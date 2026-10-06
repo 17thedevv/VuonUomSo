@@ -67,7 +67,7 @@ describe('OrderNewScreen', () => {
     expect(ordersAfter.length).toBe(ordersBefore.length + 1)
     const newOrder = ordersAfter.find((o) => !ordersBefore.some((b) => b.id === o.id))!
     expect(newOrder.status).toBe('open')
-    expect(newOrder.variety).toBe('Bạch đàn BV16')
+    expect(newOrder.variety).toBe('Keo lai BV16')
     expect(newOrder.requestedQuantity).toBe(30000)
 
     // Invariant: NO reservation created

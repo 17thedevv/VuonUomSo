@@ -34,7 +34,7 @@ Trong sản xuất cây giống lâm nghiệp, việc nhầm lẫn giữa cây t
 
 $$\text{Physical Stock} \quad\neq\quad \text{Ready Stock} \quad\neq\quad \text{Available Stock}$$
 
-### Ví dụ thực tế một lô Bạch đàn BV16:
+### Ví dụ thực tế một lô Keo lai BV16:
 1. **Initial Quantity (Cắm hom ban đầu)**: $100.000\text{ cây}$
 2. **Current / Physical Quantity (Cây còn sống thực tế)**: $82.000\text{ cây}$ (hao hụt 18.000 cây trong quá trình bật mầm)
 3. **Ready Quantity (Cây đủ chuẩn xuất vườn)**: $50.000\text{ cây}$ (32.000 cây còn non đang nuôi tiếp)

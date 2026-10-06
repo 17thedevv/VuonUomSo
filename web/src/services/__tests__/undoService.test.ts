@@ -36,7 +36,7 @@ describe('undoService', () => {
     const testBatch: Batch = {
       id: 'batch_test_1',
       code: 'BV16 #01',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       initialQuantity: 10000,
       currentQuantity: 10000,
       readyQuantity: 0,
@@ -103,7 +103,7 @@ describe('undoService', () => {
     const testOrder: Order = {
       id: 'order_test_1',
       customerId: 'customer_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 5000,
       status: 'open'
     }

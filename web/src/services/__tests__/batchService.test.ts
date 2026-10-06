@@ -18,9 +18,9 @@ describe('batchService', () => {
 
   describe('extractVarietyPrefix', () => {
     it('extracts uppercase alphanumeric code from variety name', () => {
-      expect(extractVarietyPrefix('Bạch đàn BV16')).toBe('BV16')
+      expect(extractVarietyPrefix('Keo lai BV16')).toBe('BV16')
       expect(extractVarietyPrefix('Keo lai AH1')).toBe('AH1')
-      expect(extractVarietyPrefix('Bạch đàn BV523')).toBe('BV523')
+      expect(extractVarietyPrefix('Keo lai BV523')).toBe('BV523')
       expect(extractVarietyPrefix('Keo mô GLSE9')).toBe('GLSE9')
     })
 
@@ -36,7 +36,7 @@ describe('batchService', () => {
         {
           id: 'b1',
           code: 'BV16 #12',
-          variety: 'Bạch đàn BV16',
+          variety: 'Keo lai BV16',
           initialQuantity: 50000,
           currentQuantity: 50000,
           readyQuantity: 0,
@@ -45,7 +45,7 @@ describe('batchService', () => {
         }
       ]
 
-      const code = generateBatchCode('Bạch đàn BV16', existing)
+      const code = generateBatchCode('Keo lai BV16', existing)
       expect(code).toBe('BV16 #13')
     })
 
@@ -58,7 +58,7 @@ describe('batchService', () => {
   describe('createBatch', () => {
     it('creates batch with correct forestry invariants: current=initial, ready=0, status=propagating', async () => {
       const result = await createBatch({
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 40000,
         sourceNote: 'Cây hom vườn ươm Ba Vì'
       })
@@ -68,7 +68,7 @@ describe('batchService', () => {
       const batch = result.batch!
 
       expect(batch.code).toBe('BV16 #01')
-      expect(batch.variety).toBe('Bạch đàn BV16')
+      expect(batch.variety).toBe('Keo lai BV16')
       expect(batch.initialQuantity).toBe(40000)
       expect(batch.currentQuantity).toBe(40000)
       expect(batch.readyQuantity).toBe(0)
@@ -96,7 +96,7 @@ describe('batchService', () => {
 
     it('rejects invalid initial quantity <= 0', async () => {
       const result = await createBatch({
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 0
       })
 
@@ -117,13 +117,13 @@ describe('batchService', () => {
     it('rejects duplicate batch code', async () => {
       await createBatch({
         code: 'BV16 #99',
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 10000
       })
 
       const duplicate = await createBatch({
         code: 'BV16 #99',
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 20000
       })
 
@@ -135,7 +135,7 @@ describe('batchService', () => {
   describe('updateBatchInventory', () => {
     it('updates currentQuantity and logs difference event', async () => {
       const created = await createBatch({
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 50000
       })
       const batchId = created.batch!.id
@@ -200,7 +200,7 @@ describe('batchService', () => {
 
     it('marks batch as depleted when newQuantity is 0', async () => {
       const created = await createBatch({
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         initialQuantity: 10000
       })
       const batchId = created.batch!.id

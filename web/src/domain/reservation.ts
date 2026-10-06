@@ -35,42 +35,6 @@ export type ExternalSupplierCandidate = {
 }
 
 /**
- * Deterministic default catalog for external suppliers in prototype.
- * Provides reference quantities for external suppliers when variety matches.
- */
-export const DEFAULT_SUPPLIER_CATALOG: {
-  supplierName: string
-  phone?: string
-  variety: string
-  estimatedQuantity: number
-}[] = [
-  {
-    supplierName: 'Vườn Thảo',
-    phone: '0977 123 456',
-    variety: 'Bạch đàn BV16',
-    estimatedQuantity: 35000
-  },
-  {
-    supplierName: 'Vườn Hồng',
-    phone: '0966 234 567',
-    variety: 'Bạch đàn BV16',
-    estimatedQuantity: 22000
-  },
-  {
-    supplierName: 'Vườn An',
-    phone: '0955 345 678',
-    variety: 'Bạch đàn BV16',
-    estimatedQuantity: 48000
-  },
-  {
-    supplierName: 'Vườn Thảo',
-    phone: '0977 123 456',
-    variety: 'Keo lai AH1',
-    estimatedQuantity: 25000
-  }
-]
-
-/**
  * Filters own batches that can be reserved for an order:
  * 1. Must match order variety (case-insensitive)
  * 2. Status must be 'ready'
@@ -127,8 +91,8 @@ export function sortBatchCandidatesForReservation(
 export function validateReservationQuantity(
   quantity: number
 ): { valid: boolean; error?: string } {
-  if (isNaN(quantity) || !isFinite(quantity) || quantity <= 0) {
-    return { valid: false, error: 'Số lượng giữ phải lớn hơn 0 cây.' }
+  if (!Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0) {
+    return { valid: false, error: 'Số lượng giữ phải là số nguyên dương lớn hơn 0 cây.' }
   }
   return { valid: true }
 }

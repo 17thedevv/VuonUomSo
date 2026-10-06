@@ -97,11 +97,11 @@ describe('Repository & Persistence Boundary', () => {
     const orders = await orderRepository.getAll()
     expect(orders.length).toBe(3)
     const hungOrder = orders.find((o) => o.id === 'order_hung_01')
-    expect(hungOrder?.variety).toBe('Bạch đàn BV16')
+    expect(hungOrder?.variety).toBe('Keo lai BV16')
     expect(hungOrder?.requestedQuantity).toBe(30000)
 
     const lanOrder = orders.find((o) => o.id === 'order_lan_01')
-    expect(lanOrder?.variety).toBe('Bạch đàn BV16')
+    expect(lanOrder?.variety).toBe('Keo lai BV16')
     expect(lanOrder?.requestedQuantity).toBe(50000)
 
     const namOrder = orders.find((o) => o.id === 'order_nam_01')

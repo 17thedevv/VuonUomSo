@@ -14,7 +14,7 @@ describe('Domain: Order calculations & filters', () => {
   const createMockOrder = (overrides: Partial<Order>): Order => ({
     id: 'ord_1',
     customerId: 'cust_1',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     requestedQuantity: 20000,
     requestedDate: '2026-10-15',
     unitPrice: 1200,

@@ -58,7 +58,7 @@ describe('Derived Quantity Domain Functions', () => {
   const dummyBatch: Batch = {
     id: 'batch_1',
     code: 'BV16 #12',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     createdAt: '2026-01-01T00:00:00.000Z',
     initialQuantity: 50000,
     currentQuantity: 45200,

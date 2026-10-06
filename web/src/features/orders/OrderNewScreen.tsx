@@ -11,9 +11,9 @@ import { formatQuantity } from '../../domain/quantity'
 import { UserPlus, Calendar, Plus, AlertCircle, Info, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 
 const COMMON_VARIETIES = [
-  'Bạch đàn BV16',
+  'Keo lai BV16',
   'Keo lai AH1',
-  'Bạch đàn BV523',
+  'Keo lai BV523',
   'Keo tai tượng',
   'Bạch đàn U6'
 ]

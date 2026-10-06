@@ -6,9 +6,9 @@ import { createBatch } from '../../services/batchService'
 import { Sprout, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
 
 const COMMON_VARIETIES = [
-  'Bạch đàn BV16',
+  'Keo lai BV16',
   'Keo lai AH1',
-  'Bạch đàn BV523',
+  'Keo lai BV523',
   'Keo tai tượng',
   'Bạch đàn U6'
 ]

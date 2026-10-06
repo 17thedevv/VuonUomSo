@@ -22,17 +22,21 @@ export class VuonUomDatabase extends Dexie {
   shipments!: EntityTable<Shipment, 'id'>
   events!: EntityTable<DomainEvent, 'id'>
 
-  constructor() {
-    super('VuonUomDB')
+  constructor(dbName = 'VuonUomDB') {
+    super(dbName)
     this.version(1).stores({
       organizations: 'id, name',
       settings: 'key',
       contacts: 'id, name',
       batches: 'id, code, variety, status, createdAt',
       orders: 'id, customerId, status',
-      reservations: 'id, orderId, batchId, supplierId, status',
+      reservations: 'id, orderId, batchId, status',
       shipments: 'id, orderId, status',
       events: 'id, type, entityType, entityId, createdAt'
+    })
+
+    this.version(2).stores({
+      reservations: 'id, orderId, batchId, supplierId, status'
     })
   }
 }

@@ -340,8 +340,14 @@ export const OrderDetailScreen: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      Đang giữ
+                    <span
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        reservation.status === 'fulfilled'
+                          ? 'bg-sky-100 text-sky-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {reservation.status === 'fulfilled' ? 'Đã giao' : 'Đang giữ'}
                     </span>
 
                     {reservation.status === 'active' && (

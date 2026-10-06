@@ -22,7 +22,7 @@ describe('orderService', () => {
       await resetDemoData()
 
       // Demo data has BV16: ready = 32000, reserved = 10000 => available = 22000
-      const availability1 = await getVarietyAvailability('Bạch đàn BV16', 20000)
+      const availability1 = await getVarietyAvailability('Keo lai BV16', 20000)
       expect(availability1.readyQuantity).toBe(32000)
       expect(availability1.reservedQuantity).toBe(10000)
       expect(availability1.availableQuantity).toBe(22000)
@@ -30,7 +30,7 @@ describe('orderService', () => {
       expect(availability1.shortageAmount).toBe(0)
 
       // Requesting 30.000 while 22.000 available => shortage of 8.000
-      const availability2 = await getVarietyAvailability('Bạch đàn BV16', 30000)
+      const availability2 = await getVarietyAvailability('Keo lai BV16', 30000)
       expect(availability2.isShortage).toBe(true)
       expect(availability2.shortageAmount).toBe(8000)
     })
@@ -49,7 +49,7 @@ describe('orderService', () => {
       // Create new order for 30.000 trees
       const result = await createOrder({
         customerId: 'contact_hung',
-        variety: 'Bạch đàn BV16',
+        variety: 'Keo lai BV16',
         requestedQuantity: 30000,
         unitPrice: 1200,
         requestedDate: '2026-10-20',
@@ -84,7 +84,7 @@ describe('orderService', () => {
       // Order saved in repository
       const saved = await orderRepository.getById(order.id)
       expect(saved).not.toBeNull()
-      expect(saved?.variety).toBe('Bạch đàn BV16')
+      expect(saved?.variety).toBe('Keo lai BV16')
 
       // Event logged
       const events = await eventRepository.getAll()

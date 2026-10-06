@@ -12,7 +12,7 @@ describe('Domain: Batch calculations & filters', () => {
   const createMockBatch = (overrides: Partial<Batch>): Batch => ({
     id: 'test_batch_1',
     code: 'TEST #01',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     initialQuantity: 10000,
     currentQuantity: 9500,
     readyQuantity: 9000,

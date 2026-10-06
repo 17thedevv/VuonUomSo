@@ -29,7 +29,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45200,
@@ -39,7 +39,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 30000,
       status: 'open'
     }
@@ -88,7 +88,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45200,
@@ -98,7 +98,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 30000,
       status: 'open'
     }
@@ -127,7 +127,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45200,
@@ -137,7 +137,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 8000, // order only needs 8.000
       status: 'open'
     }
@@ -163,7 +163,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45200,
@@ -173,7 +173,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'reserved'
     }
@@ -220,6 +220,77 @@ describe('Service: reservationService (Phase P3)', () => {
     expect(orderShortage(updatedOrder!, allRes)).toBe(10000)
   })
 
+  it('blocks releasing fulfilled reservation with descriptive error', async () => {
+    const batch: Batch = {
+      id: 'b_bv16',
+      code: 'BV16 #12',
+      variety: 'Keo lai BV16',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      initialQuantity: 50000,
+      currentQuantity: 45200,
+      readyQuantity: 32000,
+      status: 'ready'
+    }
+    const order: Order = {
+      id: 'ord_shipped',
+      customerId: 'cust_1',
+      variety: 'Keo lai BV16',
+      requestedQuantity: 20000,
+      status: 'shipped'
+    }
+    const resFulfilled: Reservation = {
+      id: 'res_fulfilled_1',
+      orderId: 'ord_shipped',
+      sourceType: 'own_batch',
+      batchId: 'b_bv16',
+      quantity: 20000,
+      status: 'fulfilled',
+      createdAt: '2026-09-01T00:00:00.000Z'
+    }
+
+    await db.batches.put(batch)
+    await db.orders.put(order)
+    await db.reservations.put(resFulfilled)
+
+    await expect(
+      releaseReservation({ reservationId: resFulfilled.id })
+    ).rejects.toThrow(/Chỉ có thể bỏ giữ cây đang được giữ/)
+
+    // Status remains fulfilled
+    const checkRes = await db.reservations.get(resFulfilled.id)
+    expect(checkRes?.status).toBe('fulfilled')
+  })
+
+  it('blocks reserving from own batch when variety does not match order', async () => {
+    const batchAH1: Batch = {
+      id: 'b_ah1',
+      code: 'AH1 #07',
+      variety: 'Keo lai AH1',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      initialQuantity: 30000,
+      currentQuantity: 30000,
+      readyQuantity: 20000,
+      status: 'ready'
+    }
+    const orderBV16: Order = {
+      id: 'ord_bv16',
+      customerId: 'cust_1',
+      variety: 'Keo lai BV16',
+      requestedQuantity: 10000,
+      status: 'open'
+    }
+    await db.batches.put(batchAH1)
+    await db.orders.put(orderBV16)
+
+    await expect(
+      reserveOwnBatch({
+        orderId: orderBV16.id,
+        batchId: batchAH1.id,
+        quantity: 5000
+      })
+    ).rejects.toThrow(/không cùng giống cây với đơn hàng/)
+  })
+
   // =========================================================================
   // Section 56: Critical test — physical quantity unchanged (regression guard)
   // =========================================================================
@@ -227,7 +298,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45200,
@@ -237,7 +308,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'open'
     }
@@ -262,7 +333,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const ownBatch: Batch = {
       id: 'b_own',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 30000,
       currentQuantity: 25000,
@@ -287,7 +358,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_100k',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 100000,
       status: 'open'
     }
@@ -321,6 +392,31 @@ describe('Service: reservationService (Phase P3)', () => {
     expect(updatedOrder?.status).toBe('reserved')
   })
 
+  it('blocks reserving external supplier when contact does not have supplier role', async () => {
+    const nonSupplierContact: Contact = {
+      id: 'cust_only',
+      name: 'Anh Hùng Khách Hàng',
+      roles: ['customer'] // NOT a supplier
+    }
+    const order: Order = {
+      id: 'ord_1',
+      customerId: 'cust_only',
+      variety: 'Keo lai BV16',
+      requestedQuantity: 20000,
+      status: 'open'
+    }
+    await db.contacts.put(nonSupplierContact)
+    await db.orders.put(order)
+
+    await expect(
+      reserveExternalSupplier({
+        orderId: order.id,
+        supplierId: nonSupplierContact.id,
+        quantity: 5000
+      })
+    ).rejects.toThrow(/Liên hệ này không phải nguồn cung cây/)
+  })
+
   // =========================================================================
   // Section 58: Critical test — released excluded
   // =========================================================================
@@ -328,7 +424,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45000,
@@ -338,7 +434,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'open'
     }
@@ -368,7 +464,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45000,
@@ -378,7 +474,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'open'
     }
@@ -414,7 +510,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45000,
@@ -424,7 +520,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'open'
     }
@@ -457,7 +553,7 @@ describe('Service: reservationService (Phase P3)', () => {
 
     const options = await getReservationOptions('order_lan_01')
     expect(options).not.toBeNull()
-    expect(options?.order.variety).toBe('Bạch đàn BV16')
+    expect(options?.order.variety).toBe('Keo lai BV16')
     expect(options?.shortage).toBe(18000)
     expect(options?.currentReservations.length).toBeGreaterThan(0)
     expect(options?.externalSuppliers.length).toBeGreaterThan(0)
@@ -470,7 +566,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const batch: Batch = {
       id: 'b_bv16',
       code: 'BV16 #12',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       createdAt: '2026-09-01T00:00:00.000Z',
       initialQuantity: 50000,
       currentQuantity: 45000,
@@ -480,7 +576,7 @@ describe('Service: reservationService (Phase P3)', () => {
     const order: Order = {
       id: 'ord_1',
       customerId: 'cust_1',
-      variety: 'Bạch đàn BV16',
+      variety: 'Keo lai BV16',
       requestedQuantity: 20000,
       status: 'open'
     }

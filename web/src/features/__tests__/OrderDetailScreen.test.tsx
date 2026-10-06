@@ -32,8 +32,8 @@ describe('OrderDetailScreen', () => {
     // Status: Đã giữ đủ
     expect(screen.getByText('Đã giữ đủ')).toBeInTheDocument()
 
-    // 2 sources: BV16 #12 (Bạch đàn BV16) and Vườn Thảo
-    expect(screen.getByText('BV16 #12 (Bạch đàn BV16)')).toBeInTheDocument()
+    // 2 sources: BV16 #12 (Keo lai BV16) and Vườn Thảo
+    expect(screen.getByText('BV16 #12 (Keo lai BV16)')).toBeInTheDocument()
     expect(screen.getByText('Vườn Thảo')).toBeInTheDocument()
 
     // Quantities per source: 10.000 and 20.000

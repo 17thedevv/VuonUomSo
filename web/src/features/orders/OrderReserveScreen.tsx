@@ -323,18 +323,26 @@ export const OrderReserveScreen: React.FC = () => {
                       </div>
 
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          Đang giữ
+                        <span
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            res.status === 'fulfilled'
+                              ? 'bg-sky-100 text-sky-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {res.status === 'fulfilled' ? 'Đã giao' : 'Đang giữ'}
                         </span>
 
-                        <button
-                          type="button"
-                          onClick={() => handleOpenRelease(res)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>BỎ GIỮ</span>
-                        </button>
+                        {res.status === 'active' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRelease(res)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>BỎ GIỮ</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

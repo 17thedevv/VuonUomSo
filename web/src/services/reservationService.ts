@@ -21,9 +21,9 @@ import {
   validateReservationQuantity,
   validateBatchAvailability,
   validateOrderShortage,
-  DEFAULT_SUPPLIER_CATALOG,
   type ExternalSupplierCandidate
 } from '../domain/reservation'
+import { DEFAULT_SUPPLIER_CATALOG } from '../data/demo/supplierCatalog'
 import { undoService } from './undoService'
 
 export interface ReserveOwnBatchParams {
@@ -204,6 +204,13 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
       throw new Error('Đơn hàng đã hoàn thành hoặc đã bị hủy.')
     }
 
+    // 3. Enforce variety matching invariant
+    if (batch.variety.trim().toLowerCase() !== order.variety.trim().toLowerCase()) {
+      throw new Error(
+        `Lô ${batch.code} (${batch.variety}) không cùng giống cây với đơn hàng (${order.variety}).`
+      )
+    }
+
     // 3. Re-calculate live available quantity of batch at commit time
     const batchReservations = await db.reservations.where('batchId').equals(batchId).toArray()
     const activeBatchReserved = batchReservations
@@ -346,6 +353,9 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
     if (!supplier) {
       throw new Error('Không tìm thấy nhà vườn liên kết.')
     }
+    if (!supplier.roles.includes('supplier')) {
+      throw new Error('Liên hệ này không phải nguồn cung cây.')
+    }
 
     // 3. Validate quantity invariant
     const qtyCheck = validateReservationQuantity(quantity)
@@ -445,6 +455,10 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
     // Idempotent: If already released, return success
     if (reservation.status === 'released') {
       return { success: true }
+    }
+
+    if (reservation.status !== 'active') {
+      throw new Error('Chỉ có thể bỏ giữ cây đang được giữ.')
     }
 
     // Update reservation status to 'released'

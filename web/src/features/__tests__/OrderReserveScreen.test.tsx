@@ -32,7 +32,7 @@ describe('OrderReserveScreen (Phase P3)', () => {
     })
 
     // Variety & requested count
-    expect(screen.getAllByText('Bạch đàn BV16').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Keo lai BV16').length).toBeGreaterThan(0)
     expect(screen.getByText('50.000 cây')).toBeInTheDocument()
 
     // Shortage

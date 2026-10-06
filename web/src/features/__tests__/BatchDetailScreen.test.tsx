@@ -22,7 +22,7 @@ describe('BatchDetailScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText('BV16 #12')).toBeInTheDocument()
-      expect(screen.getByText('Bạch đàn BV16')).toBeInTheDocument()
+      expect(screen.getByText('Keo lai BV16')).toBeInTheDocument()
     })
 
     // Key metrics:

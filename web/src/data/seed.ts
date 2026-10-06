@@ -70,7 +70,7 @@ export const DEMO_BATCHES: Batch[] = [
   {
     id: 'batch_bv16_12',
     code: 'BV16 #12',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     createdAt: daysAgo(35),
     initialQuantity: 50000,
     currentQuantity: 45200,
@@ -92,7 +92,7 @@ export const DEMO_BATCHES: Batch[] = [
   {
     id: 'batch_bv523_03',
     code: 'BV523 #03',
-    variety: 'Bạch đàn BV523',
+    variety: 'Keo lai BV523',
     createdAt: daysAgo(50),
     initialQuantity: 20000,
     currentQuantity: 18400,
@@ -107,7 +107,7 @@ export const DEMO_ORDERS: Order[] = [
   {
     id: 'order_hung_01',
     customerId: 'contact_hung',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     requestedQuantity: 30000,
     requestedDate: daysHence(4),
     unitPrice: 1200,
@@ -117,7 +117,7 @@ export const DEMO_ORDERS: Order[] = [
   {
     id: 'order_lan_01',
     customerId: 'contact_lan',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     requestedQuantity: 50000,
     requestedDate: daysHence(5),
     unitPrice: 1200,

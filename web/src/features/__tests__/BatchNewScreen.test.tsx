@@ -51,7 +51,7 @@ describe('BatchNewScreen', () => {
     // Verify batch in repository
     const batches = await batchRepository.getAll()
     expect(batches).toHaveLength(1)
-    expect(batches[0].variety).toBe('Bạch đàn BV16')
+    expect(batches[0].variety).toBe('Keo lai BV16')
     expect(batches[0].initialQuantity).toBe(50000)
     expect(batches[0].currentQuantity).toBe(50000)
     expect(batches[0].readyQuantity).toBe(0)

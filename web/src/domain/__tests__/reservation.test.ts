@@ -5,15 +5,15 @@ import {
   sortBatchCandidatesForReservation,
   validateReservationQuantity,
   validateBatchAvailability,
-  validateOrderShortage,
-  DEFAULT_SUPPLIER_CATALOG
+  validateOrderShortage
 } from '../reservation'
+import { DEFAULT_SUPPLIER_CATALOG } from '../../data/demo/supplierCatalog'
 
 describe('Domain: Reservation logic & helpers', () => {
   const createMockBatch = (overrides: Partial<BatchWithAvailability>): BatchWithAvailability => ({
     id: 'batch_1',
     code: 'BV16 #01',
-    variety: 'Bạch đàn BV16',
+    variety: 'Keo lai BV16',
     createdAt: '2026-09-01T00:00:00.000Z',
     initialQuantity: 50000,
     currentQuantity: 45000,
@@ -28,15 +28,15 @@ describe('Domain: Reservation logic & helpers', () => {
   describe('filterBatchCandidatesForOrder', () => {
     it('filters batches to only matching variety, status=ready, and available > 0', () => {
       const batches: BatchWithAvailability[] = [
-        createMockBatch({ id: '1', variety: 'Bạch đàn BV16', status: 'ready', availableQuantity: 10000 }),
-        createMockBatch({ id: '2', variety: 'bạch đàn bv16', status: 'ready', availableQuantity: 5000 }), // case-insensitive
+        createMockBatch({ id: '1', variety: 'Keo lai BV16', status: 'ready', availableQuantity: 10000 }),
+        createMockBatch({ id: '2', variety: 'keo lai bv16', status: 'ready', availableQuantity: 5000 }), // case-insensitive
         createMockBatch({ id: '3', variety: 'Keo lai AH1', status: 'ready', availableQuantity: 20000 }), // wrong variety
-        createMockBatch({ id: '4', variety: 'Bạch đàn BV16', status: 'nearly_ready', availableQuantity: 15000 }), // not ready
-        createMockBatch({ id: '5', variety: 'Bạch đàn BV16', status: 'ready', availableQuantity: 0 }), // 0 available
-        createMockBatch({ id: '6', variety: 'Bạch đàn BV16', status: 'depleted', availableQuantity: 0 }) // depleted
+        createMockBatch({ id: '4', variety: 'Keo lai BV16', status: 'nearly_ready', availableQuantity: 15000 }), // not ready
+        createMockBatch({ id: '5', variety: 'Keo lai BV16', status: 'ready', availableQuantity: 0 }), // 0 available
+        createMockBatch({ id: '6', variety: 'Keo lai BV16', status: 'depleted', availableQuantity: 0 }) // depleted
       ]
 
-      const candidates = filterBatchCandidatesForOrder(batches, 'Bạch đàn BV16')
+      const candidates = filterBatchCandidatesForOrder(batches, 'Keo lai BV16')
       expect(candidates).toHaveLength(2)
       expect(candidates.map((c) => c.id)).toEqual(['1', '2'])
     })
@@ -82,11 +82,13 @@ describe('Domain: Reservation logic & helpers', () => {
       expect(validateReservationQuantity(50000).valid).toBe(true)
     })
 
-    it('rejects 0, negative, NaN or non-finite numbers', () => {
+    it('rejects 0, negative, NaN, fractional or non-finite numbers', () => {
       expect(validateReservationQuantity(0).valid).toBe(false)
       expect(validateReservationQuantity(-500).valid).toBe(false)
       expect(validateReservationQuantity(NaN).valid).toBe(false)
       expect(validateReservationQuantity(Infinity).valid).toBe(false)
+      expect(validateReservationQuantity(1.5).valid).toBe(false)
+      expect(validateReservationQuantity(10.2).valid).toBe(false)
     })
   })
 
