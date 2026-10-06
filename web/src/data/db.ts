@@ -30,7 +30,7 @@ export class VuonUomDatabase extends Dexie {
       contacts: 'id, name',
       batches: 'id, code, variety, status, createdAt',
       orders: 'id, customerId, status',
-      reservations: 'id, orderId, batchId, status',
+      reservations: 'id, orderId, batchId, supplierId, status',
       shipments: 'id, orderId, status',
       events: 'id, type, entityType, entityId, createdAt'
     })

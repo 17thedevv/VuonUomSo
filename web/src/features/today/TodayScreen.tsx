@@ -127,10 +127,13 @@ export const TodayScreen: React.FC = () => {
 
   const attentionBatches = batches.filter((b) => b.isAttention)
 
-  // Orders needing attention: not shipped, not cancelled
-  const pendingOrders = orders.filter(
-    (o) => o.status !== 'shipped' && o.status !== 'cancelled'
+  // Orders needing attention: shortage > 0 and active (not shipped, not cancelled)
+  const attentionOrders = orders.filter(
+    (o) => o.shortage > 0 && o.status !== 'shipped' && o.status !== 'cancelled'
   )
+  const pendingOrdersCount = orders.filter(
+    (o) => o.status !== 'shipped' && o.status !== 'cancelled'
+  ).length
 
   if (loading) {
     return (
@@ -270,7 +273,7 @@ export const TodayScreen: React.FC = () => {
               onClick={() => navigate('/orders')}
               className="text-xs text-emerald-700 font-semibold hover:underline flex items-center gap-0.5"
             >
-              Xem đơn hàng ({pendingOrders.length})
+              Xem đơn hàng ({pendingOrdersCount})
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -301,8 +304,8 @@ export const TodayScreen: React.FC = () => {
               </div>
             ))}
 
-            {/* Orders requiring attention */}
-            {pendingOrders.map((order) => {
+            {/* Orders requiring attention (shortage > 0) */}
+            {attentionOrders.map((order) => {
               const isShortage = order.shortage > 0
 
               return (
@@ -364,7 +367,7 @@ export const TodayScreen: React.FC = () => {
               </div>
             )}
 
-            {batches.length > 0 && attentionBatches.length === 0 && pendingOrders.length === 0 && (
+            {batches.length > 0 && attentionBatches.length === 0 && attentionOrders.length === 0 && (
               <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
                 Không có việc gấp nào cần xử lý hôm nay.
               </div>

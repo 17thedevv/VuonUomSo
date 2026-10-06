@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { OrderDetailScreen } from '../orders/OrderDetailScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
+import { undoService } from '../../services/undoService'
 
 describe('OrderDetailScreen', () => {
   beforeEach(async () => {
+    undoService.clearLastMutation()
     await clearAllData()
     await resetDemoData()
   })
@@ -57,9 +59,9 @@ describe('OrderDetailScreen', () => {
     expect(screen.getAllByText(/Còn thiếu/).length).toBeGreaterThan(0)
   })
 
-  it('renders empty state when order ID is not found', async () => {
+  it('allows releasing a reservation directly from order detail', async () => {
     render(
-      <MemoryRouter initialEntries={['/orders/non_existent_id']}>
+      <MemoryRouter initialEntries={['/orders/order_hung_01']}>
         <Routes>
           <Route path="/orders/:id" element={<OrderDetailScreen />} />
         </Routes>
@@ -67,7 +69,27 @@ describe('OrderDetailScreen', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Không tìm thấy đơn hàng này')).toBeInTheDocument()
+      expect(screen.getByText('Đã giữ đủ')).toBeInTheDocument()
+    })
+
+    // Click BỎ GIỮ on the first reservation
+    const releaseButtons = screen.getAllByRole('button', { name: /BỎ GIỮ/i })
+    expect(releaseButtons.length).toBeGreaterThan(0)
+    fireEvent.click(releaseButtons[0]!)
+
+    // Modal opens
+    await waitFor(() => {
+      expect(screen.getByText('Xác nhận bỏ giữ cây?')).toBeInTheDocument()
+    })
+
+    // Confirm
+    const confirmButton = screen.getByRole('button', { name: /Xác nhận bỏ giữ/i })
+    fireEvent.click(confirmButton)
+
+    // After release, shortage alert should appear
+    await waitFor(() => {
+      expect(screen.getAllByText(/Còn thiếu/).length).toBeGreaterThan(0)
     })
   })
 })
+

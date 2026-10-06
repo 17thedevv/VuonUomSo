@@ -45,11 +45,12 @@ export type OrderWithDerived = Order & {
 export type OrderFilterType = 'all' | 'action_needed' | 'ready_pickup' | 'shipped'
 
 /**
- * Total active reserved quantity across all sources (own batches and external suppliers) for an order.
+ * Total committed quantity across all sources (own batches and external suppliers) for an order:
+ * sum(active + fulfilled reservations for order).
  */
 export function reservedQuantityForOrder(orderId: string, reservations: Reservation[]): number {
   return reservations
-    .filter((r) => r.orderId === orderId && r.status === 'active')
+    .filter((r) => r.orderId === orderId && (r.status === 'active' || r.status === 'fulfilled'))
     .reduce((sum, r) => sum + r.quantity, 0)
 }
 

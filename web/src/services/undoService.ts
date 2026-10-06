@@ -1,4 +1,5 @@
 import { batchRepository, orderRepository, eventRepository } from '../data/repositories'
+import { releaseReservation } from './reservationService'
 
 export type ReversibleMutation =
   | {
@@ -18,6 +19,12 @@ export type ReversibleMutation =
       type: 'create_order'
       orderId: string
       customerName: string
+      description: string
+    }
+  | {
+      type: 'create_reservation'
+      reservationId: string
+      orderId: string
       description: string
     }
 
@@ -165,6 +172,17 @@ class UndoService {
           success: true,
           message: `Đã hoàn tác: Đã xóa đơn hàng của ${mutation.customerName}.`,
           revertedType: 'create_order'
+        }
+      }
+
+      if (mutation.type === 'create_reservation') {
+        await releaseReservation({ reservationId: mutation.reservationId })
+
+        this.clearLastMutation()
+        return {
+          success: true,
+          message: 'Đã hoàn tác: Đã bỏ giữ cây.',
+          revertedType: 'create_reservation'
         }
       }
 
