@@ -66,7 +66,7 @@ export function getPlannedShipmentForOrder(orderId: string, shipments: Shipment[
  * Validates a shipment quantity (must be a positive whole integer).
  */
 export function validateShipmentQuantity(quantity: number): { valid: boolean; error?: string } {
-  if (typeof quantity !== 'number' || isNaN(quantity)) {
+  if (typeof quantity !== 'number' || isNaN(quantity) || !Number.isFinite(quantity)) {
     return { valid: false, error: 'Số lượng giao không hợp lệ.' }
   }
   if (!Number.isInteger(quantity)) {

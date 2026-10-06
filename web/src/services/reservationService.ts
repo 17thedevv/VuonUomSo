@@ -471,6 +471,23 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
       throw new Error('Chỉ có thể bỏ giữ cây đang được giữ.')
     }
 
+    // Invariant: Cannot release reservation if it is allocated in an open planned shipment
+    const plannedShipmentWithRes = await db.shipments
+      .where('orderId')
+      .equals(reservation.orderId)
+      .filter(
+        (s) =>
+          s.status === 'planned' &&
+          (s.lines ?? []).some((l) => l.reservationId === reservationId && l.quantity > 0)
+      )
+      .first()
+
+    if (plannedShipmentWithRes) {
+      throw new Error(
+        'Nguồn cây này đang nằm trong một chuyến chờ giao. Hãy hủy chuyến đó trước khi bỏ giữ cây.'
+      )
+    }
+
     // Update reservation status to 'released'
     reservation.status = 'released'
     await db.reservations.put(reservation)

@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { OrderDetailScreen } from '../orders/OrderDetailScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import { undoService } from '../../services/undoService'
+import { db } from '../../data/db'
 
 describe('OrderDetailScreen', () => {
   beforeEach(async () => {
@@ -90,6 +91,43 @@ describe('OrderDetailScreen', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Còn thiếu/).length).toBeGreaterThan(0)
     })
+  })
+
+  it('displays "Trong chuyến chờ giao" instead of BỎ GIỮ button when reservation is in planned shipment', async () => {
+    // Add a planned shipment for order_hung_01 referencing the own batch reservation
+    await db.shipments.add({
+      id: 'ship_test_planned',
+      orderId: 'order_hung_01',
+      status: 'planned',
+      plannedQuantity: 10000,
+      shippedQuantity: 0,
+      plannedDate: '2026-10-15',
+      lines: [
+        {
+          reservationId: 'res_bv16_hung_own',
+          sourceType: 'own_batch',
+          batchId: 'batch_bv16_12',
+          quantity: 10000
+        }
+      ],
+      createdAt: '2026-10-06'
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/orders/order_hung_01']}>
+        <Routes>
+          <Route path="/orders/:id" element={<OrderDetailScreen />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Trong chuyến chờ giao')).toBeInTheDocument()
+    })
+
+    // The other reservation (external supplier) is not in planned shipment, so it still has BỎ GIỮ
+    const releaseButtons = screen.getAllByRole('button', { name: /BỎ GIỮ/i })
+    expect(releaseButtons.length).toBe(1)
   })
 })
 

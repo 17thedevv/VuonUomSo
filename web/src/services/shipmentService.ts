@@ -118,10 +118,16 @@ export async function createShipment(params: CreateShipmentParams): Promise<{
       throw new Error('Chuyến giao phải có ít nhất một dòng với số lượng lớn hơn 0.')
     }
 
+    const seenReservationIds = new Set<string>()
     const shipmentLines: ShipmentLine[] = []
     let totalPlanned = 0
 
     for (const inputLine of positiveLines) {
+      if (seenReservationIds.has(inputLine.reservationId)) {
+        throw new Error('Một nguồn cây không được xuất hiện hai lần trong cùng chuyến.')
+      }
+      seenReservationIds.add(inputLine.reservationId)
+
       const reservation = await db.reservations.get(inputLine.reservationId)
       if (!reservation) {
         throw new Error('Bản ghi giữ cây không tồn tại.')
@@ -147,6 +153,19 @@ export async function createShipment(params: CreateShipmentParams): Promise<{
         quantity: inputLine.quantity
       })
       totalPlanned += inputLine.quantity
+    }
+
+    // Explicit total shipment guard: cannot exceed remaining unfulfilled order quantity
+    const existingShipments = await db.shipments.where('orderId').equals(orderId).toArray()
+    const remainingOrder = remainingToShipForOrder(
+      order.requestedQuantity,
+      orderId,
+      existingShipments
+    )
+    if (totalPlanned > remainingOrder) {
+      throw new Error(
+        `Tổng số cây lên chuyến (${formatQuantity(totalPlanned)}) vượt quá số lượng còn thiếu của đơn hàng (${formatQuantity(remainingOrder)} cây).`
+      )
     }
 
     // 4. Create planned shipment
@@ -278,6 +297,16 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
         throw new Error('Đơn hàng không tồn tại.')
       }
 
+      // Re-verify total completed shipped does not exceed requested quantity
+      const allOrderShipments = await db.shipments.where('orderId').equals(order.id).toArray()
+      const alreadyShipped = allOrderShipments
+        .filter((s) => s.status === 'completed' && s.id !== shipment.id)
+        .reduce((sum, s) => sum + s.shippedQuantity, 0)
+
+      if (alreadyShipped + shipment.plannedQuantity > order.requestedQuantity) {
+        throw new Error('Tổng số cây xuất vượt quá số lượng khách đặt của đơn hàng.')
+      }
+
       const now = new Date().toISOString()
 
       // 3. Process each line atomically
@@ -287,23 +316,42 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
           throw new Error('Bản ghi giữ cây không tồn tại.')
         }
 
+        // Re-validate reservation belongs to the same order
+        if (reservation.orderId !== shipment.orderId) {
+          throw new Error('Nguồn cây trong chuyến không thuộc đơn hàng này.')
+        }
+
         if (reservation.status === 'released') {
           throw new Error('Không thể giao từ khoản giữ cây đã bị hủy.')
         }
 
+        // Re-validate line quantity allocation at commit time (integer, > 0, finite, <= remaining)
         const remaining = remainingReservationQuantity(reservation)
-        if (line.quantity > remaining) {
-          throw new Error(
-            `Số lượng giao (${formatQuantity(line.quantity)}) vượt quá số lượng giữ còn lại (${formatQuantity(remaining)}).`
-          )
+        const lineCheck = validateShipmentLineAllocation(line.quantity, remaining)
+        if (!lineCheck.valid) {
+          throw new Error(lineCheck.error)
         }
 
-        // Own batch: reduce physical & ready stock
-        if (line.sourceType === 'own_batch') {
-          if (!line.batchId) {
+        // Reconcile line metadata against authoritative reservation
+        if (line.sourceType !== reservation.sourceType) {
+          throw new Error('Loại nguồn cây trong chuyến không khớp với bản ghi giữ cây.')
+        }
+        if (reservation.sourceType === 'own_batch') {
+          if (line.batchId !== reservation.batchId) {
+            throw new Error('Mã lô cây trong chuyến không khớp với bản ghi giữ cây.')
+          }
+        } else if (reservation.sourceType === 'external_supplier') {
+          if (line.supplierId !== reservation.supplierId) {
+            throw new Error('Nhà cung cấp trong chuyến không khớp với bản ghi giữ cây.')
+          }
+        }
+
+        // Authoritative source of truth: reservation.sourceType and reservation.batchId
+        if (reservation.sourceType === 'own_batch') {
+          if (!reservation.batchId) {
             throw new Error('Dòng xuất từ lô nội bộ thiếu mã lô.')
           }
-          const batch = await db.batches.get(line.batchId)
+          const batch = await db.batches.get(reservation.batchId)
           if (!batch) {
             throw new Error(`Lô cây không tồn tại.`)
           }

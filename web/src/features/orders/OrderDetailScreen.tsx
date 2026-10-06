@@ -482,22 +482,33 @@ export const OrderDetailScreen: React.FC = () => {
                       </span>
 
                       {reservation.status === 'active' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setReservationToRelease({
-                              ...reservation,
-                              fulfilledQuantity: reservation.fulfilledQuantity ?? 0,
-                              sourceLabel,
-                              isOwnBatch
-                            })
-                            setIsReleaseModalOpen(true)
-                          }}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>BỎ GIỮ</span>
-                        </button>
+                        (plannedShipment?.lines ?? []).some(
+                          (l) => l.reservationId === reservation.id && l.quantity > 0
+                        ) ? (
+                          <span
+                            title="Nguồn cây này đang nằm trong chuyến chờ giao. Hãy hủy chuyến trước khi bỏ giữ cây."
+                            className="text-[11px] font-medium text-slate-400 italic"
+                          >
+                            Trong chuyến chờ giao
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReservationToRelease({
+                                ...reservation,
+                                fulfilledQuantity: reservation.fulfilledQuantity ?? 0,
+                                sourceLabel,
+                                isOwnBatch
+                              })
+                              setIsReleaseModalOpen(true)
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>BỎ GIỮ</span>
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

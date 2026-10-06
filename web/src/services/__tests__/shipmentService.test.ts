@@ -11,6 +11,7 @@ import {
   getOrderShipmentSummary,
   getShipmentDetail
 } from '../shipmentService'
+import { releaseReservation } from '../reservationService'
 
 describe('Service: Shipment & Physical Fulfillment', () => {
   const BATCH_ID = 'b_test_bv16'
@@ -308,6 +309,255 @@ describe('Service: Shipment & Physical Fulfillment', () => {
       expect(detail?.orderShippedQuantity).toBe(10000)
       expect(detail?.orderRemainingToShip).toBe(20000)
       expect(detail?.linesWithDetails[0].sourceLabel).toContain('BV16 #01')
+    })
+  })
+
+  describe('Safety & Transaction Atomicity (Boundary Audits)', () => {
+    it('rejects duplicate reservationId in createShipment', async () => {
+      await expect(
+        createShipment({
+          orderId: ORDER_ID,
+          lines: [
+            { reservationId: RES_OWN_ID, quantity: 5000 },
+            { reservationId: RES_OWN_ID, quantity: 5000 }
+          ]
+        })
+      ).rejects.toThrow('Một nguồn cây không được xuất hiện hai lần trong cùng chuyến.')
+
+      const shipments = await db.shipments.toArray()
+      expect(shipments.length).toBe(0)
+    })
+
+    it('rejects createShipment when total planned exceeds order remaining quantity', async () => {
+      // Order requested: 30.000. Complete a shipment of 20.000 first
+      const { shipment: firstShipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 20000 }]
+      })
+      await confirmShipment({ shipmentId: firstShipment.id })
+
+      // Now order remaining to ship is 10.000.
+      // Trying to plan 15.000 must be rejected
+      const extRes = (await db.reservations.get(RES_EXT_ID))!
+      extRes.quantity = 15000
+      await db.reservations.put(extRes)
+
+      await expect(
+        createShipment({
+          orderId: ORDER_ID,
+          lines: [{ reservationId: RES_EXT_ID, quantity: 15000 }]
+        })
+      ).rejects.toThrow('vượt quá số lượng còn thiếu của đơn hàng')
+    })
+
+    it('rolls back and rejects confirmShipment when line quantity is negative', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt persisted shipment line
+      shipment.lines![0].quantity = -1000
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Số lượng giao phải lớn hơn 0.')
+
+      // Verify batch stock untouched
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+
+      // Verify reservation fulfilledQuantity untouched
+      const res = (await db.reservations.get(RES_OWN_ID))!
+      expect(res.fulfilledQuantity).toBe(0)
+
+      // Verify shipment remains planned
+      const persistedShip = (await db.shipments.get(shipment.id))!
+      expect(persistedShip.status).toBe('planned')
+    })
+
+    it('rolls back and rejects confirmShipment when line quantity is fractional', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt persisted shipment line
+      shipment.lines![0].quantity = 1.5
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Số lượng giao phải là số nguyên (không có phần thập phân).')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+
+      const res = (await db.reservations.get(RES_OWN_ID))!
+      expect(res.fulfilledQuantity).toBe(0)
+    })
+
+    it('rolls back and rejects confirmShipment when reservation belongs to another order', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt reservation to point to different order
+      const res = (await db.reservations.get(RES_OWN_ID))!
+      res.orderId = 'other_order_999'
+      await db.reservations.put(res)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Nguồn cây trong chuyến không thuộc đơn hàng này.')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+    })
+
+    it('rolls back and rejects confirmShipment when line sourceType mismatches reservation', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt line sourceType
+      shipment.lines![0].sourceType = 'external_supplier'
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Loại nguồn cây trong chuyến không khớp với bản ghi giữ cây.')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+
+      const res = (await db.reservations.get(RES_OWN_ID))!
+      expect(res.fulfilledQuantity).toBe(0)
+    })
+
+    it('rolls back and rejects confirmShipment when line batchId mismatches reservation', async () => {
+      // Add second batch B
+      const BATCH_ID_2 = 'b_test_02'
+      await db.batches.add({
+        id: BATCH_ID_2,
+        code: 'BV16 #02',
+        variety: 'Keo lai BV16',
+        initialQuantity: 10000,
+        currentQuantity: 10000,
+        readyQuantity: 10000,
+        status: 'ready',
+        createdAt: '2026-09-01'
+      })
+
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt line batchId to point to batch 2
+      shipment.lines![0].batchId = BATCH_ID_2
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Mã lô cây trong chuyến không khớp với bản ghi giữ cây.')
+
+      // Neither batch A nor batch B is modified
+      const batch1 = (await db.batches.get(BATCH_ID))!
+      expect(batch1.currentQuantity).toBe(45200)
+      expect(batch1.readyQuantity).toBe(32000)
+
+      const batch2 = (await db.batches.get(BATCH_ID_2))!
+      expect(batch2.currentQuantity).toBe(10000)
+      expect(batch2.readyQuantity).toBe(10000)
+    })
+
+    it('rejects releaseReservation when reservation is allocated in an open planned shipment', async () => {
+      // Plan shipment referencing RES_OWN_ID
+      await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Attempt to release reservation
+      await expect(
+        releaseReservation({ reservationId: RES_OWN_ID })
+      ).rejects.toThrow(
+        'Nguồn cây này đang nằm trong một chuyến chờ giao. Hãy hủy chuyến đó trước khi bỏ giữ cây.'
+      )
+
+      // Reservation remains active
+      const res = (await db.reservations.get(RES_OWN_ID))!
+      expect(res.status).toBe('active')
+    })
+
+    it('guarantees atomicity: multi-line shipment rolls back line 1 when line 2 fails', async () => {
+      // Setup batch 2 with limited readyQuantity (2.000)
+      const BATCH_ID_2 = 'b_test_02'
+      const RES_OWN_ID_2 = 'res_test_own_2'
+      await db.batches.add({
+        id: BATCH_ID_2,
+        code: 'BV16 #02',
+        variety: 'Keo lai BV16',
+        initialQuantity: 5000,
+        currentQuantity: 5000,
+        readyQuantity: 2000,
+        status: 'ready',
+        createdAt: '2026-09-01'
+      })
+      await db.reservations.add({
+        id: RES_OWN_ID_2,
+        orderId: ORDER_ID,
+        sourceType: 'own_batch',
+        batchId: BATCH_ID_2,
+        quantity: 5000,
+        fulfilledQuantity: 0,
+        status: 'active',
+        createdAt: '2026-09-02'
+      })
+
+      // Plan shipment: line 1 = 5.000 from batch 1 (valid), line 2 = 3.000 from batch 2
+      // (Line 2 planned is 3.000, which exceeds batch 2 readyQuantity = 2.000)
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [
+          { reservationId: RES_OWN_ID, quantity: 5000 },
+          { reservationId: RES_OWN_ID_2, quantity: 3000 }
+        ]
+      })
+
+      // Attempt confirmShipment: Line 1 succeeds, but Line 2 fails because batch 2 only has 2.000 ready
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('không đủ tồn kho thực tế để xuất')
+
+      // ATOMICITY VERIFICATION: Line 1 stock deduction MUST BE ROLLED BACK
+      const batch1 = (await db.batches.get(BATCH_ID))!
+      expect(batch1.currentQuantity).toBe(45200)
+      expect(batch1.readyQuantity).toBe(32000)
+
+      const batch2 = (await db.batches.get(BATCH_ID_2))!
+      expect(batch2.currentQuantity).toBe(5000)
+      expect(batch2.readyQuantity).toBe(2000)
+
+      const res1 = (await db.reservations.get(RES_OWN_ID))!
+      expect(res1.fulfilledQuantity).toBe(0)
+      expect(res1.status).toBe('active')
+
+      const res2 = (await db.reservations.get(RES_OWN_ID_2))!
+      expect(res2.fulfilledQuantity).toBe(0)
+      expect(res2.status).toBe('active')
+
+      // Shipment remains planned
+      const persistedShip = (await db.shipments.get(shipment.id))!
+      expect(persistedShip.status).toBe('planned')
     })
   })
 })
