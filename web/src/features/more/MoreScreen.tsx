@@ -9,7 +9,8 @@ import {
   Info,
   ShieldCheck,
   Truck,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from 'lucide-react'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import {
@@ -25,6 +26,7 @@ import { PageHeader } from '../../shared/components/PageHeader'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { validationTracker } from '../../validation/validationTracker'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
+import { PilotSessionPanel } from '../validation/PilotSessionPanel'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -252,6 +254,23 @@ export const MoreScreen: React.FC = () => {
           <PrimaryButton onClick={handleResetDemo} disabled={isProcessing || isRestoring}>
             Cài lại dữ liệu mẫu (Reset demo data)
           </PrimaryButton>
+        </div>
+
+        {/* Pilot Tools & Survey */}
+        <PilotSessionPanel />
+
+        {/* Validation Report Link */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-emerald-700" />
+            Báo cáo thử nghiệm
+          </h2>
+          <p className="text-xs text-slate-500">
+            Xem tổng hợp các chỉ số kích hoạt (A1/A2/A3), thao tác thành công, khó khăn và khả năng chi trả (WTP).
+          </p>
+          <SecondaryButton fullWidth onClick={() => navigate('/validation')}>
+            Xem báo cáo thử nghiệm
+          </SecondaryButton>
         </div>
 
         {/* Local Backup */}
