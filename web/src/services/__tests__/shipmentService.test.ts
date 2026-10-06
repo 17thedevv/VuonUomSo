@@ -559,5 +559,65 @@ describe('Service: Shipment & Physical Fulfillment', () => {
       const persistedShip = (await db.shipments.get(shipment.id))!
       expect(persistedShip.status).toBe('planned')
     })
+
+    it('rejects confirmShipment when persisted shipment has empty lines', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt persisted shipment: lines = []
+      shipment.lines = []
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Chuyến giao không có dòng phân bổ cây.')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+    })
+
+    it('rejects confirmShipment when sum of lines does not match plannedQuantity', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt persisted shipment: plannedQuantity modified to 8000 but line is 5000
+      shipment.plannedQuantity = 8000
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Tổng số cây trong các dòng không khớp với số lượng dự kiến của chuyến giao.')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+    })
+
+    it('rejects confirmShipment when persisted shipment has duplicate reservation lines', async () => {
+      const { shipment } = await createShipment({
+        orderId: ORDER_ID,
+        lines: [{ reservationId: RES_OWN_ID, quantity: 5000 }]
+      })
+
+      // Corrupt persisted shipment: duplicate line for same reservationId
+      shipment.lines = [
+        { reservationId: RES_OWN_ID, sourceType: 'own_batch', batchId: BATCH_ID, quantity: 2000 },
+        { reservationId: RES_OWN_ID, sourceType: 'own_batch', batchId: BATCH_ID, quantity: 3000 }
+      ]
+      await db.shipments.put(shipment)
+
+      await expect(
+        confirmShipment({ shipmentId: shipment.id })
+      ).rejects.toThrow('Chuyến giao có dòng giữ cây bị trùng lặp.')
+
+      const batch = (await db.batches.get(BATCH_ID))!
+      expect(batch.currentQuantity).toBe(45200)
+      expect(batch.readyQuantity).toBe(32000)
+    })
   })
 })
