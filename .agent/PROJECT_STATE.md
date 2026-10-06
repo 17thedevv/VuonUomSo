@@ -25,7 +25,7 @@
 | **P3** | **Reservation** | **DONE** | Đã hoàn thành (Giữ cây từ lô nội bộ, giữ cây từ nguồn ngoài, nhả giữ cây, chống bán khống, undo, tests) |
 | **P4** | **Shipment** | **DONE / FROZEN** | Đã hoàn thành và đóng băng (Lên danh sách chuyến xe, giao hàng từng phần, trừ tồn kho vật lý current & ready, commit-time validation & atomicity, tests) |
 | **P5** | **Dossier + Backup** | **DONE** | Đã hoàn thành (Hồ sơ nguồn gốc lô cây, chứng từ tham chiếu, in/lưu nội bộ; Sao lưu/khôi phục toàn bộ workspace JSON versioned, atomic transaction rollback, validation, tests) |
-| **P6** | **Validation Instrumentation**| **NOT STARTED** | Giai đoạn tiếp theo: Đo lường sự kiện sử dụng, câu hỏi khảo sát pilot |
+| **P6** | **Validation Instrumentation**| **NEXT** | Đo lường sự kiện sử dụng, câu hỏi khảo sát pilot phục vụ quyết định GO/PIVOT/STOP |
 | **STOP**| **USER VALIDATION** | **FROZEN** | **DỪNG CODE**: Sau P6, dừng toàn bộ code để mang ra vườn cho người dùng thật thử |
 
 ---
