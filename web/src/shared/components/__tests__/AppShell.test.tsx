@@ -104,4 +104,20 @@ describe('Responsive Navigation & AppShell', () => {
     expect(screen.queryByRole('complementary', { name: 'Thanh điều hướng bên' })).not.toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument()
   })
+
+  it('AppShell respects hideMobileNavOnly by hiding only mobile bottom nav while keeping desktop sidebar', () => {
+    render(
+      <MemoryRouter initialEntries={['/orders/new']}>
+        <AppShell hideMobileNavOnly>
+          <div data-testid="form-content">Tạo đơn mới</div>
+        </AppShell>
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId('form-content')).toBeInTheDocument()
+    // Desktop sidebar is preserved
+    expect(screen.getByRole('complementary', { name: 'Thanh điều hướng bên' })).toBeInTheDocument()
+    // Mobile bottom navigation is hidden
+    expect(screen.queryByRole('navigation', { name: 'Điều hướng chính' })).not.toBeInTheDocument()
+  })
 })

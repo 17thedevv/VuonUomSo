@@ -35,6 +35,17 @@ const RootLayout: React.FC = () => {
   )
 }
 
+const FOCUSED_TASK_ROUTES = [
+  /^\/orders\/new$/,
+  /^\/batches\/new$/,
+  /^\/shipments\/new$/,
+  /^\/orders\/[^/]+\/reserve$/,
+  /^\/dossiers\/[^/]+$/
+]
+
+const isFocusedTaskRoute = (pathname: string): boolean =>
+  FOCUSED_TASK_ROUTES.some((pattern) => pattern.test(pathname))
+
 /**
  * Route guard ensuring user has completed onboarding before accessing core features.
  */
@@ -68,8 +79,10 @@ const AppShellLayout: React.FC = () => {
     return <Navigate to="/onboarding" replace />
   }
 
+  const isFocusedTask = isFocusedTaskRoute(location.pathname)
+
   return (
-    <AppShell>
+    <AppShell hideMobileNavOnly={isFocusedTask}>
       <Outlet />
     </AppShell>
   )

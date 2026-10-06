@@ -21,7 +21,8 @@ import {
   Calendar,
   FileText,
   PackageCheck,
-  Ban
+  Ban,
+  ChevronRight
 } from 'lucide-react'
 
 export const ShipmentDetailScreen: React.FC = () => {
@@ -116,7 +117,11 @@ export const ShipmentDetailScreen: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
-      <PageHeader title={`Chuyến giao #${shipment.id}`} showBack backTo="/shipments" />
+      <PageHeader
+        title={customer?.name ? `Chuyến giao · ${customer.name}` : 'Chi tiết chuyến giao'}
+        showBack
+        backTo="/shipments"
+      />
 
       <div className="max-w-6xl mx-auto w-full p-4 sm:p-6 pb-16">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start space-y-4 lg:space-y-0">
@@ -195,9 +200,10 @@ export const ShipmentDetailScreen: React.FC = () => {
                 <span className="text-slate-500">Đơn hàng liên kết:</span>
                 <Link
                   to={`/orders/${order.id}`}
-                  className="font-bold text-emerald-700 hover:underline"
+                  className="font-bold text-emerald-700 hover:underline inline-flex items-center gap-1 min-h-[36px] py-1"
                 >
-                  #{order.id} (Xem chi tiết)
+                  <span>Đơn {order.variety} ({formatQuantity(order.requestedQuantity)} cây)</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-emerald-600" />
                 </Link>
               </div>
             </div>

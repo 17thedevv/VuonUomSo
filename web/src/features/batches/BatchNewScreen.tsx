@@ -231,12 +231,12 @@ export const BatchNewScreen: React.FC = () => {
                 </div>
               )}
 
-              {/* Primary Submit CTA */}
-              <div className="pt-2">
+              {/* Primary Submit CTA - Sticky bottom on mobile for one-thumb reach */}
+              <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pt-2 sm:pb-0 sm:bg-transparent sm:static border-t border-slate-100 sm:border-0 z-10 shadow-xs sm:shadow-none">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full min-h-[48px] py-3.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xs flex items-center justify-center gap-2"
+                  className="w-full min-h-[48px] py-3.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
                 >
                   <Sprout className="w-5 h-5" />
                   <span>{isSubmitting ? 'ĐANG LƯU LÔ...' : 'LƯU LÔ CÂY'}</span>
