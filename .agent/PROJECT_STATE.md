@@ -21,8 +21,8 @@
 | :--- | :--- | :--- | :--- |
 | **P0** | **Foundation** | **DONE** | Đã hoàn thành (AppShell, Dexie IDB, Routing, Seed, Parser, Tests) |
 | **P1** | **Read-only UX** | **DONE** | Đã hoàn thành (Today, Batches, BatchDetail, Orders, OrderDetail, Invariants, Tests) |
-| **P2** | **Core Write Flow** | **NEXT (CURRENT)** | **ĐƯỢC PHÉP**: Form nhập lô mới, form ghi đơn nhanh, cập nhật kiểm kê số lượng |
-| **P3** | **Reservation** | **NOT STARTED** | **CẤM LÀM TRƯỚC**: Giữ cây từ lô nội bộ, giữ cây từ nguồn ngoài, nhả giữ cây |
+| **P2** | **Core Write Flow** | **DONE** | Đã hoàn thành (Create Batch, Update Inventory, Quick Contact, Create Order, Undo, Invariants, Tests) |
+| **P3** | **Reservation** | **NEXT** | **ĐƯỢC PHÉP Ở TASK TIẾP THEO**: Giữ cây từ lô nội bộ, giữ cây từ nguồn ngoài, nhả giữ cây |
 | **P4** | **Shipment** | **NOT STARTED** | **CẤM LÀM TRƯỚC**: Lên chuyến xe, giao hàng từng phần, ghi nhận hao hụt |
 | **P5** | **Dossier + Backup** | **NOT STARTED** | **CẤM LÀM TRƯỚC**: Xuất hồ sơ nguồn gốc giống cây, sao lưu/phục hồi chuyên sâu |
 | **P6** | **Validation Instrumentation**| **NOT STARTED** | **CẤM LÀM TRƯỚC**: Đo lường sự kiện sử dụng, câu hỏi khảo sát pilot |

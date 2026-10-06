@@ -59,8 +59,9 @@ Triển khai theo thứ tự từ trong ra ngoài:
 - **QUY TẮC**: Không xây dựng hạ tầng/hàm trừu tượng cho những yêu cầu chưa tồn tại trong task hiện tại.
 
 ### Bước 4 — Kiểm chứng nghiêm ngặt (Verification):
-Chạy đầy đủ 4 lệnh kiểm tra trước khi hoàn thành:
+Chạy đầy đủ 4 lệnh kiểm tra từ thư mục `web/` trước khi hoàn thành:
 ```bash
+cd web
 npm run typecheck   # TypeScript strict, không any, không lỗi type
 npm run lint        # Oxlint, 0 errors, 0 warnings
 npm test            # Vitest, 100% test suites pass
