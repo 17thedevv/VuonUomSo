@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { db } from '../../data/db'
 import { PilotSessionPanel } from '../validation/PilotSessionPanel'
 import { ValidationReportScreen } from '../validation/ValidationReportScreen'
+import { PilotToolsScreen } from '../validation/PilotToolsScreen'
 import { validationRepository } from '../../validation/validation.repository'
+import * as validationExportModule from '../../validation/validationExport'
 
 describe('Validation UI Components', () => {
   beforeEach(async () => {
@@ -125,6 +127,71 @@ describe('Validation UI Components', () => {
         expect(screen.getByText('KÍCH HOẠT')).toBeInTheDocument()
         expect(screen.getByText(/BẰNG CHỨNG VALIDATION \(SO VỚI MỤC TIÊU\)/i)).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('PilotToolsScreen', () => {
+    it('renders tools screen and triggers export download', async () => {
+      const exportSpy = vi.spyOn(validationExportModule, 'exportValidationData').mockResolvedValue({
+        filename: 'vuon-uom-validation-2026-10-07-0010.json',
+        exportData: {} as any
+      })
+
+      render(
+        <MemoryRouter>
+          <PilotToolsScreen />
+        </MemoryRouter>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Công cụ thử nghiệm')).toBeInTheDocument()
+        expect(screen.getByText(/Tải tệp dữ liệu thử nghiệm \(JSON\)/i)).toBeInTheDocument()
+        expect(screen.getByText(/Xóa toàn bộ dữ liệu thử nghiệm/i)).toBeInTheDocument()
+      })
+
+      const exportBtn = screen.getByRole('button', { name: /Tải tệp dữ liệu thử nghiệm \(JSON\)/i })
+      fireEvent.click(exportBtn)
+
+      await waitFor(() => {
+        expect(exportSpy).toHaveBeenCalled()
+        expect(screen.getByText(/Đã tải về tệp dữ liệu thử nghiệm: vuon-uom-validation-2026-10-07-0010.json/i)).toBeInTheDocument()
+      })
+
+      exportSpy.mockRestore()
+    })
+
+    it('handles clearing validation data with confirmation dialog', async () => {
+      await validationRepository.savePilotSession({
+        id: 'sess_clear_ui',
+        participantCode: 'P11',
+        consent: 'accepted',
+        startedAt: new Date().toISOString()
+      })
+
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+      render(
+        <MemoryRouter>
+          <PilotToolsScreen />
+        </MemoryRouter>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Công cụ thử nghiệm')).toBeInTheDocument()
+      })
+
+      const clearBtn = screen.getByRole('button', { name: /Xóa toàn bộ dữ liệu thử nghiệm/i })
+      fireEvent.click(clearBtn)
+
+      await waitFor(() => {
+        expect(confirmSpy).toHaveBeenCalled()
+        expect(screen.getByText(/Đã xóa sạch toàn bộ dữ liệu phiên và sự kiện thử nghiệm/i)).toBeInTheDocument()
+      })
+
+      const remaining = await validationRepository.getAllPilotSessions()
+      expect(remaining).toHaveLength(0)
+
+      confirmSpy.mockRestore()
     })
   })
 })

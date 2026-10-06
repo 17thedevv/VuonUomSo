@@ -8,6 +8,7 @@ import {
   settingsRepository
 } from '../repositories'
 import { resetDemoData, clearAllData } from '../seed'
+import { validationRepository } from '../../validation/validation.repository'
 import { availableQuantityForBatch, reservedQuantityForBatch } from '../../domain/quantity'
 import type { Organization } from '../../domain/organization'
 
@@ -124,5 +125,109 @@ describe('Repository & Persistence Boundary', () => {
     expect(contacts).toHaveLength(0)
     expect(orders).toHaveLength(0)
     expect(onboarded).toBeNull()
+  })
+
+  it('resetDemoData() preserves validation research history while restoring business demo data', async () => {
+    // 1. Seed a pilot session and a validation event
+    await validationRepository.savePilotSession({
+      id: 'sess_preserve_01',
+      participantCode: 'P01',
+      consent: 'accepted',
+      startedAt: '2026-10-06T10:00:00.000Z'
+    })
+    await validationRepository.recordValidationEvent({
+      id: 'evt_preserve_01',
+      sessionId: 'sess_preserve_01',
+      participantCode: 'P01',
+      mode: 'pilot',
+      type: 'action_completed',
+      action: 'batch_created',
+      createdAt: '2026-10-06T10:05:00.000Z'
+    })
+
+    // 2. Call resetDemoData()
+    await resetDemoData()
+
+    // 3. Business demo data is present
+    const batches = await batchRepository.getAll()
+    expect(batches.length).toBe(3)
+    const org = await organizationRepository.getCurrent()
+    expect(org?.name).toBe('Vườn Hồng Anh')
+
+    // 4. Pilot research session and telemetry events are PRESERVED
+    const sessions = await validationRepository.getAllPilotSessions()
+    expect(sessions.length).toBe(1)
+    expect(sessions[0].id).toBe('sess_preserve_01')
+    expect(sessions[0].participantCode).toBe('P01')
+
+    const events = await validationRepository.getAllValidationEvents()
+    expect(events.length).toBe(1)
+    expect(events[0].id).toBe('evt_preserve_01')
+    expect(events[0].action).toBe('batch_created')
+  })
+
+  it('clearAllData() (factory reset) completely clears BOTH business data and validation research history', async () => {
+    await resetDemoData()
+    await validationRepository.savePilotSession({
+      id: 'sess_factory_01',
+      participantCode: 'P05',
+      consent: 'accepted',
+      startedAt: '2026-10-06T10:00:00.000Z'
+    })
+    await validationRepository.recordValidationEvent({
+      id: 'evt_factory_01',
+      sessionId: 'sess_factory_01',
+      participantCode: 'P05',
+      mode: 'pilot',
+      type: 'screen_viewed',
+      route: 'batches',
+      createdAt: '2026-10-06T10:01:00.000Z'
+    })
+
+    // Perform factory reset
+    await clearAllData()
+
+    // Business tables are empty
+    expect(await organizationRepository.getCurrent()).toBeNull()
+    expect(await batchRepository.getAll()).toHaveLength(0)
+    expect(await orderRepository.getAll()).toHaveLength(0)
+
+    // Validation tables are also completely empty
+    expect(await validationRepository.getAllPilotSessions()).toHaveLength(0)
+    expect(await validationRepository.getAllValidationEvents()).toHaveLength(0)
+  })
+
+  it('clearValidationData() clears validation research history while leaving all business data intact', async () => {
+    await resetDemoData()
+    await validationRepository.savePilotSession({
+      id: 'sess_privacy_01',
+      participantCode: 'P09',
+      consent: 'accepted',
+      startedAt: '2026-10-06T10:00:00.000Z'
+    })
+    await validationRepository.recordValidationEvent({
+      id: 'evt_privacy_01',
+      sessionId: 'sess_privacy_01',
+      participantCode: 'P09',
+      mode: 'pilot',
+      type: 'screen_viewed',
+      route: 'today',
+      createdAt: '2026-10-06T10:01:00.000Z'
+    })
+
+    // Clear validation research data only
+    await validationRepository.clearValidationData()
+
+    // Validation tables are empty
+    expect(await validationRepository.getAllPilotSessions()).toHaveLength(0)
+    expect(await validationRepository.getAllValidationEvents()).toHaveLength(0)
+
+    // Business records remain completely intact
+    const org = await organizationRepository.getCurrent()
+    expect(org?.name).toBe('Vườn Hồng Anh')
+    const batches = await batchRepository.getAll()
+    expect(batches.length).toBe(3)
+    const orders = await orderRepository.getAll()
+    expect(orders.length).toBe(3)
   })
 })
