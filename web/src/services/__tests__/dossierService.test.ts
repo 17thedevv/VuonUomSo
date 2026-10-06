@@ -112,7 +112,8 @@ describe('Service: Batch Dossier', () => {
     // Verify update event recorded
     const events = await db.events.toArray()
     expect(events.length).toBe(2)
-    expect(events[1].type).toBe('dossier_updated')
+    expect(events.some((e) => e.type === 'dossier_created')).toBe(true)
+    expect(events.some((e) => e.type === 'dossier_updated')).toBe(true)
   })
 
   it('rejects saving dossier for non-existent batch (orphan guard)', async () => {
