@@ -57,7 +57,7 @@ export const UndoBanner: React.FC = () => {
     <div
       role="region"
       aria-label="Thông báo hoàn tác"
-      className="fixed bottom-20 left-4 right-4 z-40 max-w-[420px] mx-auto animate-in fade-in slide-in-from-bottom-3 duration-200"
+      className="fixed bottom-20 left-4 right-4 lg:bottom-6 lg:right-6 lg:left-auto lg:mx-0 z-40 max-w-[420px] mx-auto animate-in fade-in slide-in-from-bottom-3 duration-200"
     >
       <div className="bg-slate-900/95 backdrop-blur-xs text-white p-3.5 rounded-2xl shadow-xl border border-slate-700/80 flex items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 min-w-0 flex-1">

@@ -14,19 +14,15 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   background-color: #f1f5f9;
-  display: flex;
-  justify-content: center;
 }
 
 #root {
   width: 100%;
-  max-width: 440px;
+  min-width: 0;
   min-height: 100vh;
   min-height: 100dvh;
-  background-color: #ffffff;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 20px -5px rgba(0, 0, 0, 0.05);
 }
 
 /* Ensure mobile tap target sizing */
