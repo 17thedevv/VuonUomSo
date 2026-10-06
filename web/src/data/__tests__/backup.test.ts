@@ -474,8 +474,8 @@ describe('Data: Backup & Restore System', () => {
         settings: [{ key: 'currentOrganizationId', value: 'org_1' }],
         contacts: [{ id: 'c_1', name: 'Khách', roles: ['customer'] }],
         batches: [
-          { id: 'b_1', code: 'B1', variety: 'Keo', initialQuantity: 1000, currentQuantity: 1000, readyQuantity: 1000, status: 'ready' },
-          { id: 'b_2', code: 'B2', variety: 'Bạch đàn', initialQuantity: 2000, currentQuantity: 2000, readyQuantity: 2000, status: 'ready' }
+          { id: 'b_1', code: 'B1', variety: 'Keo', initialQuantity: 1000, currentQuantity: 1000, readyQuantity: 1000, status: 'ready', createdAt: '2026-10-01' },
+          { id: 'b_2', code: 'B2', variety: 'Bạch đàn', initialQuantity: 2000, currentQuantity: 2000, readyQuantity: 2000, status: 'ready', createdAt: '2026-10-01' }
         ],
         orders: [
           { id: 'o_1', customerId: 'c_1', variety: 'Keo', requestedQuantity: 500, status: 'reserved' }
@@ -746,7 +746,7 @@ describe('Data: Backup & Restore System', () => {
             createdAt: '2026-10-01'
           }
         ],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'partially_shipped' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'partially_shipped' }],
         reservations: [
           {
             id: 'r1',
@@ -799,7 +799,7 @@ describe('Data: Backup & Restore System', () => {
             createdAt: '2026-10-01'
           }
         ],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'open' }],
         reservations: [
           {
             id: 'r1',
@@ -852,7 +852,7 @@ describe('Data: Backup & Restore System', () => {
             createdAt: '2026-10-01'
           }
         ],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'open' }],
         reservations: [
           {
             id: 'r1',
@@ -905,7 +905,7 @@ describe('Data: Backup & Restore System', () => {
             createdAt: '2026-10-01'
           }
         ],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'open' }],
         reservations: [
           {
             id: 'r1',
@@ -950,7 +950,7 @@ describe('Data: Backup & Restore System', () => {
         settings: [],
         contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
         batches: [],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'open' }],
         reservations: [],
         shipments: [
           { id: 's1', orderId: 'o1', status: 'planned', plannedQuantity: 1000, shippedQuantity: 0, lines: [] },
@@ -987,7 +987,7 @@ describe('Data: Backup & Restore System', () => {
             createdAt: '2026-10-01'
           }
         ],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 30000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 30000, status: 'open' }],
         reservations: [
           {
             id: 'r1',
@@ -1029,7 +1029,7 @@ describe('Data: Backup & Restore System', () => {
         settings: [],
         contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
         batches: [],
-        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        orders: [{ id: 'o1', customerId: 'c1', variety: 'Keo', requestedQuantity: 5000, status: 'open' }],
         reservations: [],
         shipments: [
           { id: 's1', orderId: 'o1', status: 'cancelled', plannedQuantity: 1000, shippedQuantity: 500, lines: [] }
@@ -1063,6 +1063,202 @@ describe('Data: Backup & Restore System', () => {
     }
     await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
       'trỏ đến cơ sở không tồn tại trong danh sách'
+    )
+  })
+
+  it('Audit Test 14: rejects backup with invalid contact role', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Tài xế', roles: ['driver'] }],
+        batches: [],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Vai trò "driver" không hợp lệ'
+    )
+  })
+
+  it('Audit Test 15: rejects backup with invalid organization capability', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [{ id: 'org_1', name: 'Vườn', capabilities: ['banana'] }],
+        settings: [],
+        contacts: [],
+        batches: [],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Vai trò/năng lực "banana" không hợp lệ'
+    )
+  })
+
+  it('Audit Test 16: rejects backup with missing or null batch variety', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: null,
+            status: 'ready',
+            initialQuantity: 1000,
+            currentQuantity: 1000,
+            readyQuantity: 1000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Giống cây (variety) không được để trống'
+    )
+  })
+
+  it('Audit Test 17: rejects backup with missing or null order variety', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [],
+        orders: [
+          {
+            id: 'o1',
+            customerId: 'c1',
+            variety: '',
+            requestedQuantity: 500,
+            status: 'open'
+          }
+        ],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Giống cây (variety) không được để trống'
+    )
+  })
+
+  it('Audit Test 18: rejects backup with null dossier document', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 1000,
+            currentQuantity: 1000,
+            readyQuantity: 1000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [
+          {
+            id: 'd1',
+            batchId: 'b1',
+            materialType: 'seed',
+            documents: [null]
+          }
+        ],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Chứng từ thứ 1 không hợp lệ (không phải đối tượng)'
+    )
+  })
+
+  it('Audit Test 19: rejects backup with duplicate document id within same dossier', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 1000,
+            currentQuantity: 1000,
+            readyQuantity: 1000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [
+          {
+            id: 'd1',
+            batchId: 'b1',
+            materialType: 'seed',
+            documents: [
+              { id: 'doc1', title: 'Phiếu 1' },
+              { id: 'doc1', title: 'Phiếu 2' }
+            ]
+          }
+        ],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Trùng lặp mã chứng từ "doc1" trong cùng hồ sơ'
     )
   })
 })

@@ -1,6 +1,6 @@
 import type { VuonUomBackupV1 } from './backup.types'
 import { BACKUP_FORMAT, BACKUP_FORMAT_VERSION } from './backup.types'
-import type { Organization } from '../../domain/organization'
+import type { Organization, OrganizationCapability } from '../../domain/organization'
 import type { AppSetting } from '../db'
 import type { Contact } from '../../domain/contact'
 import type { Batch } from '../../domain/batch'
@@ -9,6 +9,24 @@ import type { Reservation } from '../../domain/reservation'
 import type { Shipment } from '../../domain/shipment'
 import type { BatchDossier } from '../../domain/dossier'
 import type { DomainEvent } from '../../analytics/events'
+
+const VALID_CAPABILITIES: ReadonlySet<OrganizationCapability> = new Set([
+  'produce',
+  'sell',
+  'buy',
+  'aggregate',
+  'transport'
+])
+
+function normalizeCapabilities(raw: unknown): OrganizationCapability[] {
+  if (!Array.isArray(raw)) {
+    return ['produce', 'sell']
+  }
+  const filtered = raw.filter((c): c is OrganizationCapability =>
+    typeof c === 'string' && VALID_CAPABILITIES.has(c as OrganizationCapability)
+  )
+  return filtered.length > 0 ? filtered : ['produce', 'sell']
+}
 
 /**
  * Normalizes an untrusted parsed JSON object into the standard VuonUomBackupV1 format.
@@ -125,9 +143,7 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
     const org: Organization = {
       id: String(rawOrg.id),
       name: String(rawOrg.name || 'Vườn Ươm'),
-      capabilities: Array.isArray(rawOrg.capabilities)
-        ? (rawOrg.capabilities as any)
-        : ['produce', 'sell']
+      capabilities: normalizeCapabilities(rawOrg.capabilities)
     }
     organizations.push(org)
     settings.push({ key: 'currentOrganizationId', value: org.id })
@@ -138,9 +154,7 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
         organizations.push({
           id: String(o.id),
           name: String(o.name || 'Vườn Ươm'),
-          capabilities: Array.isArray(o.capabilities)
-            ? (o.capabilities as any)
-            : ['produce', 'sell']
+          capabilities: normalizeCapabilities(o.capabilities)
         })
       }
     }
