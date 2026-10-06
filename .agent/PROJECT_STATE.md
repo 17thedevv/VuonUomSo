@@ -23,7 +23,7 @@
 | **P1** | **Read-only UX** | **DONE** | Đã hoàn thành (Today, Batches, BatchDetail, Orders, OrderDetail, Invariants, Tests) |
 | **P2** | **Core Write Flow** | **DONE** | Đã hoàn thành (Create Batch, Update Inventory, Quick Contact, Create Order, Undo, Invariants, Tests) |
 | **P3** | **Reservation** | **DONE** | Đã hoàn thành (Giữ cây từ lô nội bộ, giữ cây từ nguồn ngoài, nhả giữ cây, chống bán khống, undo, tests) |
-| **P4** | **Shipment** | **DONE** | Đã hoàn thành (Lên danh sách chuyến xe, giao hàng từng phần, trừ tồn kho vật lý current & ready, cập nhật trạng thái đơn, tests) |
+| **P4** | **Shipment** | **DONE / FROZEN** | Đã hoàn thành và đóng băng (Lên danh sách chuyến xe, giao hàng từng phần, trừ tồn kho vật lý current & ready, commit-time validation & atomicity, tests) |
 | **P5** | **Dossier + Backup** | **NEXT** | **ĐƯỢC PHÉP Ở TASK TIẾP THEO**: Xuất hồ sơ nguồn gốc giống cây, sao lưu/phục hồi chuyên sâu |
 | **P6** | **Validation Instrumentation**| **NOT STARTED** | **CẤM LÀM TRƯỚC**: Đo lường sự kiện sử dụng, câu hỏi khảo sát pilot |
 | **STOP**| **USER VALIDATION** | **FROZEN** | **DỪNG CODE**: Sau P6, dừng toàn bộ code để mang ra vườn cho người dùng thật thử |
