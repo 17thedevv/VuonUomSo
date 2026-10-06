@@ -1,28 +1,15 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { CalendarDays, Trees, ClipboardList, MoreHorizontal } from 'lucide-react'
-
-interface NavItem {
-  to: string
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-const navItems: NavItem[] = [
-  { to: '/today', label: 'Hôm nay', icon: CalendarDays },
-  { to: '/batches', label: 'Lô cây', icon: Trees },
-  { to: '/orders', label: 'Đơn hàng', icon: ClipboardList },
-  { to: '/more', label: 'Thêm', icon: MoreHorizontal }
-]
+import { NAV_ITEMS } from '../navigation'
 
 export const BottomNav: React.FC = () => {
   return (
     <nav
       aria-label="Điều hướng chính"
-      className="fixed bottom-0 left-0 right-0 z-30 mx-auto max-w-[440px] bg-white border-t border-slate-200 px-2 py-1 shadow-lg"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-30 w-full bg-white border-t border-slate-200 px-2 py-1 shadow-lg"
     >
       <div className="flex items-center justify-around h-[58px]">
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           return (
             <NavLink
