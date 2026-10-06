@@ -22,6 +22,18 @@ describe('Domain: Batch Dossier', () => {
     expect(deriveDossierCompleteness(undefined)).toBe('none')
   })
 
+  it('derives none completeness when dossier has unknown material and no source info', () => {
+    const emptyDossier: BatchDossier = {
+      id: 'dos_empty',
+      batchId: 'batch_empty',
+      materialType: 'unknown',
+      documents: [],
+      createdAt: '2026-10-01',
+      updatedAt: '2026-10-01'
+    }
+    expect(deriveDossierCompleteness(emptyDossier)).toBe('none')
+  })
+
   it('derives basic completeness when dossier exists without reference documents', () => {
     const dossier: BatchDossier = {
       id: 'dos_1',

@@ -23,25 +23,60 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
 
   const obj = raw as Record<string, unknown>
 
-  // Check if it's already a modern versioned backup
-  if (obj.format === BACKUP_FORMAT && obj.formatVersion === 1 && typeof obj.data === 'object' && obj.data !== null) {
+  // Check if future version
+  if (obj.format === BACKUP_FORMAT && typeof obj.formatVersion === 'number' && obj.formatVersion > BACKUP_FORMAT_VERSION) {
+    throw new Error('Bản sao này được tạo bởi phiên bản Vườn Ươm mới hơn. Hãy cập nhật ứng dụng trước khi khôi phục.')
+  }
+
+  // Check if modern V1 versioned backup
+  if (obj.format === BACKUP_FORMAT && obj.formatVersion === 1) {
+    if (typeof obj.data !== 'object' || obj.data === null || Array.isArray(obj.data)) {
+      throw new Error('Bản sao lưu V1 không hợp lệ: thiếu mục dữ liệu "data" hoặc sai định dạng.')
+    }
+
+    if (typeof obj.exportedAt !== 'string' || !obj.exportedAt.trim()) {
+      throw new Error('Bản sao lưu V1 không hợp lệ: thiếu thời điểm xuất "exportedAt".')
+    }
+
+    if (typeof obj.dbSchemaVersion !== 'number') {
+      throw new Error('Bản sao lưu V1 không hợp lệ: thiếu phiên bản cơ sở dữ liệu "dbSchemaVersion".')
+    }
+
     const dataObj = obj.data as Record<string, unknown>
-    const orgs = (Array.isArray(dataObj.organizations) ? dataObj.organizations : []) as Organization[]
-    const settings = (Array.isArray(dataObj.settings) ? dataObj.settings : []) as AppSetting[]
-    const contacts = (Array.isArray(dataObj.contacts) ? dataObj.contacts : []) as Contact[]
-    const batches = (Array.isArray(dataObj.batches) ? dataObj.batches : []) as Batch[]
-    const orders = (Array.isArray(dataObj.orders) ? dataObj.orders : []) as Order[]
-    const reservations = (Array.isArray(dataObj.reservations) ? dataObj.reservations : []) as Reservation[]
-    const shipments = (Array.isArray(dataObj.shipments) ? dataObj.shipments : []) as Shipment[]
-    const dossiers = (Array.isArray(dataObj.dossiers) ? dataObj.dossiers : []) as BatchDossier[]
-    const events = (Array.isArray(dataObj.events) ? dataObj.events : []) as DomainEvent[]
+    const REQUIRED_TABLES = [
+      'organizations',
+      'settings',
+      'contacts',
+      'batches',
+      'orders',
+      'reservations',
+      'shipments',
+      'dossiers',
+      'events'
+    ] as const
+
+    for (const table of REQUIRED_TABLES) {
+      if (!Array.isArray(dataObj[table])) {
+        throw new Error(`Bản sao lưu V1 không hợp lệ: bảng "${table}" phải là một danh sách (mảng).`)
+      }
+    }
+
+    const orgs = dataObj.organizations as Organization[]
+    const settings = dataObj.settings as AppSetting[]
+    const contacts = dataObj.contacts as Contact[]
+    const batches = dataObj.batches as Batch[]
+    const orders = dataObj.orders as Order[]
+    const reservations = dataObj.reservations as Reservation[]
+    const shipments = dataObj.shipments as Shipment[]
+    const dossiers = dataObj.dossiers as BatchDossier[]
+    const events = dataObj.events as DomainEvent[]
 
     return {
       format: BACKUP_FORMAT,
       formatVersion: BACKUP_FORMAT_VERSION,
-      exportedAt: typeof obj.exportedAt === 'string' ? obj.exportedAt : new Date().toISOString(),
+      exportedAt: obj.exportedAt,
       appVersion: typeof obj.appVersion === 'string' ? obj.appVersion : undefined,
-      dbSchemaVersion: typeof obj.dbSchemaVersion === 'number' ? obj.dbSchemaVersion : 4,
+      dbSchemaVersion: obj.dbSchemaVersion,
       recordCounts: {
         organizations: orgs.length,
         settings: settings.length,
@@ -67,9 +102,8 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
     }
   }
 
-  // Check if future version
-  if (obj.format === BACKUP_FORMAT && typeof obj.formatVersion === 'number' && obj.formatVersion > BACKUP_FORMAT_VERSION) {
-    throw new Error('Bản sao này được tạo bởi phiên bản Vườn Ươm mới hơn. Hãy cập nhật ứng dụng trước khi khôi phục.')
+  if (obj.format === BACKUP_FORMAT) {
+    throw new Error(`Phiên bản bản sao lưu không hợp lệ (formatVersion: ${String(obj.formatVersion)}).`)
   }
 
   // Detect Legacy DatabaseBackup (P0-P4 format)
@@ -87,13 +121,27 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
   const settings: AppSetting[] = []
 
   if (obj.organization && typeof obj.organization === 'object' && 'id' in (obj.organization as object)) {
-    const org = obj.organization as Organization
+    const rawOrg = obj.organization as Record<string, unknown>
+    const org: Organization = {
+      id: String(rawOrg.id),
+      name: String(rawOrg.name || 'Vườn Ươm'),
+      capabilities: Array.isArray(rawOrg.capabilities)
+        ? (rawOrg.capabilities as any)
+        : ['produce', 'sell']
+    }
     organizations.push(org)
     settings.push({ key: 'currentOrganizationId', value: org.id })
   } else if (Array.isArray(obj.organizations)) {
-    for (const org of obj.organizations) {
-      if (org && typeof org === 'object' && 'id' in org) {
-        organizations.push(org as Organization)
+    for (const rawOrg of obj.organizations) {
+      if (rawOrg && typeof rawOrg === 'object' && 'id' in rawOrg) {
+        const o = rawOrg as Record<string, unknown>
+        organizations.push({
+          id: String(o.id),
+          name: String(o.name || 'Vườn Ươm'),
+          capabilities: Array.isArray(o.capabilities)
+            ? (o.capabilities as any)
+            : ['produce', 'sell']
+        })
       }
     }
   }
@@ -106,6 +154,11 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
         }
       }
     }
+  }
+
+  // Ensure single legacy organization gets currentOrganizationId setting if missing
+  if (organizations.length === 1 && !settings.some((s) => s.key === 'currentOrganizationId')) {
+    settings.push({ key: 'currentOrganizationId', value: organizations[0].id })
   }
 
   const contacts = (Array.isArray(obj.contacts) ? obj.contacts : []) as Contact[]

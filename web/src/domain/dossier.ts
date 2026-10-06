@@ -67,7 +67,20 @@ export function deriveDossierCompleteness(dossier: BatchDossier | null | undefin
 
   if (hasReferenceDoc) return 'referenced'
 
-  return 'basic'
+  const hasMeaningfulSource = Boolean(
+    (dossier.materialType && dossier.materialType !== 'unknown') ||
+    (dossier.sourceName && dossier.sourceName.trim()) ||
+    (dossier.sourceLocation && dossier.sourceLocation.trim()) ||
+    (dossier.sourceLotCode && dossier.sourceLotCode.trim()) ||
+    (dossier.supplierContactId && dossier.supplierContactId.trim()) ||
+    (dossier.receivedAt && dossier.receivedAt.trim()) ||
+    (dossier.propagatedAt && dossier.propagatedAt.trim()) ||
+    (dossier.note && dossier.note.trim())
+  )
+
+  if (hasMeaningfulSource) return 'basic'
+
+  return 'none'
 }
 
 /**

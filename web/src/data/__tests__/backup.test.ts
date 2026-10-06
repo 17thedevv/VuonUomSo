@@ -457,6 +457,7 @@ describe('Data: Backup & Restore System', () => {
       format: 'vuonuom-backup',
       formatVersion: 1,
       exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
       recordCounts: {
         organizations: 1,
         settings: 1,
@@ -469,7 +470,7 @@ describe('Data: Backup & Restore System', () => {
         events: 0
       },
       data: {
-        organizations: [{ id: 'org_1', name: 'Vườn Mẫu' }],
+        organizations: [{ id: 'org_1', name: 'Vườn Mẫu', capabilities: ['produce'] }],
         settings: [{ key: 'currentOrganizationId', value: 'org_1' }],
         contacts: [{ id: 'c_1', name: 'Khách', roles: ['customer'] }],
         batches: [
@@ -516,6 +517,7 @@ describe('Data: Backup & Restore System', () => {
       format: 'vuonuom-backup',
       formatVersion: 1,
       exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
       recordCounts: {
         organizations: 0,
         settings: 0,
@@ -571,5 +573,496 @@ describe('Data: Backup & Restore System', () => {
     // The new batch was NOT committed
     const newBatch = await db.batches.get('batch_new')
     expect(newBatch).toBeUndefined()
+  })
+
+  // =========================================================================
+  // P5 Audit Regression Tests (13 Specific Validation Scenarios)
+  // =========================================================================
+
+  it('Audit Test 1: rejects modern V1 backup missing a table and leaves database untouched', async () => {
+    await seedRichWorkspace()
+    const invalidV1 = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: []
+        // missing batches, orders, etc.
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(invalidV1))).rejects.toThrow(
+      'bảng "batches" phải là một danh sách'
+    )
+    const org = await db.organizations.get('org_test_01')
+    expect(org).not.toBeNull()
+  })
+
+  it('Audit Test 2: rejects modern V1 backup with table of wrong type and leaves database untouched', async () => {
+    await seedRichWorkspace()
+    const invalidV1 = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: 'CORRUPTED',
+        batches: [],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(invalidV1))).rejects.toThrow(
+      'bảng "contacts" phải là một danh sách'
+    )
+    const org = await db.organizations.get('org_test_01')
+    expect(org).not.toBeNull()
+  })
+
+  it('Audit Test 3: rejects backup with null or malformed entity with friendly error', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [null],
+        batches: [],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Bản ghi thứ 1 trong bảng contacts không hợp lệ'
+    )
+  })
+
+  it('Audit Test 4: rejects backup containing unknown batch/order/reservation/shipment status', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'banana',
+            initialQuantity: 100,
+            currentQuantity: 100,
+            readyQuantity: 100,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Trạng thái "banana" không hợp lệ'
+    )
+  })
+
+  it('Audit Test 5: rejects backup containing unknown dossier materialType', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 100,
+            currentQuantity: 100,
+            readyQuantity: 100,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [
+          {
+            id: 'd1',
+            batchId: 'b1',
+            materialType: 'rootstock_xyz',
+            documents: []
+          }
+        ],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Loại vật liệu giống "rootstock_xyz" không hợp lệ'
+    )
+  })
+
+  it('Audit Test 6: rejects backup when completed shipment line quantity does not reconcile with reservation.fulfilledQuantity', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 10000,
+            currentQuantity: 10000,
+            readyQuantity: 10000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'partially_shipped' }],
+        reservations: [
+          {
+            id: 'r1',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 5000,
+            fulfilledQuantity: 0, // Mismatch with completed shipment line!
+            status: 'active'
+          }
+        ],
+        shipments: [
+          {
+            id: 's1',
+            orderId: 'o1',
+            status: 'completed',
+            plannedQuantity: 3000,
+            shippedQuantity: 3000,
+            lines: [{ reservationId: 'r1', sourceType: 'own_batch', batchId: 'b1', quantity: 3000 }]
+          }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'vượt quá số lượng đã giao ghi nhận'
+    )
+  })
+
+  it('Audit Test 7: rejects backup when planned line quantity exceeds reservation remaining', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 10000,
+            currentQuantity: 10000,
+            readyQuantity: 10000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        reservations: [
+          {
+            id: 'r1',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 2000,
+            fulfilledQuantity: 0,
+            status: 'active'
+          }
+        ],
+        shipments: [
+          {
+            id: 's1',
+            orderId: 'o1',
+            status: 'planned',
+            plannedQuantity: 3000, // 3000 > 2000 remaining
+            shippedQuantity: 0,
+            lines: [{ reservationId: 'r1', sourceType: 'own_batch', batchId: 'b1', quantity: 3000 }]
+          }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'vượt quá số lượng giữ còn lại'
+    )
+  })
+
+  it('Audit Test 8: rejects backup when planned shipment references non-active reservation', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 10000,
+            currentQuantity: 10000,
+            readyQuantity: 10000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        reservations: [
+          {
+            id: 'r1',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 2000,
+            fulfilledQuantity: 2000,
+            status: 'fulfilled'
+          }
+        ],
+        shipments: [
+          {
+            id: 's1',
+            orderId: 'o1',
+            status: 'planned',
+            plannedQuantity: 2000,
+            shippedQuantity: 0,
+            lines: [{ reservationId: 'r1', sourceType: 'own_batch', batchId: 'b1', quantity: 2000 }]
+          }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Không thể lên chuyến dự kiến từ khoản giữ cây đã kết thúc hoặc đã hủy'
+    )
+  })
+
+  it('Audit Test 9: rejects backup when shipment contains duplicate reservation lines', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 10000,
+            currentQuantity: 10000,
+            readyQuantity: 10000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        reservations: [
+          {
+            id: 'r1',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 4000,
+            fulfilledQuantity: 0,
+            status: 'active'
+          }
+        ],
+        shipments: [
+          {
+            id: 's1',
+            orderId: 'o1',
+            status: 'planned',
+            plannedQuantity: 4000,
+            shippedQuantity: 0,
+            lines: [
+              { reservationId: 'r1', sourceType: 'own_batch', batchId: 'b1', quantity: 2000 },
+              { reservationId: 'r1', sourceType: 'own_batch', batchId: 'b1', quantity: 2000 }
+            ]
+          }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'bị trùng lặp trong chuyến giao'
+    )
+  })
+
+  it('Audit Test 10: rejects backup containing two planned shipments for the same order', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        reservations: [],
+        shipments: [
+          { id: 's1', orderId: 'o1', status: 'planned', plannedQuantity: 1000, shippedQuantity: 0, lines: [] },
+          { id: 's2', orderId: 'o1', status: 'planned', plannedQuantity: 1000, shippedQuantity: 0, lines: [] }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'có nhiều hơn 1 chuyến giao đang chờ'
+    )
+  })
+
+  it('Audit Test 11: rejects backup when order reservation coverage exceeds requestedQuantity', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [
+          {
+            id: 'b1',
+            code: 'B1',
+            variety: 'Keo',
+            status: 'ready',
+            initialQuantity: 50000,
+            currentQuantity: 50000,
+            readyQuantity: 50000,
+            createdAt: '2026-10-01'
+          }
+        ],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 30000, status: 'open' }],
+        reservations: [
+          {
+            id: 'r1',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 20000,
+            fulfilledQuantity: 0,
+            status: 'active'
+          },
+          {
+            id: 'r2',
+            orderId: 'o1',
+            sourceType: 'own_batch',
+            batchId: 'b1',
+            quantity: 20000, // 20k + 20k = 40k > 30k requested!
+            fulfilledQuantity: 0,
+            status: 'active'
+          }
+        ],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'vượt quá số lượng khách đặt'
+    )
+  })
+
+  it('Audit Test 12: rejects backup when cancelled shipment has shippedQuantity > 0', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [],
+        settings: [],
+        contacts: [{ id: 'c1', name: 'Khách', roles: ['customer'] }],
+        batches: [],
+        orders: [{ id: 'o1', customerId: 'c1', requestedQuantity: 5000, status: 'open' }],
+        reservations: [],
+        shipments: [
+          { id: 's1', orderId: 'o1', status: 'cancelled', plannedQuantity: 1000, shippedQuantity: 500, lines: [] }
+        ],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'Chuyến đã hủy nhưng số lượng xuất khác 0'
+    )
+  })
+
+  it('Audit Test 13: rejects backup when currentOrganizationId points to non-existent organization', async () => {
+    const badBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T15:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [{ id: 'org_real', name: 'Vườn Real', capabilities: ['produce'] }],
+        settings: [{ key: 'currentOrganizationId', value: 'org_ghost' }],
+        contacts: [],
+        batches: [],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+    await expect(restoreWorkspaceBackup(JSON.stringify(badBackup))).rejects.toThrow(
+      'trỏ đến cơ sở không tồn tại trong danh sách'
+    )
   })
 })

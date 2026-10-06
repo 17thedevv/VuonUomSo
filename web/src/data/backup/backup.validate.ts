@@ -6,6 +6,14 @@ export interface ValidationResult {
   errors: string[]
 }
 
+function isRecord(val: unknown): val is Record<string, unknown> {
+  return typeof val === 'object' && val !== null && !Array.isArray(val)
+}
+
+function isNonEmptyString(val: unknown): val is string {
+  return typeof val === 'string' && val.trim().length > 0
+}
+
 function isPositiveInteger(val: unknown): boolean {
   return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val > 0
 }
@@ -14,14 +22,40 @@ function isNonNegativeInteger(val: unknown): boolean {
   return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val >= 0
 }
 
+// Whitelisted enum values
+const KNOWN_BATCH_STATUSES = new Set(['propagating', 'nearly_ready', 'ready', 'depleted'])
+const KNOWN_ORDER_STATUSES = new Set([
+  'open',
+  'partially_reserved',
+  'reserved',
+  'partially_shipped',
+  'shipped',
+  'cancelled'
+])
+const KNOWN_RESERVATION_STATUSES = new Set(['active', 'fulfilled', 'released'])
+const KNOWN_RESERVATION_SOURCE_TYPES = new Set(['own_batch', 'external_supplier'])
+const KNOWN_SHIPMENT_STATUSES = new Set(['planned', 'completed', 'cancelled'])
+const KNOWN_MATERIAL_TYPES = new Set([
+  'seed',
+  'cutting',
+  'tissue_culture',
+  'seedling',
+  'other',
+  'unknown'
+])
+const KNOWN_CONTACT_ROLES = new Set(['customer', 'supplier', 'driver', 'partner', 'other'])
+
 /**
  * Performs deep runtime validation of a normalized VuonUomBackupV1 object.
  * Enforces:
  * 1. Envelope format and version boundaries.
  * 2. Duplicate ID rejection across all collections.
- * 3. Quantity invariants on Batches, Orders, Reservations, and Shipments.
- * 4. Referential integrity between related entities.
- * 5. Domain invariants (e.g. outstanding reservation <= readyQuantity).
+ * 3. Type guards and enum validation on all entities.
+ * 4. Quantity invariants on Batches, Orders, Reservations, and Shipments.
+ * 5. Referential integrity between related entities.
+ * 6. Cross-entity domain invariants (outstanding reservation <= readyQuantity,
+ *    order reservation coverage <= requestedQuantity, one planned shipment per order,
+ *    planned line allocation <= reservation remaining, shipment fulfillment reconciliation).
  */
 export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
   const errors: string[] = []
@@ -37,6 +71,11 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     return { valid: false, errors }
   }
 
+  if (!backup.data || !isRecord(backup.data)) {
+    errors.push('Mục dữ liệu "data" trong bản sao không hợp lệ.')
+    return { valid: false, errors }
+  }
+
   const {
     organizations = [],
     settings = [],
@@ -47,14 +86,19 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     shipments = [],
     dossiers = [],
     events = []
-  } = backup.data || {}
+  } = backup.data
 
-  // 2. Duplicate ID validation
-  const checkDuplicateIds = (items: { id?: string }[], tableName: string) => {
+  // 2. Duplicate ID & Record Object Shape validation
+  const checkDuplicateIdsAndRecords = (items: unknown[], tableName: string) => {
     const seen = new Set<string>()
-    for (const item of items) {
-      if (!item.id || typeof item.id !== 'string') {
-        errors.push(`Bản ghi trong bảng ${tableName} thiếu mã định danh (id).`)
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (!isRecord(item)) {
+        errors.push(`Bản ghi thứ ${i + 1} trong bảng ${tableName} không hợp lệ (không phải đối tượng).`)
+        continue
+      }
+      if (!isNonEmptyString(item.id)) {
+        errors.push(`Bản ghi thứ ${i + 1} trong bảng ${tableName} thiếu mã định danh (id).`)
         continue
       }
       if (seen.has(item.id)) {
@@ -64,20 +108,25 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
-  checkDuplicateIds(organizations, 'organizations')
-  checkDuplicateIds(contacts, 'contacts')
-  checkDuplicateIds(batches, 'batches')
-  checkDuplicateIds(orders, 'orders')
-  checkDuplicateIds(reservations, 'reservations')
-  checkDuplicateIds(shipments, 'shipments')
-  checkDuplicateIds(dossiers, 'dossiers')
-  checkDuplicateIds(events, 'events')
+  checkDuplicateIdsAndRecords(organizations, 'organizations')
+  checkDuplicateIdsAndRecords(contacts, 'contacts')
+  checkDuplicateIdsAndRecords(batches, 'batches')
+  checkDuplicateIdsAndRecords(orders, 'orders')
+  checkDuplicateIdsAndRecords(reservations, 'reservations')
+  checkDuplicateIdsAndRecords(shipments, 'shipments')
+  checkDuplicateIdsAndRecords(dossiers, 'dossiers')
+  checkDuplicateIdsAndRecords(events, 'events')
 
   // Check duplicate settings keys
   const settingKeys = new Set<string>()
-  for (const s of settings) {
-    if (!s.key || typeof s.key !== 'string') {
-      errors.push('Bản ghi cài đặt thiếu khóa (key).')
+  for (let i = 0; i < settings.length; i++) {
+    const s = settings[i] as unknown
+    if (!isRecord(s)) {
+      errors.push(`Bản ghi thứ ${i + 1} trong bảng settings không hợp lệ.`)
+      continue
+    }
+    if (!isNonEmptyString(s.key)) {
+      errors.push(`Bản ghi thứ ${i + 1} trong bảng cài đặt thiếu khóa (key).`)
       continue
     }
     if (settingKeys.has(s.key)) {
@@ -86,10 +135,27 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     settingKeys.add(s.key)
   }
 
+  // Check currentOrganizationId in settings
+  const orgMap = new Map(
+    organizations
+      .filter(isRecord)
+      .filter((o) => isNonEmptyString(o.id))
+      .map((o) => [o.id as string, o])
+  )
+  const currentOrgSetting = settings.find((s) => isRecord(s) && s.key === 'currentOrganizationId')
+  if (currentOrgSetting && isRecord(currentOrgSetting)) {
+    const orgIdVal = String(currentOrgSetting.value)
+    if (!orgMap.has(orgIdVal)) {
+      errors.push(`Cài đặt cơ sở hiện tại (currentOrganizationId: "${orgIdVal}") trỏ đến cơ sở không tồn tại trong danh sách.`)
+    }
+  } else if (organizations.length > 1) {
+    errors.push('Bản sao lưu có nhiều hơn một cơ sở nhưng thiếu cài đặt cơ sở hiện tại (currentOrganizationId).')
+  }
+
   // Check 1:1 invariant for dossiers: one dossier per batch
   const dossierBatchIds = new Set<string>()
   for (const d of dossiers) {
-    if (d.batchId) {
+    if (isRecord(d) && isNonEmptyString(d.batchId)) {
       if (dossierBatchIds.has(d.batchId)) {
         errors.push(`Lô cây "${d.batchId}" có nhiều hơn 1 hồ sơ lô cây trong bản sao.`)
       }
@@ -98,13 +164,65 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
   }
 
   // Maps for fast referential lookups
-  const contactMap = new Map(contacts.map((c) => [c.id, c]))
-  const batchMap = new Map(batches.map((b) => [b.id, b]))
-  const orderMap = new Map(orders.map((o) => [o.id, o]))
-  const reservationMap = new Map(reservations.map((r) => [r.id, r]))
+  const contactMap = new Map(
+    contacts
+      .filter(isRecord)
+      .filter((c) => isNonEmptyString(c.id))
+      .map((c) => [c.id as string, c])
+  )
+  const batchMap = new Map(
+    batches
+      .filter(isRecord)
+      .filter((b) => isNonEmptyString(b.id))
+      .map((b) => [b.id as string, b])
+  )
+  const orderMap = new Map(
+    orders
+      .filter(isRecord)
+      .filter((o) => isNonEmptyString(o.id))
+      .map((o) => [o.id as string, o])
+  )
+  const reservationMap = new Map(
+    reservations
+      .filter(isRecord)
+      .filter((r) => isNonEmptyString(r.id))
+      .map((r) => [r.id as string, r])
+  )
 
-  // 3. Batch validations
+  // 3. Organization entity validation
+  for (const o of organizations) {
+    if (!isRecord(o)) continue
+    if (!isNonEmptyString(o.name)) {
+      errors.push(`Cơ sở "${o.id}": Tên cơ sở không được để trống.`)
+    }
+    if (!Array.isArray(o.capabilities)) {
+      errors.push(`Cơ sở "${o.id}": Danh sách vai trò/năng lực (capabilities) phải là mảng.`)
+    }
+  }
+
+  // 4. Contact entity validation
+  for (const c of contacts) {
+    if (!isRecord(c)) continue
+    if (!isNonEmptyString(c.name)) {
+      errors.push(`Liên hệ "${c.id}": Tên liên hệ không được để trống.`)
+    }
+    if (!Array.isArray(c.roles) || c.roles.length === 0) {
+      errors.push(`Liên hệ "${c.id}": Phải có ít nhất một vai trò (roles).`)
+    } else {
+      for (const role of c.roles) {
+        if (!KNOWN_CONTACT_ROLES.has(String(role))) {
+          errors.push(`Liên hệ "${c.id}": Vai trò "${String(role)}" không hợp lệ.`)
+        }
+      }
+    }
+  }
+
+  // 5. Batch validations
   for (const b of batches) {
+    if (!isRecord(b)) continue
+    if (!isNonEmptyString(b.status) || !KNOWN_BATCH_STATUSES.has(b.status)) {
+      errors.push(`Lô "${b.code || b.id}": Trạng thái "${String(b.status)}" không hợp lệ.`)
+    }
     if (!isNonNegativeInteger(b.initialQuantity)) {
       errors.push(`Lô "${b.code || b.id}": Số lượng ban đầu phải là số nguyên không âm.`)
     }
@@ -123,8 +241,12 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
-  // 4. Order validations
+  // 6. Order validations
   for (const o of orders) {
+    if (!isRecord(o)) continue
+    if (!isNonEmptyString(o.status) || !KNOWN_ORDER_STATUSES.has(o.status)) {
+      errors.push(`Đơn hàng "${o.id}": Trạng thái "${String(o.status)}" không hợp lệ.`)
+    }
     if (!isPositiveInteger(o.requestedQuantity)) {
       errors.push(`Đơn hàng "${o.id}": Số lượng đặt phải là số nguyên lớn hơn 0.`)
     }
@@ -133,8 +255,15 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
-  // 5. Reservation validations
+  // 7. Reservation validations
   for (const r of reservations) {
+    if (!isRecord(r)) continue
+    if (!isNonEmptyString(r.status) || !KNOWN_RESERVATION_STATUSES.has(r.status)) {
+      errors.push(`Bản ghi giữ cây "${r.id}": Trạng thái "${String(r.status)}" không hợp lệ.`)
+    }
+    if (!isNonEmptyString(r.sourceType) || !KNOWN_RESERVATION_SOURCE_TYPES.has(r.sourceType)) {
+      errors.push(`Bản ghi giữ cây "${r.id}": Loại nguồn "${String(r.sourceType)}" không hợp lệ.`)
+    }
     if (!isPositiveInteger(r.quantity)) {
       errors.push(`Bản ghi giữ cây "${r.id}": Số lượng giữ phải là số nguyên lớn hơn 0.`)
     }
@@ -144,6 +273,18 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
     if (fulfilled > r.quantity) {
       errors.push(`Bản ghi giữ cây "${r.id}": Số lượng đã giao (${fulfilled}) vượt quá số lượng giữ (${r.quantity}).`)
+    }
+
+    // Reservation status semantics
+    if (r.status === 'fulfilled' && fulfilled !== r.quantity) {
+      errors.push(
+        `Bản ghi giữ cây "${r.id}": Trạng thái đã hoàn thành (fulfilled) nhưng số lượng đã giao (${fulfilled}) không bằng số lượng giữ (${r.quantity}).`
+      )
+    }
+    if (r.status === 'active' && fulfilled >= r.quantity) {
+      errors.push(
+        `Bản ghi giữ cây "${r.id}": Trạng thái đang giữ (active) nhưng số lượng đã giao (${fulfilled}) đã đạt hoặc vượt quá số lượng giữ (${r.quantity}).`
+      )
     }
 
     if (!orderMap.has(r.orderId)) {
@@ -167,13 +308,38 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
           errors.push(`Bản ghi giữ cây "${r.id}": Liên hệ "${sup.name}" không có vai trò nhà cung cấp.`)
         }
       }
-    } else {
-      errors.push(`Bản ghi giữ cây "${r.id}": Loại nguồn "${r.sourceType}" không hợp lệ.`)
     }
   }
 
-  // 6. Shipment validations
+  // 8. Order reservation coverage check (P3 over-reservation prevention)
+  for (const o of orders) {
+    if (!isRecord(o)) continue
+    const orderReservations = reservations.filter((r) => r.orderId === o.id)
+    const coveredQuantity = orderReservations.reduce((sum, r) => {
+      if (r.status === 'active' || r.status === 'fulfilled') {
+        return sum + (Number(r.quantity) || 0)
+      }
+      if (r.status === 'released') {
+        return sum + (Number(r.fulfilledQuantity) || 0)
+      }
+      return sum
+    }, 0)
+
+    if (coveredQuantity > o.requestedQuantity) {
+      errors.push(
+        `Đơn hàng "${o.id}": Tổng số lượng giữ (${coveredQuantity}) vượt quá số lượng khách đặt (${o.requestedQuantity}).`
+      )
+    }
+  }
+
+  // 9. Shipment validations
+  const plannedOrderIds = new Set<string>()
+
   for (const s of shipments) {
+    if (!isRecord(s)) continue
+    if (!isNonEmptyString(s.status) || !KNOWN_SHIPMENT_STATUSES.has(s.status)) {
+      errors.push(`Chuyến giao "${s.id}": Trạng thái "${String(s.status)}" không hợp lệ.`)
+    }
     if (!orderMap.has(s.orderId)) {
       errors.push(`Chuyến giao "${s.id}": Đơn hàng "${s.orderId}" không tồn tại.`)
     }
@@ -184,49 +350,145 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
       errors.push(`Chuyến giao "${s.id}": Số lượng đã xuất phải là số nguyên không âm.`)
     }
 
-    const lines = s.lines ?? []
+    const lines = Array.isArray(s.lines) ? s.lines : []
+    const seenReservationInShipment = new Set<string>()
+
+    for (const line of lines) {
+      if (!isRecord(line)) {
+        errors.push(`Chuyến giao "${s.id}": Dòng phân bổ không phải đối tượng hợp lệ.`)
+        continue
+      }
+      if (!isPositiveInteger(line.quantity)) {
+        errors.push(`Chuyến giao "${s.id}": Dòng phân bổ số lượng phải là số nguyên lớn hơn 0.`)
+      }
+
+      if (!isNonEmptyString(line.reservationId)) {
+        errors.push(`Chuyến giao "${s.id}": Dòng phân bổ thiếu mã giữ cây (reservationId).`)
+        continue
+      }
+
+      // Duplicate reservationId inside shipment
+      if (seenReservationInShipment.has(line.reservationId)) {
+        errors.push(`Chuyến giao "${s.id}": Dòng giữ cây "${line.reservationId}" bị trùng lặp trong chuyến giao.`)
+      }
+      seenReservationInShipment.add(line.reservationId)
+
+      const res = reservationMap.get(line.reservationId)
+      if (!res) {
+        errors.push(`Chuyến giao "${s.id}": Bản ghi giữ cây "${line.reservationId}" không tồn tại.`)
+        continue
+      }
+
+      if (res.orderId !== s.orderId) {
+        errors.push(`Chuyến giao "${s.id}": Nguồn giữ cây "${line.reservationId}" không thuộc đơn hàng này.`)
+      }
+      if (line.sourceType !== res.sourceType) {
+        errors.push(`Chuyến giao "${s.id}": Loại nguồn của dòng không khớp với bản ghi giữ cây.`)
+      }
+      if (res.sourceType === 'own_batch' && line.batchId !== res.batchId) {
+        errors.push(`Chuyến giao "${s.id}": Mã lô cây của dòng không khớp với bản ghi giữ cây.`)
+      }
+      if (res.sourceType === 'external_supplier' && line.supplierId !== res.supplierId) {
+        errors.push(`Chuyến giao "${s.id}": Nhà cung cấp của dòng không khớp với bản ghi giữ cây.`)
+      }
+
+      // Invariant for planned shipments
+      if (s.status === 'planned') {
+        if (res.status !== 'active') {
+          errors.push(
+            `Chuyến giao "${s.id}": Không thể lên chuyến dự kiến từ khoản giữ cây đã kết thúc hoặc đã hủy (trạng thái: "${res.status}").`
+          )
+        }
+        const remaining = res.quantity - (res.fulfilledQuantity ?? 0)
+        if (line.quantity > remaining) {
+          errors.push(
+            `Chuyến giao "${s.id}": Số lượng dòng giao (${line.quantity}) vượt quá số lượng giữ còn lại (${remaining}).`
+          )
+        }
+      }
+    }
+
     if (lines.length > 0) {
-      let sumLines = 0
-      for (const line of lines) {
-        if (!isPositiveInteger(line.quantity)) {
-          errors.push(`Chuyến giao "${s.id}": Dòng phân bổ số lượng phải là số nguyên lớn hơn 0.`)
-        }
-        sumLines += line.quantity
-
-        const res = reservationMap.get(line.reservationId)
-        if (!res) {
-          errors.push(`Chuyến giao "${s.id}": Bản ghi giữ cây "${line.reservationId}" không tồn tại.`)
-        } else {
-          if (res.orderId !== s.orderId) {
-            errors.push(`Chuyến giao "${s.id}": Nguồn giữ cây "${line.reservationId}" không thuộc đơn hàng này.`)
-          }
-          if (line.sourceType !== res.sourceType) {
-            errors.push(`Chuyến giao "${s.id}": Loại nguồn của dòng không khớp với bản ghi giữ cây.`)
-          }
-          if (res.sourceType === 'own_batch' && line.batchId !== res.batchId) {
-            errors.push(`Chuyến giao "${s.id}": Mã lô cây của dòng không khớp với bản ghi giữ cây.`)
-          }
-          if (res.sourceType === 'external_supplier' && line.supplierId !== res.supplierId) {
-            errors.push(`Chuyến giao "${s.id}": Nhà cung cấp của dòng không khớp với bản ghi giữ cây.`)
-          }
-        }
-      }
-
+      const sumLines = lines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0)
       if (sumLines !== s.plannedQuantity) {
-        errors.push(`Chuyến giao "${s.id}": Tổng số lượng các dòng (${sumLines}) không khớp với số lượng dự kiến (${s.plannedQuantity}).`)
+        errors.push(
+          `Chuyến giao "${s.id}": Tổng số lượng các dòng (${sumLines}) không khớp với số lượng dự kiến (${s.plannedQuantity}).`
+        )
       }
     }
 
-    if (s.status === 'completed' && lines.length > 0 && s.shippedQuantity !== s.plannedQuantity) {
-      errors.push(`Chuyến giao "${s.id}": Chuyến đã giao nhưng số xuất (${s.shippedQuantity}) không bằng số dự kiến (${s.plannedQuantity}).`)
+    // Status constraints
+    if (s.status === 'planned') {
+      if (s.shippedQuantity !== 0) {
+        errors.push(`Chuyến giao "${s.id}": Chuyến đang chờ giao nhưng số xuất khác 0 (${s.shippedQuantity}).`)
+      }
+      // One planned shipment per order invariant
+      if (plannedOrderIds.has(s.orderId)) {
+        errors.push(`Đơn hàng "${s.orderId}" có nhiều hơn 1 chuyến giao đang chờ (planned).`)
+      }
+      plannedOrderIds.add(s.orderId)
+    } else if (s.status === 'completed') {
+      if (s.shippedQuantity !== s.plannedQuantity) {
+        errors.push(`Chuyến giao "${s.id}": Chuyến đã giao nhưng số xuất (${s.shippedQuantity}) không bằng số dự kiến (${s.plannedQuantity}).`)
+      }
+    } else if (s.status === 'cancelled') {
+      if (s.shippedQuantity !== 0) {
+        errors.push(`Chuyến giao "${s.id}": Chuyến đã hủy nhưng số lượng xuất khác 0 (${s.shippedQuantity}).`)
+      }
     }
-    if (s.status === 'planned' && s.shippedQuantity !== 0) {
-      errors.push(`Chuyến giao "${s.id}": Chuyến đang chờ giao nhưng số xuất khác 0 (${s.shippedQuantity}).`)
+
+    // Planned shipment total cannot exceed remaining unfulfilled order quantity
+    if (s.status === 'planned') {
+      const targetOrder = orderMap.get(s.orderId)
+      if (targetOrder) {
+        const completedShippedForOrder = shipments
+          .filter((other) => other.orderId === s.orderId && other.status === 'completed')
+          .reduce((sum, other) => sum + other.shippedQuantity, 0)
+        const remainingOrder = targetOrder.requestedQuantity - completedShippedForOrder
+        if (s.plannedQuantity > remainingOrder) {
+          errors.push(
+            `Chuyến giao "${s.id}": Số lượng dự kiến (${s.plannedQuantity}) vượt quá số cây còn lại của đơn hàng (${remainingOrder}).`
+          )
+        }
+      }
     }
   }
 
-  // 7. Dossier validations
+  // 10. Cross-entity: Completed Shipment Lines vs Reservation Fulfillment Reconciliation
+  for (const r of reservations) {
+    if (!isRecord(r)) continue
+    let completedAllocatedToRes = 0
+    let hasCompletedLines = false
+
+    for (const s of shipments) {
+      if (s.status === 'completed' && Array.isArray(s.lines)) {
+        for (const line of s.lines) {
+          if (line.reservationId === r.id) {
+            hasCompletedLines = true
+            completedAllocatedToRes += Number(line.quantity) || 0
+          }
+        }
+      }
+    }
+
+    const resFulfilled = r.fulfilledQuantity ?? 0
+    if (completedAllocatedToRes > resFulfilled) {
+      errors.push(
+        `Bản ghi giữ cây "${r.id}": Tổng số lượng đã xuất trong các chuyến giao (${completedAllocatedToRes}) vượt quá số lượng đã giao ghi nhận (${resFulfilled}).`
+      )
+    } else if (hasCompletedLines && completedAllocatedToRes !== resFulfilled) {
+      errors.push(
+        `Bản ghi giữ cây "${r.id}": Số lượng đã giao ghi nhận (${resFulfilled}) không khớp với tổng số lượng đã xuất trong các chuyến giao (${completedAllocatedToRes}).`
+      )
+    }
+  }
+
+  // 11. Dossier validations
   for (const d of dossiers) {
+    if (!isRecord(d)) continue
+    if (!isNonEmptyString(d.materialType) || !KNOWN_MATERIAL_TYPES.has(d.materialType)) {
+      errors.push(`Hồ sơ lô cây "${d.id}": Loại vật liệu giống "${String(d.materialType)}" không hợp lệ.`)
+    }
     if (!batchMap.has(d.batchId)) {
       errors.push(`Hồ sơ lô cây "${d.id}": Lô cây "${d.batchId}" không tồn tại.`)
     }
@@ -238,11 +500,14 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
         errors.push(`Hồ sơ lô cây "${d.id}": Liên hệ "${sup.name}" không có vai trò nhà cung cấp.`)
       }
     }
+    if (d.documents !== undefined && !Array.isArray(d.documents)) {
+      errors.push(`Hồ sơ lô cây "${d.id}": Danh mục chứng từ (documents) phải là mảng.`)
+    }
   }
 
-  // 8. Cross-entity Domain Invariant Validation
-  // Invariant 1: For each batch, active outstanding reservations <= readyQuantity
+  // 12. Batch outstanding reservation vs readyQuantity
   for (const b of batches) {
+    if (!isRecord(b)) continue
     const activeOutstanding = reservations
       .filter((r) => r.sourceType === 'own_batch' && r.batchId === b.id && r.status === 'active')
       .reduce((sum, r) => sum + (r.quantity - (r.fulfilledQuantity ?? 0)), 0)
@@ -254,8 +519,9 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
-  // Invariant 2: For each order, total completed shipped <= requestedQuantity
+  // 13. Order total completed shipped <= requestedQuantity
   for (const o of orders) {
+    if (!isRecord(o)) continue
     const totalShipped = shipments
       .filter((s) => s.orderId === o.id && s.status === 'completed')
       .reduce((sum, s) => sum + s.shippedQuantity, 0)

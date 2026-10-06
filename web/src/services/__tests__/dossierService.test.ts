@@ -159,7 +159,7 @@ describe('Service: Batch Dossier', () => {
     expect(res.dossier.documents.length).toBe(0)
 
     const completeness = getDossierCompleteness(res.dossier)
-    expect(completeness).toBe('basic')
+    expect(completeness).toBe('none')
   })
 
   it('cleans out completely empty document references', async () => {
