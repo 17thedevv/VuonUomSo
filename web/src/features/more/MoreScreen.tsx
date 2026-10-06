@@ -259,18 +259,23 @@ export const MoreScreen: React.FC = () => {
         {/* Pilot Tools & Survey */}
         <PilotSessionPanel />
 
-        {/* Validation Report Link */}
+        {/* Validation Report & Tools Link */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-emerald-700" />
-            Báo cáo thử nghiệm
+            Công cụ thử nghiệm & Báo cáo
           </h2>
           <p className="text-xs text-slate-500">
-            Xem tổng hợp các chỉ số kích hoạt (A1/A2/A3), thao tác thành công, khó khăn và khả năng chi trả (WTP).
+            Xem tổng hợp các chỉ số kích hoạt (A1/A2/A3), WTP, xuất tệp dữ liệu thử nghiệm và quản lý phiên nghiên cứu thực địa.
           </p>
-          <SecondaryButton fullWidth onClick={() => navigate('/validation')}>
-            Xem báo cáo thử nghiệm
-          </SecondaryButton>
+          <div className="flex flex-col gap-2 pt-1">
+            <SecondaryButton fullWidth onClick={() => navigate('/validation')}>
+              Xem báo cáo thử nghiệm
+            </SecondaryButton>
+            <SecondaryButton fullWidth onClick={() => navigate('/pilot-tools')}>
+              Mở công cụ thử nghiệm (Xuất & Xóa telemetry)
+            </SecondaryButton>
+          </div>
         </div>
 
         {/* Local Backup */}

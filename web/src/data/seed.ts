@@ -12,9 +12,11 @@ import {
   orderRepository,
   reservationRepository,
   shipmentRepository,
+  dossierRepository,
   eventRepository,
   settingsRepository
 } from './repositories'
+import { validationRepository } from '../validation/validation.repository'
 
 export const DEMO_ORGANIZATION: Organization = {
   id: 'org_hong_anh',
@@ -252,11 +254,28 @@ export const DEMO_EVENTS: DomainEvent[] = [
 ]
 
 /**
+ * Clears only business data tables (organizations, contacts, batches, orders, reservations, shipments, dossiers, events, settings).
+ * Preserves validation research telemetry (pilotSessions, validationEvents).
+ */
+export async function clearBusinessData(): Promise<void> {
+  await organizationRepository.clear()
+  await contactRepository.clear()
+  await batchRepository.clear()
+  await orderRepository.clear()
+  await reservationRepository.clear()
+  await shipmentRepository.clear()
+  await dossierRepository.clear()
+  await eventRepository.clear()
+  await settingsRepository.clear()
+}
+
+/**
  * Resets the database and seeds the standard demo dataset.
+ * Preserves validation history (pilot sessions and validation telemetry).
  */
 export async function resetDemoData(): Promise<void> {
-  // Clear all data
-  await clearAllData()
+  // Clear business data while preserving validation history
+  await clearBusinessData()
 
   // Populate demo data
   await organizationRepository.save(DEMO_ORGANIZATION)
@@ -291,9 +310,10 @@ export async function resetDemoData(): Promise<void> {
 
 /**
  * Clears demo transactions and enters Pilot mode with empty batches/orders.
+ * Preserves validation history.
  */
 export async function resetToPilotWorkspace(orgName = 'Vườn của tôi'): Promise<void> {
-  await clearAllData()
+  await clearBusinessData()
 
   const pilotOrg: Organization = {
     id: `org_${Date.now()}`,
@@ -315,14 +335,9 @@ export async function resetToPilotWorkspace(orgName = 'Vườn của tôi'): Pro
 
 /**
  * Completely clears all local data and returns to pristine initial state (un-onboarded).
+ * Factory reset: clears both business data and validation research telemetry.
  */
 export async function clearAllData(): Promise<void> {
-  await organizationRepository.clear()
-  await contactRepository.clear()
-  await batchRepository.clear()
-  await orderRepository.clear()
-  await reservationRepository.clear()
-  await shipmentRepository.clear()
-  await eventRepository.clear()
-  await settingsRepository.clear()
+  await clearBusinessData()
+  await validationRepository.clearValidationData()
 }

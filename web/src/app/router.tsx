@@ -23,6 +23,7 @@ import { ShipmentDetailScreen } from '../features/shipments/ShipmentDetailScreen
 import { BatchDossierScreen } from '../features/dossiers/BatchDossierScreen'
 import { MoreScreen } from '../features/more/MoreScreen'
 import { ValidationReportScreen } from '../features/validation/ValidationReportScreen'
+import { PilotToolsScreen } from '../features/validation/PilotToolsScreen'
 import { ValidationRouteTracker } from '../validation/ValidationRouteTracker'
 
 const RootLayout: React.FC = () => {
@@ -169,6 +170,10 @@ const router = createBrowserRouter([
           {
             path: '/validation',
             element: <ValidationReportScreen />
+          },
+          {
+            path: '/pilot-tools',
+            element: <PilotToolsScreen />
           }
         ]
       },
