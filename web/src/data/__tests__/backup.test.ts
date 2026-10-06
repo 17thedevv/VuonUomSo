@@ -1261,4 +1261,107 @@ describe('Data: Backup & Restore System', () => {
       'Trùng lặp mã chứng từ "doc1" trong cùng hồ sơ'
     )
   })
+
+  it('Audit Test 20: exportWorkspaceBackup excludes pilotSessions and validationEvents from VuonUomBackupV1', async () => {
+    // Insert pilot session and validation event into DB
+    await db.pilotSessions.put({
+      id: 'psess_iso_01',
+      participantCode: 'P01',
+      consent: 'accepted',
+      startedAt: '2026-10-06T15:00:00.000Z'
+    })
+    await db.validationEvents.put({
+      id: 'vevt_iso_01',
+      sessionId: 'psess_iso_01',
+      participantCode: 'P01',
+      mode: 'pilot',
+      type: 'screen_viewed',
+      route: 'today',
+      createdAt: '2026-10-06T15:00:05.000Z'
+    })
+
+    const { backup } = await exportWorkspaceBackup()
+
+    // Backup envelope must only contain the 9 business entities
+    expect(backup.format).toBe('vuonuom-backup')
+    expect(backup.formatVersion).toBe(1)
+    expect(Object.keys(backup.data).sort()).toEqual([
+      'batches',
+      'contacts',
+      'dossiers',
+      'events',
+      'orders',
+      'organizations',
+      'reservations',
+      'settings',
+      'shipments'
+    ])
+    expect((backup as unknown as Record<string, unknown>).pilotSessions).toBeUndefined()
+    expect((backup as unknown as Record<string, unknown>).validationEvents).toBeUndefined()
+    expect((backup.data as unknown as Record<string, unknown>).pilotSessions).toBeUndefined()
+    expect((backup.data as unknown as Record<string, unknown>).validationEvents).toBeUndefined()
+  })
+
+  it('Audit Test 21: restoreWorkspaceBackup preserves existing pilot sessions and validation events', async () => {
+    // Seed existing validation telemetry
+    await db.pilotSessions.put({
+      id: 'psess_keep_01',
+      participantCode: 'P02',
+      consent: 'accepted',
+      startedAt: '2026-10-06T15:30:00.000Z'
+    })
+    await db.validationEvents.put({
+      id: 'vevt_keep_01',
+      sessionId: 'psess_keep_01',
+      participantCode: 'P02',
+      mode: 'pilot',
+      type: 'action_completed',
+      action: 'batch_created',
+      createdAt: '2026-10-06T15:31:00.000Z'
+    })
+
+    // Prepare a valid new workspace backup
+    const newWorkspaceBackup = {
+      format: 'vuonuom-backup',
+      formatVersion: 1,
+      exportedAt: '2026-10-06T16:00:00.000Z',
+      dbSchemaVersion: 4,
+      data: {
+        organizations: [{ id: 'org_restored', name: 'Vườn Mới Khôi Phục', capabilities: ['produce', 'sell'] }],
+        settings: [{ key: 'currentOrganizationId', value: 'org_restored' }],
+        contacts: [],
+        batches: [
+          {
+            id: 'b_restored',
+            code: 'BM-01',
+            variety: 'Bạch đàn',
+            status: 'ready',
+            initialQuantity: 5000,
+            currentQuantity: 5000,
+            readyQuantity: 5000,
+            createdAt: '2026-10-06'
+          }
+        ],
+        orders: [],
+        reservations: [],
+        shipments: [],
+        dossiers: [],
+        events: []
+      }
+    }
+
+    await restoreWorkspaceBackup(JSON.stringify(newWorkspaceBackup))
+
+    // Business workspace replaced
+    const restoredOrg = await db.organizations.get('org_restored')
+    expect(restoredOrg?.name).toBe('Vườn Mới Khôi Phục')
+
+    // Research validation data preserved
+    const preservedSession = await db.pilotSessions.get('psess_keep_01')
+    expect(preservedSession?.participantCode).toBe('P02')
+
+    const preservedEvents = await db.validationEvents.where('sessionId').equals('psess_keep_01').toArray()
+    expect(preservedEvents.length).toBe(1)
+    expect(preservedEvents[0].action).toBe('batch_created')
+  })
 })

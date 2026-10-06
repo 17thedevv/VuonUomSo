@@ -9,7 +9,8 @@ import {
   Info,
   ShieldCheck,
   Truck,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from 'lucide-react'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import {
@@ -23,7 +24,9 @@ import {
 import { settingsRepository, organizationRepository } from '../../data/repositories'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
+import { validationTracker } from '../../validation/validationTracker'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
+import { PilotSessionPanel } from '../validation/PilotSessionPanel'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -105,6 +108,7 @@ export const MoreScreen: React.FC = () => {
       const { jsonString } = await exportWorkspaceBackup()
       const filename = generateBackupFilename()
       downloadBackupFile(jsonString, filename)
+      void validationTracker.actionCompleted('backup_exported')
       setStatusMsg(`Đã tải tệp sao lưu về máy (${filename}).`)
     } catch (err) {
       console.error(err)
@@ -167,6 +171,7 @@ export const MoreScreen: React.FC = () => {
     setRestoreError(null)
     try {
       await restoreWorkspaceBackup(backupJsonString)
+      void validationTracker.actionCompleted('backup_restored')
       setStatusMsg('Đã khôi phục dữ liệu thành công!')
       setSelectedFileName(null)
       setBackupJsonString(null)
@@ -249,6 +254,28 @@ export const MoreScreen: React.FC = () => {
           <PrimaryButton onClick={handleResetDemo} disabled={isProcessing || isRestoring}>
             Cài lại dữ liệu mẫu (Reset demo data)
           </PrimaryButton>
+        </div>
+
+        {/* Pilot Tools & Survey */}
+        <PilotSessionPanel />
+
+        {/* Validation Report & Tools Link */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-emerald-700" />
+            Công cụ thử nghiệm & Báo cáo
+          </h2>
+          <p className="text-xs text-slate-500">
+            Xem tổng hợp các chỉ số kích hoạt (A1/A2/A3), WTP, xuất tệp dữ liệu thử nghiệm và quản lý phiên nghiên cứu thực địa.
+          </p>
+          <div className="flex flex-col gap-2 pt-1">
+            <SecondaryButton fullWidth onClick={() => navigate('/validation')}>
+              Xem báo cáo thử nghiệm
+            </SecondaryButton>
+            <SecondaryButton fullWidth onClick={() => navigate('/pilot-tools')}>
+              Mở công cụ thử nghiệm (Xuất & Xóa telemetry)
+            </SecondaryButton>
+          </div>
         </div>
 
         {/* Local Backup */}

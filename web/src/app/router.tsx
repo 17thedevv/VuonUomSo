@@ -22,6 +22,18 @@ import { ShipmentNewScreen } from '../features/shipments/ShipmentNewScreen'
 import { ShipmentDetailScreen } from '../features/shipments/ShipmentDetailScreen'
 import { BatchDossierScreen } from '../features/dossiers/BatchDossierScreen'
 import { MoreScreen } from '../features/more/MoreScreen'
+import { ValidationReportScreen } from '../features/validation/ValidationReportScreen'
+import { PilotToolsScreen } from '../features/validation/PilotToolsScreen'
+import { ValidationRouteTracker } from '../validation/ValidationRouteTracker'
+
+const RootLayout: React.FC = () => {
+  return (
+    <>
+      <ValidationRouteTracker />
+      <Outlet />
+    </>
+  )
+}
 
 /**
  * Route guard ensuring user has completed onboarding before accessing core features.
@@ -90,73 +102,86 @@ const RootRedirect: React.FC = () => {
 
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <RootRedirect />
-  },
-  {
-    path: '/onboarding',
-    element: <OnboardingScreen />
-  },
-  {
-    element: <AppShellLayout />,
+    element: <RootLayout />,
     children: [
       {
-        path: '/today',
-        element: <TodayScreen />
+        path: '/',
+        element: <RootRedirect />
       },
       {
-        path: '/batches',
-        element: <BatchesScreen />
+        path: '/onboarding',
+        element: <OnboardingScreen />
       },
       {
-        path: '/batches/new',
-        element: <BatchNewScreen />
+        element: <AppShellLayout />,
+        children: [
+          {
+            path: '/today',
+            element: <TodayScreen />
+          },
+          {
+            path: '/batches',
+            element: <BatchesScreen />
+          },
+          {
+            path: '/batches/new',
+            element: <BatchNewScreen />
+          },
+          {
+            path: '/batches/:id',
+            element: <BatchDetailScreen />
+          },
+          {
+            path: '/orders',
+            element: <OrdersScreen />
+          },
+          {
+            path: '/orders/new',
+            element: <OrderNewScreen />
+          },
+          {
+            path: '/orders/:id',
+            element: <OrderDetailScreen />
+          },
+          {
+            path: '/orders/:id/reserve',
+            element: <OrderReserveScreen />
+          },
+          {
+            path: '/shipments',
+            element: <ShipmentsScreen />
+          },
+          {
+            path: '/shipments/new',
+            element: <ShipmentNewScreen />
+          },
+          {
+            path: '/shipments/:id',
+            element: <ShipmentDetailScreen />
+          },
+          {
+            path: '/dossiers/:batchId',
+            element: <BatchDossierScreen />
+          },
+          {
+            path: '/more',
+            element: <MoreScreen />
+          },
+          {
+            path: '/validation',
+            element: <ValidationReportScreen />
+          },
+          {
+            path: '/pilot-tools',
+            element: <PilotToolsScreen />
+          }
+        ]
       },
       {
-        path: '/batches/:id',
-        element: <BatchDetailScreen />
-      },
-      {
-        path: '/orders',
-        element: <OrdersScreen />
-      },
-      {
-        path: '/orders/new',
-        element: <OrderNewScreen />
-      },
-      {
-        path: '/orders/:id',
-        element: <OrderDetailScreen />
-      },
-      {
-        path: '/orders/:id/reserve',
-        element: <OrderReserveScreen />
-      },
-      {
-        path: '/shipments',
-        element: <ShipmentsScreen />
-      },
-      {
-        path: '/shipments/new',
-        element: <ShipmentNewScreen />
-      },
-      {
-        path: '/shipments/:id',
-        element: <ShipmentDetailScreen />
-      },
-      {
-        path: '/dossiers/:batchId',
-        element: <BatchDossierScreen />
-      },
-      {
-        path: '/more',
-        element: <MoreScreen />
+        path: '*',
+        element: <Navigate to="/" replace />
       }
     ]
-  },
-  {
-    path: '*',
-    element: <Navigate to="/" replace />
   }
 ])
 

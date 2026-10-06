@@ -10,6 +10,7 @@ import { PageHeader } from '../../shared/components/PageHeader'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { AlertCircle, Truck, Calendar, FileText, CheckCircle2 } from 'lucide-react'
+import { validationTracker } from '../../validation/validationTracker'
 
 export const ShipmentNewScreen: React.FC = () => {
   const navigate = useNavigate()
@@ -23,6 +24,10 @@ export const ShipmentNewScreen: React.FC = () => {
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    void validationTracker.formStarted('shipment_planned')
+  }, [])
 
   useEffect(() => {
     if (!orderId) {
@@ -173,6 +178,7 @@ export const ShipmentNewScreen: React.FC = () => {
 
     if (totalPlanned <= 0) {
       setError('Vui lòng nhập số lượng cây cần giao lớn hơn 0.')
+      void validationTracker.actionFailed('shipment_planned', 'validation')
       return
     }
 
@@ -194,8 +200,10 @@ export const ShipmentNewScreen: React.FC = () => {
         note
       })
 
+      void validationTracker.actionCompleted('shipment_planned')
       navigate(`/shipments/${res.shipment.id}`, { replace: true })
     } catch (err: unknown) {
+      void validationTracker.actionFailed('shipment_planned', 'insufficient_stock')
       setError(err instanceof Error ? err.message : 'Không thể tạo chuyến giao.')
       setIsSubmitting(false)
     }

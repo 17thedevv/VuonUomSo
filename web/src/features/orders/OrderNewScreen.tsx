@@ -9,6 +9,7 @@ import type { Contact } from '../../domain/contact'
 import type { Batch } from '../../domain/batch'
 import { formatQuantity } from '../../domain/quantity'
 import { UserPlus, Calendar, Plus, AlertCircle, Info, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
+import { validationTracker } from '../../validation/validationTracker'
 
 const COMMON_VARIETIES = [
   'Keo lai BV16',
@@ -114,22 +115,29 @@ export const OrderNewScreen: React.FC = () => {
     return new Date(customDate).toISOString()
   }
 
+  useEffect(() => {
+    void validationTracker.formStarted('order_created')
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
 
     if (!customerId) {
       setFormError('Vui lòng chọn hoặc thêm khách hàng.')
+      void validationTracker.actionFailed('order_created', 'validation')
       return
     }
 
     if (!variety) {
       setFormError('Vui lòng chọn giống cây.')
+      void validationTracker.actionFailed('order_created', 'validation')
       return
     }
 
     if (!parsedQuantity || parsedQuantity <= 0) {
       setFormError('Vui lòng nhập số lượng cây đặt lớn hơn 0.')
+      void validationTracker.actionFailed('order_created', 'validation')
       return
     }
 
@@ -150,8 +158,10 @@ export const OrderNewScreen: React.FC = () => {
     setIsSubmitting(false)
 
     if (result.success && result.order) {
+      void validationTracker.actionCompleted('order_created')
       navigate(`/orders/${result.order.id}`, { replace: true })
     } else {
+      void validationTracker.actionFailed('order_created', 'storage')
       setFormError(result.error || 'Chưa lưu được đơn hàng. Vui lòng thử lại.')
     }
   }

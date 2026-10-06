@@ -8,6 +8,7 @@ import {
 } from '../../services/shipmentService'
 import { formatQuantity } from '../../domain/quantity'
 import { formatDate } from '../../domain/date'
+import { validationTracker } from '../../validation/validationTracker'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { StatusBadge } from '../../shared/components/StatusBadge'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
@@ -84,9 +85,11 @@ export const ShipmentDetailScreen: React.FC = () => {
 
     try {
       await confirmShipment({ shipmentId: shipment.id })
+      void validationTracker.actionCompleted('shipment_completed')
       setShowConfirmModal(false)
       await loadData()
     } catch (err: unknown) {
+      void validationTracker.actionFailed('shipment_completed', 'insufficient_stock')
       setActionError(err instanceof Error ? err.message : 'Lỗi khi xác nhận giao hàng.')
     } finally {
       setIsProcessing(false)
@@ -100,9 +103,11 @@ export const ShipmentDetailScreen: React.FC = () => {
 
     try {
       await cancelShipment({ shipmentId: shipment.id })
+      void validationTracker.actionCompleted('shipment_cancelled')
       setShowCancelModal(false)
       await loadData()
     } catch (err: unknown) {
+      void validationTracker.actionFailed('shipment_cancelled', 'domain_conflict')
       setActionError(err instanceof Error ? err.message : 'Lỗi khi hủy chuyến giao.')
     } finally {
       setIsProcessing(false)

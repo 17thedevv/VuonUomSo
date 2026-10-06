@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { Batch } from '../../domain/batch'
 import { updateBatchInventory } from '../../services/batchService'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { formatQuantity } from '../../domain/quantity'
 import { X, AlertTriangle, Info, ClipboardList } from 'lucide-react'
+import { validationTracker } from '../../validation/validationTracker'
 
 export interface InventoryUpdateModalProps {
   batch: Batch
@@ -25,6 +26,12 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (isOpen) {
+      void validationTracker.formStarted('inventory_updated')
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const difference =
@@ -41,7 +48,12 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting || parsedQuantity === null || isInvalid) return
+    if (isSubmitting || parsedQuantity === null || isInvalid) {
+      if (isInvalid) {
+        void validationTracker.actionFailed('inventory_updated', 'validation')
+      }
+      return
+    }
 
     setIsSubmitting(true)
     setErrorMessage(null)
@@ -55,9 +67,11 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
     setIsSubmitting(false)
 
     if (result.success && result.batch) {
+      void validationTracker.actionCompleted('inventory_updated')
       onSuccess(result.batch)
       onClose()
     } else {
+      void validationTracker.actionFailed('inventory_updated', 'storage')
       setErrorMessage(result.error || 'Có lỗi xảy ra khi cập nhật kiểm kê.')
     }
   }

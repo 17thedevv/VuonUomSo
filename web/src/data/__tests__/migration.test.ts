@@ -69,8 +69,8 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    // Verify database version is now 4
-    expect(appDb.verno).toBe(4)
+    // Verify database version is now 5
+    expect(appDb.verno).toBe(5)
 
     // 5. Verify existing data preserved
     const loadedBatch = await appDb.batches.get('batch_old')
@@ -158,7 +158,7 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    expect(appDb.verno).toBe(4)
+    expect(appDb.verno).toBe(5)
 
     // Check backfilled fulfilledQuantity on reservations
     const resActive = await appDb.reservations.get('res_active_v2')
@@ -254,7 +254,7 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    expect(appDb.verno).toBe(4)
+    expect(appDb.verno).toBe(5)
 
     // Check existing records preserved
     const batch = await appDb.batches.get('batch_p4')
@@ -288,6 +288,97 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     expect(foundDossier?.materialType).toBe('cutting')
     expect(foundDossier?.sourceName).toBe('Vườn cây đầu dòng Ba Vì')
     expect(foundDossier?.documents.length).toBe(1)
+
+    appDb.close()
+  })
+
+  it('migrates from v4 to v5 adding pilotSessions and validationEvents tables while preserving all data', async () => {
+    // 1. Create a pure v4 database instance simulating a user after Phase P5
+    const v4Db = new Dexie(testDbName)
+    v4Db.version(1).stores({
+      organizations: 'id, name',
+      settings: 'key',
+      contacts: 'id, name',
+      batches: 'id, code, variety, status, createdAt',
+      orders: 'id, customerId, status',
+      reservations: 'id, orderId, batchId, status',
+      shipments: 'id, orderId, status',
+      events: 'id, type, entityType, entityId, createdAt'
+    })
+    v4Db.version(2).stores({
+      reservations: 'id, orderId, batchId, supplierId, status'
+    })
+    v4Db.version(3).stores({
+      reservations: 'id, orderId, batchId, supplierId, status',
+      shipments: 'id, orderId, status, plannedDate, shippedAt, createdAt'
+    })
+    v4Db.version(4).stores({
+      dossiers: 'id, batchId, updatedAt'
+    })
+
+    await v4Db.open()
+
+    // Insert v4 records across multiple business tables
+    await v4Db.table('batches').add({
+      id: 'batch_p5',
+      code: 'DH17 #01',
+      variety: 'Bạch đàn DH17',
+      initialQuantity: 20000,
+      currentQuantity: 18000,
+      readyQuantity: 16000,
+      status: 'ready',
+      createdAt: '2026-10-02'
+    })
+
+    await v4Db.table('dossiers').add({
+      id: 'dos_p5_01',
+      batchId: 'batch_p5',
+      materialType: 'tissue_culture',
+      sourceName: 'Viện Khoa học Lâm nghiệp',
+      createdAt: '2026-10-02T08:00:00.000Z',
+      updatedAt: '2026-10-02T08:00:00.000Z'
+    })
+
+    v4Db.close()
+
+    // 2. Open with VuonUomDatabase v5
+    const appDb = new VuonUomDatabase(testDbName)
+    await appDb.open()
+
+    expect(appDb.verno).toBe(5)
+
+    // Check existing business data preserved
+    const batch = await appDb.batches.get('batch_p5')
+    expect(batch?.code).toBe('DH17 #01')
+    expect(batch?.currentQuantity).toBe(18000)
+
+    const dossier = await appDb.dossiers.get('dos_p5_01')
+    expect(dossier?.sourceName).toBe('Viện Khoa học Lâm nghiệp')
+
+    // 3. Test pilotSessions and validationEvents in v5
+    await appDb.pilotSessions.put({
+      id: 'psess_mig_01',
+      participantCode: 'P01',
+      consent: 'accepted',
+      startedAt: '2026-10-06T14:00:00.000Z'
+    })
+
+    await appDb.validationEvents.put({
+      id: 'vevt_mig_01',
+      sessionId: 'psess_mig_01',
+      participantCode: 'P01',
+      mode: 'pilot',
+      type: 'screen_viewed',
+      route: 'today',
+      createdAt: '2026-10-06T14:00:05.000Z'
+    })
+
+    const foundSession = await appDb.pilotSessions.get('psess_mig_01')
+    expect(foundSession?.participantCode).toBe('P01')
+
+    const foundEvents = await appDb.validationEvents.where('sessionId').equals('psess_mig_01').toArray()
+    expect(foundEvents.length).toBe(1)
+    expect(foundEvents[0].route).toBe('today')
 
     appDb.close()
   })
