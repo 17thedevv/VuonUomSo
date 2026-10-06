@@ -19,10 +19,44 @@ export type Reservation = {
   supplierId?: string
 
   quantity: number
+  fulfilledQuantity?: number
 
   status: ReservationStatus
 
   createdAt: string
+}
+
+/**
+ * Returns the quantity already fulfilled (shipped) for this reservation.
+ */
+export function fulfilledQuantityForReservation(r: Reservation): number {
+  return r.fulfilledQuantity ?? 0
+}
+
+/**
+ * Returns outstanding commitment remaining to be fulfilled:
+ * - active: max(quantity - fulfilledQuantity, 0)
+ * - fulfilled: 0
+ * - released: 0
+ */
+export function remainingReservationQuantity(r: Reservation): number {
+  if (r.status === 'released' || r.status === 'fulfilled') return 0
+  const fulfilled = r.fulfilledQuantity ?? 0
+  return Math.max(r.quantity - fulfilled, 0)
+}
+
+/**
+ * Returns the quantity of supply covered by this reservation towards an order:
+ * - active: quantity
+ * - fulfilled: quantity
+ * - released: fulfilledQuantity (already shipped portion remains covered historically)
+ */
+export function coveredQuantityForReservation(r: Reservation): number {
+  if (r.status === 'active' || r.status === 'fulfilled') {
+    return r.quantity
+  }
+  // Released: only previously fulfilled portion remains covered
+  return r.fulfilledQuantity ?? 0
 }
 
 export type ExternalSupplierCandidate = {

@@ -18,6 +18,7 @@ import { OrderNewScreen } from '../features/orders/OrderNewScreen'
 import { OrderDetailScreen } from '../features/orders/OrderDetailScreen'
 import { OrderReserveScreen } from '../features/orders/OrderReserveScreen'
 import { ShipmentsScreen } from '../features/shipments/ShipmentsScreen'
+import { ShipmentNewScreen } from '../features/shipments/ShipmentNewScreen'
 import { ShipmentDetailScreen } from '../features/shipments/ShipmentDetailScreen'
 import { BatchDossierScreen } from '../features/dossiers/BatchDossierScreen'
 import { MoreScreen } from '../features/more/MoreScreen'
@@ -134,6 +135,10 @@ const router = createBrowserRouter([
       {
         path: '/shipments',
         element: <ShipmentsScreen />
+      },
+      {
+        path: '/shipments/new',
+        element: <ShipmentNewScreen />
       },
       {
         path: '/shipments/:id',

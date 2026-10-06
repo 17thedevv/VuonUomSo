@@ -38,6 +38,34 @@ export class VuonUomDatabase extends Dexie {
     this.version(2).stores({
       reservations: 'id, orderId, batchId, supplierId, status'
     })
+
+    this.version(3)
+      .stores({
+        reservations: 'id, orderId, batchId, supplierId, status',
+        shipments: 'id, orderId, status, plannedDate, shippedAt, createdAt'
+      })
+      .upgrade(async (tx) => {
+        // Backfill fulfilledQuantity on reservations
+        await tx.table('reservations').toCollection().modify((reservation: Record<string, unknown>) => {
+          if (reservation.fulfilledQuantity === undefined) {
+            reservation.fulfilledQuantity =
+              reservation.status === 'fulfilled' ? (reservation.quantity ?? 0) : 0
+          }
+        })
+
+        // Backfill lines, plannedQuantity, createdAt on shipments
+        await tx.table('shipments').toCollection().modify((shipment: Record<string, unknown>) => {
+          if (shipment.lines === undefined) {
+            shipment.lines = []
+          }
+          if (shipment.plannedQuantity === undefined) {
+            shipment.plannedQuantity = shipment.shippedQuantity ?? 0
+          }
+          if (shipment.createdAt === undefined) {
+            shipment.createdAt = shipment.shippedAt ?? new Date().toISOString()
+          }
+        })
+      })
   }
 }
 

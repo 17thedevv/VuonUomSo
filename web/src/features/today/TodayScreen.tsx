@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight, AlertTriangle, Clock, RotateCcw, Sprout } from 'lucide-react'
+import { Plus, ChevronRight, AlertTriangle, Clock, RotateCcw, Sprout, Truck } from 'lucide-react'
 import type { Organization } from '../../domain/organization'
 import type { BatchWithAvailability } from '../../domain/batch'
 import type { OrderWithDerived } from '../../domain/order'
 import type { Contact } from '../../domain/contact'
+import type { Shipment } from '../../domain/shipment'
 import {
   organizationRepository,
   batchRepository,
@@ -34,6 +35,7 @@ export const TodayScreen: React.FC = () => {
   const [org, setOrg] = useState<Organization | null>(null)
   const [batches, setBatches] = useState<BatchWithAvailability[]>([])
   const [orders, setOrders] = useState<OrderWithDerived[]>([])
+  const [plannedShipments, setPlannedShipments] = useState<Shipment[]>([])
   const [appMode, setAppMode] = useState<string>('pilot')
   const [todayDate, setTodayDate] = useState('')
   const [loading, setLoading] = useState(true)
@@ -91,9 +93,12 @@ export const TodayScreen: React.FC = () => {
         }
       })
 
+      const plannedList = loadedShipments.filter((s) => s.status === 'planned')
+
       setOrg(loadedOrg)
       setBatches(mappedBatches)
       setOrders(mappedOrders)
+      setPlannedShipments(plannedList)
       setAppMode(mode || 'pilot')
       setTodayDate(formatHeaderDate(new Date()))
       setError(null)
@@ -263,6 +268,56 @@ export const TodayScreen: React.FC = () => {
           </div>
         </div>
 
+        {/* SECTION: CHUYẾN CẦN GIAO (Planned Shipments) */}
+        {plannedShipments.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-emerald-700" />
+                <span>CHUYẾN CẦN GIAO ({plannedShipments.length})</span>
+              </h2>
+              <button
+                onClick={() => navigate('/shipments?filter=planned')}
+                className="text-xs text-emerald-700 font-semibold hover:underline flex items-center gap-0.5"
+              >
+                Xem tất cả
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {plannedShipments.map((s) => {
+                const order = orders.find((o) => o.id === s.orderId)
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => navigate(`/shipments/${s.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-bold text-slate-900 text-sm truncate">
+                          {order?.customerName || 'Khách hàng'}
+                        </span>
+                        <span className="text-[10px] bg-sky-50 text-sky-800 border border-sky-200 px-1.5 py-0.5 rounded font-bold">
+                          Chờ xuất xe
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {order?.variety} • {formatQuantity(s.plannedQuantity)} cây
+                        {s.plannedDate ? ` • Hẹn: ${formatShortDate(s.plannedDate)}` : ''}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* SECTION: VIỆC CẦN LÀM */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
@@ -367,11 +422,14 @@ export const TodayScreen: React.FC = () => {
               </div>
             )}
 
-            {batches.length > 0 && attentionBatches.length === 0 && attentionOrders.length === 0 && (
-              <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-                Không có việc gấp nào cần xử lý hôm nay.
-              </div>
-            )}
+            {batches.length > 0 &&
+              attentionBatches.length === 0 &&
+              attentionOrders.length === 0 &&
+              plannedShipments.length === 0 && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+                  Không có việc gấp nào cần xử lý hôm nay.
+                </div>
+              )}
           </div>
         </div>
       </div>

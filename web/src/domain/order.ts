@@ -1,5 +1,5 @@
-import type { Reservation } from './reservation'
-import type { Shipment } from './shipment'
+import { type Reservation, coveredQuantityForReservation } from './reservation'
+import { type Shipment, shippedQuantityForOrder } from './shipment'
 
 export type OrderStatus =
   | 'open'
@@ -25,6 +25,7 @@ export type OrderDisplayStatusKind =
   | 'full'
   | 'partial'
   | 'none'
+  | 'partially_shipped'
   | 'shipped'
   | 'cancelled'
 
@@ -38,6 +39,7 @@ export type OrderWithDerived = Order & {
   customerName: string
   customerPhone?: string
   reservedQuantity: number
+  shippedQuantity?: number
   shortage: number
   displayStatus: OrderDisplayStatus
 }
@@ -46,12 +48,12 @@ export type OrderFilterType = 'all' | 'action_needed' | 'ready_pickup' | 'shippe
 
 /**
  * Total committed quantity across all sources (own batches and external suppliers) for an order:
- * sum(active + fulfilled reservations for order).
+ * sum(coveredQuantityForReservation for reservations for order).
  */
 export function reservedQuantityForOrder(orderId: string, reservations: Reservation[]): number {
   return reservations
-    .filter((r) => r.orderId === orderId && (r.status === 'active' || r.status === 'fulfilled'))
-    .reduce((sum, r) => sum + r.quantity, 0)
+    .filter((r) => r.orderId === orderId)
+    .reduce((sum, r) => sum + coveredQuantityForReservation(r), 0)
 }
 
 /**
@@ -72,11 +74,10 @@ export function deriveOrderDisplayStatus(
   reservations: Reservation[],
   shipments: Shipment[] = []
 ): OrderDisplayStatus {
+  const shipped = shippedQuantityForOrder(order.id, shipments)
+
   // If explicitly shipped or fulfilled via shipments
-  const hasCompletedShipment = shipments.some(
-    (s) => s.orderId === order.id && s.shippedQuantity >= order.requestedQuantity
-  )
-  if (order.status === 'shipped' || hasCompletedShipment) {
+  if (order.status === 'shipped' || (order.requestedQuantity > 0 && shipped >= order.requestedQuantity)) {
     return { kind: 'shipped', label: 'Đã giao', shortage: 0 }
   }
 
@@ -86,6 +87,16 @@ export function deriveOrderDisplayStatus(
 
   const reserved = reservedQuantityForOrder(order.id, reservations)
   const shortage = Math.max(order.requestedQuantity - reserved, 0)
+
+  // Partial shipment
+  if (order.status === 'partially_shipped' || shipped > 0) {
+    const formattedShipped = new Intl.NumberFormat('vi-VN').format(shipped)
+    return {
+      kind: 'partially_shipped',
+      label: `Đã giao ${formattedShipped} cây`,
+      shortage
+    }
+  }
 
   if (reserved >= order.requestedQuantity) {
     return { kind: 'full', label: 'Đã giữ đủ', shortage: 0 }
@@ -110,7 +121,7 @@ export function deriveOrderDisplayStatus(
 /**
  * Filter orders by user-facing tab categories:
  * - 'action_needed': Orders needing reservation (shortage > 0, not shipped/cancelled)
- * - 'ready_pickup': Fully reserved orders ready for pickup/shipment
+ * - 'ready_pickup': Fully reserved orders ready for pickup/shipment (including partially shipped with 0 shortage)
  * - 'shipped': Already shipped orders
  * - 'all': All orders
  */
@@ -128,7 +139,10 @@ export function filterOrders(
       )
     case 'ready_pickup':
       return orders.filter(
-        (o) => o.displayStatus.kind === 'full' && o.status !== 'shipped'
+        (o) =>
+          (o.displayStatus.kind === 'full' ||
+            (o.displayStatus.kind === 'partially_shipped' && o.displayStatus.shortage === 0)) &&
+          o.status !== 'shipped'
       )
     case 'shipped':
       return orders.filter((o) => o.displayStatus.kind === 'shipped')
