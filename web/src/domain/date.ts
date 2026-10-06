@@ -49,6 +49,13 @@ export function formatShortDate(
 }
 
 /**
+ * Formats standard Vietnamese date (dd/mm/yyyy).
+ */
+export function formatDate(dateInput: string | Date | undefined): string {
+  return formatShortDate(dateInput, true)
+}
+
+/**
  * Formats full Vietnamese date for headers (e.g., "Thứ năm, 09/10").
  */
 export function formatHeaderDate(dateInput: string | Date = new Date()): string {

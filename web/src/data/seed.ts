@@ -144,6 +144,7 @@ export const DEMO_RESERVATIONS: Reservation[] = [
     sourceType: 'own_batch',
     batchId: 'batch_bv16_12',
     quantity: 10000,
+    fulfilledQuantity: 0,
     status: 'active',
     createdAt: daysAgo(1)
   },
@@ -153,6 +154,7 @@ export const DEMO_RESERVATIONS: Reservation[] = [
     sourceType: 'external_supplier',
     supplierId: 'contact_thao',
     quantity: 20000,
+    fulfilledQuantity: 0,
     status: 'active',
     createdAt: daysAgo(1)
   },
@@ -164,6 +166,7 @@ export const DEMO_RESERVATIONS: Reservation[] = [
     sourceType: 'external_supplier',
     supplierId: 'contact_hong',
     quantity: 20000,
+    fulfilledQuantity: 0,
     status: 'active',
     createdAt: daysAgo(2)
   },
@@ -173,6 +176,7 @@ export const DEMO_RESERVATIONS: Reservation[] = [
     sourceType: 'external_supplier',
     supplierId: 'contact_an',
     quantity: 12000,
+    fulfilledQuantity: 0,
     status: 'active',
     createdAt: daysAgo(2)
   },
@@ -184,6 +188,7 @@ export const DEMO_RESERVATIONS: Reservation[] = [
     sourceType: 'external_supplier',
     supplierId: 'contact_thao',
     quantity: 20000,
+    fulfilledQuantity: 20000,
     status: 'fulfilled',
     createdAt: daysAgo(4)
   }
@@ -193,10 +198,21 @@ export const DEMO_SHIPMENTS: Shipment[] = [
   {
     id: 'ship_nam_01',
     orderId: 'order_nam_01',
+    lines: [
+      {
+        reservationId: 'res_nam_01',
+        sourceType: 'external_supplier',
+        supplierId: 'contact_thao',
+        quantity: 20000
+      }
+    ],
     plannedQuantity: 20000,
     shippedQuantity: 20000,
+    plannedDate: daysAgo(2).split('T')[0],
     shippedAt: daysAgo(2),
-    status: 'completed'
+    status: 'completed',
+    note: 'Xe 3.5 tấn đã bốc xong tại vườn',
+    createdAt: daysAgo(2)
   }
 ]
 

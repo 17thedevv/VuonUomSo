@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RotateCcw, Trash2, Download, CheckCircle, Info, ShieldCheck } from 'lucide-react'
+import { RotateCcw, Trash2, Download, CheckCircle, Info, ShieldCheck, Truck } from 'lucide-react'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import { exportDatabaseToJson } from '../../data/backup'
 import { settingsRepository, organizationRepository } from '../../data/repositories'
@@ -80,10 +80,10 @@ export const MoreScreen: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50">
+    <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <PageHeader title="Thêm" subtitle="Cài đặt & Quản lý dữ liệu" />
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-xl mx-auto w-full pb-16">
         {/* Status notification */}
         {statusMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
@@ -117,6 +117,20 @@ export const MoreScreen: React.FC = () => {
               IndexedDB trên máy
             </span>
           </div>
+        </div>
+
+        {/* Navigation to Shipments */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <Truck className="w-4 h-4 text-emerald-700" />
+            Sổ Chuyến giao xe
+          </h2>
+          <p className="text-xs text-slate-500">
+            Xem danh sách các chuyến xe giao cây, bốc xuất vườn và quản lý trạng thái giao hàng.
+          </p>
+          <SecondaryButton fullWidth onClick={() => navigate('/shipments')}>
+            Mở sổ chuyến giao
+          </SecondaryButton>
         </div>
 
         {/* Demo / Pilot Controls */}

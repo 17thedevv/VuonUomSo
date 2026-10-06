@@ -1,5 +1,5 @@
 import type { Batch } from './batch.js'
-import type { Reservation } from './reservation.js'
+import { type Reservation, remainingReservationQuantity } from './reservation.js'
 
 /**
  * Parses user input quantity supporting Vietnamese forestry conventions:
@@ -64,20 +64,28 @@ export function parseQuantity(
 }
 
 /**
- * Total active reserved quantity for a specific batch.
+ * Total outstanding active reserved quantity for a specific batch.
+ * Sums remaining commitment (quantity - fulfilledQuantity) across active reservations.
  */
-export function reservedQuantityForBatch(batchId: string, reservations: Reservation[]): number {
+export function reservedOutstandingQuantityForBatch(batchId: string, reservations: Reservation[]): number {
   return reservations
     .filter((r) => r.batchId === batchId && r.status === 'active')
-    .reduce((sum, r) => sum + r.quantity, 0)
+    .reduce((sum, r) => sum + remainingReservationQuantity(r), 0)
+}
+
+/**
+ * Total active reserved quantity for a specific batch (preserves backwards compatibility).
+ */
+export function reservedQuantityForBatch(batchId: string, reservations: Reservation[]): number {
+  return reservedOutstandingQuantityForBatch(batchId, reservations)
 }
 
 /**
  * Available ready quantity for a batch:
- * max(readyQuantity - reserved(batch), 0)
+ * max(readyQuantity - reservedOutstanding(batch), 0)
  */
 export function availableQuantityForBatch(batch: Batch, reservations: Reservation[]): number {
-  const reserved = reservedQuantityForBatch(batch.id, reservations)
+  const reserved = reservedOutstandingQuantityForBatch(batch.id, reservations)
   return Math.max(batch.readyQuantity - reserved, 0)
 }
 

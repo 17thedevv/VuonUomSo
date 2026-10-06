@@ -4,15 +4,16 @@ import { VuonUomDatabase } from '../db'
 import type { Batch } from '../../domain/batch'
 import type { Order } from '../../domain/order'
 import type { Reservation } from '../../domain/reservation'
+import type { Shipment } from '../../domain/shipment'
 
-describe('Database Schema Migration (v1 -> v2)', () => {
+describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
   const testDbName = 'MigrationTestDB_' + Date.now()
 
   afterEach(async () => {
     await Dexie.delete(testDbName)
   })
 
-  it('migrates from v1 to v2 without data loss and creates supplierId index', async () => {
+  it('migrates from v1 to v3 without data loss and backfills fields', async () => {
     // 1. Create a pure v1 database instance simulating a user from Phase P0-P2
     const v1Db = new Dexie(testDbName)
     v1Db.version(1).stores({
@@ -52,6 +53,7 @@ describe('Database Schema Migration (v1 -> v2)', () => {
       sourceType: 'own_batch',
       batchId: 'batch_old',
       quantity: 5000,
+      fulfilledQuantity: 0,
       status: 'active',
       createdAt: '2026-09-02T00:00:00.000Z'
     }
@@ -63,12 +65,12 @@ describe('Database Schema Migration (v1 -> v2)', () => {
     // 3. Close v1 database
     v1Db.close()
 
-    // 4. Open with VuonUomDatabase (which defines v1 and v2)
+    // 4. Open with VuonUomDatabase (which defines v1, v2, and v3)
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    // Verify database version is now 2
-    expect(appDb.verno).toBe(2)
+    // Verify database version is now 3
+    expect(appDb.verno).toBe(3)
 
     // 5. Verify existing data preserved
     const loadedBatch = await appDb.batches.get('batch_old')
@@ -80,14 +82,16 @@ describe('Database Schema Migration (v1 -> v2)', () => {
 
     const loadedRes = await appDb.reservations.get('res_old')
     expect(loadedRes?.quantity).toBe(5000)
+    expect(loadedRes?.fulfilledQuantity).toBe(0)
 
-    // 6. Test querying by supplierId using the newly indexed field
+    // 6. Test querying by supplierId using the v2-indexed field
     const supplierRes: Reservation = {
       id: 'res_supplier_01',
       orderId: 'order_old',
       sourceType: 'external_supplier',
       supplierId: 'supplier_thao',
       quantity: 3000,
+      fulfilledQuantity: 0,
       status: 'active',
       createdAt: '2026-09-03T00:00:00.000Z'
     }
@@ -96,7 +100,107 @@ describe('Database Schema Migration (v1 -> v2)', () => {
     const queriedBySupplier = await appDb.reservations.where('supplierId').equals('supplier_thao').toArray()
     expect(queriedBySupplier.length).toBe(1)
     expect(queriedBySupplier[0].id).toBe('res_supplier_01')
-    expect(queriedBySupplier[0].quantity).toBe(3000)
+
+    appDb.close()
+  })
+
+  it('migrates from v2 to v3 backfilling fulfilledQuantity and shipment lines', async () => {
+    // 1. Create a pure v2 database instance simulating a user after Phase P3
+    const v2Db = new Dexie(testDbName)
+    v2Db.version(1).stores({
+      organizations: 'id, name',
+      settings: 'key',
+      contacts: 'id, name',
+      batches: 'id, code, variety, status, createdAt',
+      orders: 'id, customerId, status',
+      reservations: 'id, orderId, batchId, status',
+      shipments: 'id, orderId, status',
+      events: 'id, type, entityType, entityId, createdAt'
+    })
+    v2Db.version(2).stores({
+      reservations: 'id, orderId, batchId, supplierId, status'
+    })
+
+    await v2Db.open()
+
+    // Insert v2 records without fulfilledQuantity or shipment lines
+    await v2Db.table('reservations').add({
+      id: 'res_active_v2',
+      orderId: 'order_1',
+      sourceType: 'own_batch',
+      batchId: 'batch_1',
+      quantity: 10000,
+      status: 'active',
+      createdAt: '2026-09-01'
+    })
+
+    await v2Db.table('reservations').add({
+      id: 'res_fulfilled_v2',
+      orderId: 'order_2',
+      sourceType: 'external_supplier',
+      supplierId: 'sup_1',
+      quantity: 15000,
+      status: 'fulfilled',
+      createdAt: '2026-09-01'
+    })
+
+    await v2Db.table('shipments').add({
+      id: 'ship_legacy',
+      orderId: 'order_2',
+      shippedQuantity: 15000,
+      status: 'completed',
+      shippedAt: '2026-09-05'
+    })
+
+    v2Db.close()
+
+    // 2. Open with VuonUomDatabase v3
+    const appDb = new VuonUomDatabase(testDbName)
+    await appDb.open()
+
+    expect(appDb.verno).toBe(3)
+
+    // Check backfilled fulfilledQuantity on reservations
+    const resActive = await appDb.reservations.get('res_active_v2')
+    expect(resActive?.fulfilledQuantity).toBe(0)
+
+    const resFulfilled = await appDb.reservations.get('res_fulfilled_v2')
+    expect(resFulfilled?.fulfilledQuantity).toBe(15000)
+
+    // Check backfilled shipment fields
+    const legacyShipment = await appDb.shipments.get('ship_legacy')
+    expect(legacyShipment?.lines).toEqual([])
+    expect(legacyShipment?.plannedQuantity).toBe(15000)
+    expect(legacyShipment?.createdAt).toBe('2026-09-05')
+
+    // Check querying shipments by status index
+    const completedShipments = await appDb.shipments.where('status').equals('completed').toArray()
+    expect(completedShipments.length).toBe(1)
+    expect(completedShipments[0].id).toBe('ship_legacy')
+
+    // Add a planned shipment and query by status
+    const plannedShipment: Shipment = {
+      id: 'ship_planned_1',
+      orderId: 'order_1',
+      lines: [
+        {
+          reservationId: 'res_active_v2',
+          sourceType: 'own_batch',
+          batchId: 'batch_1',
+          quantity: 5000
+        }
+      ],
+      plannedQuantity: 5000,
+      shippedQuantity: 0,
+      plannedDate: '2026-10-10',
+      status: 'planned',
+      createdAt: '2026-10-06'
+    }
+    await appDb.shipments.put(plannedShipment)
+
+    const plannedList = await appDb.shipments.where('status').equals('planned').toArray()
+    expect(plannedList.length).toBe(1)
+    expect(plannedList[0].id).toBe('ship_planned_1')
 
     appDb.close()
   })

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   Calendar,
   Phone,
@@ -10,7 +10,10 @@ import {
   AlertTriangle,
   RotateCcw,
   ClipboardList,
-  History
+  History,
+  Truck,
+  CheckCircle2,
+  PackageCheck
 } from 'lucide-react'
 import {
   orderRepository,
@@ -26,13 +29,19 @@ import type { Batch } from '../../domain/batch'
 import type { Shipment } from '../../domain/shipment'
 import type { DomainEvent } from '../../analytics/events'
 import { formatQuantity } from '../../domain/quantity'
-import { formatShortDate } from '../../domain/date'
+import { formatShortDate, formatDate } from '../../domain/date'
 import {
   reservedQuantityForOrder,
   orderShortage,
   deriveOrderDisplayStatus
 } from '../../domain/order'
+import {
+  shippedQuantityForOrder,
+  remainingToShipForOrder
+} from '../../domain/shipment'
+import { remainingReservationQuantity } from '../../domain/reservation'
 import { PageHeader } from '../../shared/components/PageHeader'
+import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { EmptyState } from '../../shared/components/EmptyState'
 import { undoService } from '../../services/undoService'
@@ -186,10 +195,30 @@ export const OrderDetailScreen: React.FC = () => {
   const reserved = reservedQuantityForOrder(order.id, reservations)
   const shortage = orderShortage(order, reservations)
   const displayStatus = deriveOrderDisplayStatus(order, reservations, shipments)
-  const progressPercent = Math.min(
+
+  const shippedQuantity = shippedQuantityForOrder(order.id, shipments)
+  const remainingToShip = remainingToShipForOrder(order.requestedQuantity, order.id, shipments)
+  const plannedShipment = shipments.find((s) => s.status === 'planned')
+  const completedShipments = shipments.filter((s) => s.status === 'completed')
+
+  const reservePercent = Math.min(
     Math.round((reserved / order.requestedQuantity) * 100),
     100
   )
+  const shipPercent = Math.min(
+    Math.round((shippedQuantity / order.requestedQuantity) * 100),
+    100
+  )
+
+  const hasRemainingReservedSupply = reservations.some(
+    (r) => r.status === 'active' && remainingReservationQuantity(r) > 0
+  )
+  const canCreateShipment =
+    order.status !== 'shipped' &&
+    order.status !== 'cancelled' &&
+    remainingToShip > 0 &&
+    !plannedShipment &&
+    hasRemainingReservedSupply
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
@@ -200,7 +229,7 @@ export const OrderDetailScreen: React.FC = () => {
         backTo="/orders"
       />
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-xl mx-auto w-full pb-16">
         {/* Customer & Requested Summary */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-start justify-between">
@@ -226,6 +255,8 @@ export const OrderDetailScreen: React.FC = () => {
                   ? 'bg-slate-100 text-slate-700 border-slate-300'
                   : displayStatus.kind === 'full'
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : displayStatus.kind === 'partially_shipped'
+                  ? 'bg-purple-50 text-purple-800 border-purple-300'
                   : displayStatus.kind === 'partial'
                   ? 'bg-amber-50 text-amber-900 border-amber-300'
                   : 'bg-rose-50 text-rose-800 border-rose-300'
@@ -257,6 +288,95 @@ export const OrderDetailScreen: React.FC = () => {
           </div>
         </div>
 
+        {/* TIẾN ĐỘ XUẤT GIAO HÀNG (Shipment Progress) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+              <Truck className="w-4 h-4 text-emerald-700" />
+              <span>TIẾN ĐỘ GIAO HÀNG</span>
+            </span>
+            <span className="text-xs font-extrabold text-slate-800">
+              {formatQuantity(shippedQuantity)} / {formatQuantity(order.requestedQuantity)} cây
+            </span>
+          </div>
+
+          {/* Delivery progress bar */}
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div
+              className={`h-2.5 rounded-full transition-all duration-300 ${
+                shipPercent >= 100 ? 'bg-emerald-600' : 'bg-purple-600'
+              }`}
+              style={{ width: `${shipPercent}%` }}
+            />
+          </div>
+
+          {/* Planned Shipment Banner if one exists */}
+          {plannedShipment && (
+            <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-amber-900 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>Đang có chuyến hẹn xuất xe</span>
+                </div>
+                <div className="text-[11px] text-amber-800 mt-0.5 truncate">
+                  {formatQuantity(plannedShipment.plannedQuantity)} cây (
+                  {plannedShipment.plannedDate ? formatDate(plannedShipment.plannedDate) : 'Hôm nay'})
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/shipments/${plannedShipment.id}`)}
+                className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shrink-0 active:scale-95 transition-all shadow-xs"
+              >
+                XEM CHUYẾN
+              </button>
+            </div>
+          )}
+
+          {/* Action to create shipment */}
+          {canCreateShipment && (
+            <div className="pt-1">
+              <PrimaryButton
+                fullWidth
+                onClick={() => navigate(`/shipments/new?orderId=${order.id}`)}
+                className="py-2.5 flex items-center justify-center gap-2"
+              >
+                <PackageCheck className="w-4 h-4" />
+                <span>LÊN CHUYẾN GIAO (XUẤT CÂY)</span>
+              </PrimaryButton>
+            </div>
+          )}
+
+          {/* Completed Shipments List */}
+          {completedShipments.length > 0 && (
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Các chuyến đã xuất vườn ({completedShipments.length})
+              </span>
+              <div className="space-y-1.5">
+                {completedShipments.map((s) => (
+                  <Link
+                    key={s.id}
+                    to={`/shipments/${s.id}`}
+                    className="p-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200/80 flex items-center justify-between text-xs transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="font-semibold text-slate-800">
+                        {formatQuantity(s.shippedQuantity)} cây
+                      </span>
+                      {s.shippedAt && (
+                        <span className="text-slate-400 text-[11px]">({formatDate(s.shippedAt)})</span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-700">Chi tiết &rarr;</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Tiến độ giữ cây (Reservation Progress) */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
@@ -272,9 +392,9 @@ export const OrderDetailScreen: React.FC = () => {
           <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
             <div
               className={`h-2.5 rounded-full transition-all duration-300 ${
-                progressPercent >= 100 ? 'bg-emerald-600' : 'bg-amber-500'
+                reservePercent >= 100 ? 'bg-emerald-600' : 'bg-amber-500'
               }`}
-              style={{ width: `${progressPercent}%` }}
+              style={{ width: `${reservePercent}%` }}
             />
           </div>
 
@@ -303,85 +423,111 @@ export const OrderDetailScreen: React.FC = () => {
             <p className="text-xs text-slate-400 italic">Chưa phân bổ giữ cây từ nguồn nào.</p>
           ) : (
             <div className="space-y-2">
-              {sourceDetails.map(({ reservation, sourceLabel, isOwnBatch }) => (
-                <div
-                  key={reservation.id}
-                  className="bg-slate-50/80 border border-slate-200/80 p-3 rounded-xl space-y-2 text-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                          isOwnBatch
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-sky-100 text-sky-800'
-                        }`}
-                      >
-                        {isOwnBatch ? (
-                          <Sprout className="w-4 h-4" />
-                        ) : (
-                          <Store className="w-4 h-4" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-slate-800 truncate">{sourceLabel}</div>
-                        <div className="text-[11px] text-slate-400">
-                          {isOwnBatch ? 'Lô trong vườn' : 'Vườn ngoài gom cây'}
+              {sourceDetails.map(({ reservation, sourceLabel, isOwnBatch }) => {
+                const fulfilled = reservation.fulfilledQuantity ?? 0
+                const rem = remainingReservationQuantity(reservation)
+                return (
+                  <div
+                    key={reservation.id}
+                    className="bg-slate-50/80 border border-slate-200/80 p-3 rounded-xl space-y-2 text-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isOwnBatch
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-sky-100 text-sky-800'
+                          }`}
+                        >
+                          {isOwnBatch ? (
+                            <Sprout className="w-4 h-4" />
+                          ) : (
+                            <Store className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-800 truncate">{sourceLabel}</div>
+                          <div className="text-[11px] text-slate-400">
+                            {isOwnBatch ? 'Lô trong vườn' : 'Vườn ngoài gom cây'}
+                          </div>
                         </div>
                       </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-black text-slate-800 text-sm">
+                          {formatQuantity(reservation.quantity)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">cây</span>
+                      </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="font-black text-slate-800 text-sm">
-                        {formatQuantity(reservation.quantity)}
-                      </span>
-                      <span className="text-[10px] text-slate-400 block">cây</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                    <span
-                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        reservation.status === 'fulfilled'
-                          ? 'bg-sky-100 text-sky-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}
-                    >
-                      {reservation.status === 'fulfilled' ? 'Đã giao' : 'Đang giữ'}
-                    </span>
-
-                    {reservation.status === 'active' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReservationToRelease({
-                            ...reservation,
-                            sourceLabel,
-                            isOwnBatch
-                          })
-                          setIsReleaseModalOpen(true)
-                        }}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>BỎ GIỮ</span>
-                      </button>
+                    {/* Breakdown of Fulfilled vs Remaining */}
+                    {fulfilled > 0 && (
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 bg-white/70 px-2 py-1 rounded">
+                        <span>Đã xuất: {formatQuantity(fulfilled)} cây</span>
+                        <span>Còn lại: {formatQuantity(rem)} cây</span>
+                      </div>
                     )}
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
+                      <span
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          reservation.status === 'fulfilled'
+                            ? 'bg-sky-100 text-sky-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {reservation.status === 'fulfilled' ? 'Đã xuất đủ' : 'Đang giữ'}
+                      </span>
+
+                      {reservation.status === 'active' && (
+                        (plannedShipment?.lines ?? []).some(
+                          (l) => l.reservationId === reservation.id && l.quantity > 0
+                        ) ? (
+                          <span
+                            title="Nguồn cây này đang nằm trong chuyến chờ giao. Hãy hủy chuyến trước khi bỏ giữ cây."
+                            className="text-[11px] font-medium text-slate-400 italic"
+                          >
+                            Trong chuyến chờ giao
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReservationToRelease({
+                                ...reservation,
+                                fulfilledQuantity: reservation.fulfilledQuantity ?? 0,
+                                sourceLabel,
+                                isOwnBatch
+                              })
+                              setIsReleaseModalOpen(true)
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 active:text-rose-800 hover:underline p-1"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>BỎ GIỮ</span>
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
           {/* Action button to Reserve */}
-          <div className="pt-1">
-            <SecondaryButton
-              fullWidth
-              onClick={() => navigate(`/orders/${order.id}/reserve`)}
-            >
-              {reserved === 0 ? 'GIỮ CÂY' : shortage > 0 ? 'GIỮ THÊM CÂY' : 'ĐIỀU CHỈNH GIỮ CÂY'}
-            </SecondaryButton>
-          </div>
+          {order.status !== 'shipped' && order.status !== 'cancelled' && (
+            <div className="pt-1">
+              <SecondaryButton
+                fullWidth
+                onClick={() => navigate(`/orders/${order.id}/reserve`)}
+              >
+                {reserved === 0 ? 'GIỮ CÂY' : shortage > 0 ? 'GIỮ THÊM CÂY' : 'ĐIỀU CHỈNH GIỮ CÂY'}
+              </SecondaryButton>
+            </div>
+          )}
         </div>
 
         {/* Lịch sử giữ cây (Reservation History) */}

@@ -53,6 +53,7 @@ export interface ResolvedReservation {
   batchId?: string
   supplierId?: string
   quantity: number
+  fulfilledQuantity: number
   status: ReservationStatus
   createdAt: string
   sourceLabel: string
@@ -139,6 +140,7 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
         const b = batchMap.get(r.batchId)
         return {
           ...r,
+          fulfilledQuantity: r.fulfilledQuantity ?? 0,
           sourceLabel: b ? `${b.code} (${b.variety})` : 'Lô trong vườn',
           isOwnBatch: true
         }
@@ -146,6 +148,7 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
         const sup = contactMap.get(r.supplierId)
         return {
           ...r,
+          fulfilledQuantity: r.fulfilledQuantity ?? 0,
           sourceLabel: sup ? sup.name : 'Vườn liên kết',
           isOwnBatch: false,
           sourcePhone: sup?.phone
@@ -153,6 +156,7 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
       }
       return {
         ...r,
+        fulfilledQuantity: r.fulfilledQuantity ?? 0,
         sourceLabel: 'Nguồn chưa xác định',
         isOwnBatch: false
       }
@@ -215,7 +219,7 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
     const batchReservations = await db.reservations.where('batchId').equals(batchId).toArray()
     const activeBatchReserved = batchReservations
       .filter((r) => r.status === 'active')
-      .reduce((sum, r) => sum + r.quantity, 0)
+      .reduce((sum, r) => sum + (r.quantity - (r.fulfilledQuantity ?? 0)), 0)
     const currentAvailable = Math.max(batch.readyQuantity - activeBatchReserved, 0)
 
     // 4. Validate quantity invariant
@@ -250,19 +254,22 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
       sourceType: 'own_batch',
       batchId,
       quantity,
+      fulfilledQuantity: 0,
       status: 'active',
       createdAt: new Date().toISOString()
     }
     await db.reservations.put(reservation)
 
-    // 9. Update order status
-    const newTotalReserved = activeOrderReserved + quantity
-    if (newTotalReserved >= order.requestedQuantity) {
-      order.status = 'reserved'
-    } else {
-      order.status = 'partially_reserved'
+    // 9. Update order status if not partially shipped
+    if (order.status !== 'partially_shipped') {
+      const newTotalReserved = activeOrderReserved + quantity
+      if (newTotalReserved >= order.requestedQuantity) {
+        order.status = 'reserved'
+      } else {
+        order.status = 'partially_reserved'
+      }
+      await db.orders.put(order)
     }
-    await db.orders.put(order)
 
     // 10. Record domain events
     const customer = await db.contacts.get(order.customerId)
@@ -383,19 +390,22 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
       sourceType: 'external_supplier',
       supplierId,
       quantity,
+      fulfilledQuantity: 0,
       status: 'active',
       createdAt: new Date().toISOString()
     }
     await db.reservations.put(reservation)
 
-    // 7. Update order status
-    const newTotalReserved = activeOrderReserved + quantity
-    if (newTotalReserved >= order.requestedQuantity) {
-      order.status = 'reserved'
-    } else {
-      order.status = 'partially_reserved'
+    // 7. Update order status if not partially shipped
+    if (order.status !== 'partially_shipped') {
+      const newTotalReserved = activeOrderReserved + quantity
+      if (newTotalReserved >= order.requestedQuantity) {
+        order.status = 'reserved'
+      } else {
+        order.status = 'partially_reserved'
+      }
+      await db.orders.put(order)
     }
-    await db.orders.put(order)
 
     // 8. Record domain event for order
     await db.events.put({
@@ -446,7 +456,7 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
 }> {
   const { reservationId } = params
 
-  return await db.transaction('rw', [db.batches, db.orders, db.reservations, db.events, db.contacts], async () => {
+  return await db.transaction('rw', [db.batches, db.orders, db.reservations, db.shipments, db.events, db.contacts], async () => {
     const reservation = await db.reservations.get(reservationId)
     if (!reservation) {
       throw new Error('Bản ghi giữ cây không tồn tại.')
@@ -461,6 +471,23 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
       throw new Error('Chỉ có thể bỏ giữ cây đang được giữ.')
     }
 
+    // Invariant: Cannot release reservation if it is allocated in an open planned shipment
+    const plannedShipmentWithRes = await db.shipments
+      .where('orderId')
+      .equals(reservation.orderId)
+      .filter(
+        (s) =>
+          s.status === 'planned' &&
+          (s.lines ?? []).some((l) => l.reservationId === reservationId && l.quantity > 0)
+      )
+      .first()
+
+    if (plannedShipmentWithRes) {
+      throw new Error(
+        'Nguồn cây này đang nằm trong một chuyến chờ giao. Hãy hủy chuyến đó trước khi bỏ giữ cây.'
+      )
+    }
+
     // Update reservation status to 'released'
     reservation.status = 'released'
     await db.reservations.put(reservation)
@@ -468,17 +495,28 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
     // Recompute order status
     const order = await db.orders.get(reservation.orderId)
     if (order && order.status !== 'shipped' && order.status !== 'cancelled') {
-      const orderReservations = await db.reservations.where('orderId').equals(reservation.orderId).toArray()
-      const remainingReserved = orderReservations
-        .filter((r) => (r.status === 'active' || r.status === 'fulfilled') && r.id !== reservationId)
-        .reduce((sum, r) => sum + r.quantity, 0)
+      const orderShipments = await db.shipments.where('orderId').equals(reservation.orderId).toArray()
+      const totalShipped = orderShipments
+        .filter((s) => s.status === 'completed')
+        .reduce((sum, s) => sum + s.shippedQuantity, 0)
 
-      if (remainingReserved === 0) {
-        order.status = 'open'
-      } else if (remainingReserved < order.requestedQuantity) {
-        order.status = 'partially_reserved'
+      if (totalShipped >= order.requestedQuantity) {
+        order.status = 'shipped'
+      } else if (totalShipped > 0) {
+        order.status = 'partially_shipped'
       } else {
-        order.status = 'reserved'
+        const orderReservations = await db.reservations.where('orderId').equals(reservation.orderId).toArray()
+        const remainingReserved = orderReservations
+          .filter((r) => (r.status === 'active' || r.status === 'fulfilled') && r.id !== reservationId)
+          .reduce((sum, r) => sum + (r.status === 'fulfilled' ? r.quantity : (r.quantity - (r.fulfilledQuantity ?? 0))), 0)
+
+        if (remainingReserved === 0) {
+          order.status = 'open'
+        } else if (remainingReserved < order.requestedQuantity) {
+          order.status = 'partially_reserved'
+        } else {
+          order.status = 'reserved'
+        }
       }
       await db.orders.put(order)
     }

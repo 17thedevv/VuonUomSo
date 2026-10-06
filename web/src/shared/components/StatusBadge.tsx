@@ -70,14 +70,9 @@ const statusMap: Record<BadgeKind, StatusConfig> = {
 
   // Shipment statuses
   planned: {
-    label: 'Lên lịch xe',
+    label: 'Chờ giao',
     icon: Clock,
     classes: 'bg-sky-50 text-sky-800 border-sky-300'
-  },
-  partial: {
-    label: 'Giao 1 phần',
-    icon: Truck,
-    classes: 'bg-amber-50 text-amber-800 border-amber-300'
   },
   completed: {
     label: 'Đã giao xong',
