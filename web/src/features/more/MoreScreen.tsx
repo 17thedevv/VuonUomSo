@@ -170,9 +170,21 @@ export const MoreScreen: React.FC = () => {
         <div className="text-center pt-2 pb-4 text-xs text-slate-400 space-y-1">
           <div className="flex items-center justify-center gap-1 font-semibold text-slate-500">
             <Info className="w-3.5 h-3.5" />
-            <span>Vườn Ươm — Phase P0 Foundation</span>
+            <span>Vườn Ươm — Sổ cây giống trên điện thoại</span>
           </div>
           <div>Bản thử nghiệm xác thực hành vi người dùng (PWA)</div>
+          <div className="text-[11px] text-slate-400 pt-1 flex items-center justify-center gap-2">
+            <span>Giấy phép: <strong>AGPL-3.0</strong></span>
+            <span>•</span>
+            <a
+              href="https://github.com/17thedevv/VuonUomSo"
+              target="_blank"
+              rel="noreferrer"
+              className="text-emerald-700 hover:underline font-medium"
+            >
+              Mã nguồn (Source)
+            </a>
+          </div>
         </div>
       </div>
     </div>

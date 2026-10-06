@@ -9,6 +9,7 @@
 
 ```text
 VuonUomSo/
+├── LICENSE       # GNU Affero General Public License v3.0 (AGPL-3.0-only)
 ├── web/          # Sản phẩm ứng dụng Web/PWA chạy được
 ├── docs/         # Tài liệu đặc tả, kiến trúc, bối cảnh lâm nghiệp & UX
 ├── .agent/       # Hệ điều hành Agent (Skills, Project State, Router)
@@ -156,3 +157,9 @@ web/
   └── docs/
   ```
 - **Mobile native shell**: Capacitor có thể đặt trực tiếp bên trong `web/` (`web/android/`, `web/ios/`, `web/capacitor.config.ts`) vì Android/iOS đóng vai trò native container cho cùng web app, không phải sản phẩm độc lập.
+ 
+---
+
+## 8. License
+
+Vườn Ươm is licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`). See [LICENSE](file:///d:/Project-17/VuonUom/LICENSE) for details.
