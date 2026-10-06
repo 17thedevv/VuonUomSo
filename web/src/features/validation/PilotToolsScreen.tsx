@@ -25,7 +25,7 @@ export const PilotToolsScreen: React.FC = () => {
     setStatusMsg(null)
     setErrorMsg(null)
     try {
-      const { filename } = await exportValidationData({ includeDemo: true })
+      const { filename } = await exportValidationData()
       setStatusMsg(`Đã tải về tệp dữ liệu thử nghiệm: ${filename}`)
     } catch (err) {
       console.error(err)
