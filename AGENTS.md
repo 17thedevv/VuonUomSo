@@ -11,6 +11,11 @@ Chào mừng bạn tham gia lập trình và phát triển dự án **Vườn Ư
 Trước khi thực hiện bất kỳ thay đổi nào:
 1. Đọc [.agent/PROJECT_STATE.md](file:///.agent/PROJECT_STATE.md) để biết **Phase hiện tại** và những gì được phép / bị cấm làm.
 2. Đọc [.agent/router.md](file:///.agent/router.md) để biết **bộ kỹ năng (Skills)** cần kích hoạt cho công việc của bạn.
+3. **Cấu trúc Repository**:
+   - `web/`: Ứng dụng Web/PWA chạy được. **Mọi lệnh npm (install, dev, test, lint, build) phải chạy từ thư mục `web/`**.
+   - `docs/`: Tài liệu đặc tả, kiến trúc, bối cảnh lâm nghiệp & UX.
+   - `.agent/`: Hệ điều hành Agent (Skills, Project State, Router).
+   - `.github/`: CI workflows và tự động hóa repository.
 
 ---
 
@@ -24,6 +29,7 @@ Hệ thống skills nằm trong thư mục [.agent/skills/](file:///.agent/skill
 - [`architecture`](file:///.agent/skills/architecture/SKILL.md): Ranh giới UI $\rightarrow$ Domain $\rightarrow$ Repository $\rightarrow$ Dexie IndexedDB; cấm over-engineering.
 - [`implementation`](file:///.agent/skills/implementation/SKILL.md): Quy trình 5 bước code tính năng, kỷ luật nghiệm thu.
 - [`testing`](file:///.agent/skills/testing/SKILL.md): Ưu tiên Invariants > UI; chính sách bắt buộc regression test khi sửa lỗi tồn kho.
+- [`github-workflow`](file:///.agent/skills/github-workflow/SKILL.md): Quy tắc Git/GitHub, branching, atomic commits, merge safety, CI tối thiểu, ranh giới quyền hạn agent.
 - [`validation`](file:///.agent/skills/validation/SKILL.md): Thang đo bằng chứng thực tế, quy tắc STOP-BUILD sau P6 để mang app ra vườn kiểm chứng.
 - [`review-audit`](file:///.agent/skills/review-audit/SKILL.md): Quy trình 5 bước audit code, mô hình lỗi BLOCKER/HIGH/MEDIUM/LOW.
 

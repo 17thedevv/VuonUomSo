@@ -20,10 +20,15 @@ Trước khi đọc bất kỳ skill nào khác, agent **BẮT BUỘC** đọc:
 | **Giao diện, Component, Copy chữ, Form, Mobile Responsive** | `ux-design` | `product-context` |
 | **Lô cây, Tồn kho, Giữ cây, Đơn hàng, Chuyến giao, Số lượng** | `domain-rules` | `product-context` |
 | **Kiến trúc, Repository, IndexedDB, Database Schema, Dexie** | `architecture` | `domain-rules` |
-| **Lập trình tính năng mới (Coding task)** | `implementation` | `domain-rules`, `ux-design` |
+| **Lập trình tính năng mới (Coding task)** | `implementation` + `testing` | `domain-rules`, `ux-design` |
 | **Viết Unit test, Integration test, Kiểm tra Invariants** | `testing` | `domain-rules` |
+| **Thao tác Git, commit, tạo branch, PR, CI / GitHub Actions** | `github-workflow` | `implementation`, `testing` |
 | **Đo lường, Thử nghiệm thực địa, Thu thập phản hồi Pilot** | `validation` | `product-context` |
 | **Review code, Kiểm tra PR, Audit chất lượng, Kiểm tra phase**| `review-audit` | Tất cả skills liên quan đến PR |
+
+> **Quy tắc phối hợp bắt buộc**:
+> - Mọi **Code task** $\rightarrow$ kích hoạt `implementation` + `testing`.
+> - Task có liên quan **commit / branch / PR / CI / GitHub** $\rightarrow$ kích hoạt thêm `github-workflow`.
 
 ---
 
@@ -42,17 +47,21 @@ Trước khi đọc bất kỳ skill nào khác, agent **BẮT BUỘC** đọc:
 - Trọng tâm: Boundary repository rõ ràng, UI không gọi DB trực tiếp, không over-engineer với Redux/CQRS/DI.
 
 ### Trường hợp 4: Nhận lệnh viết code tính năng mới
-- Đọc: `skills/implementation/SKILL.md`
-- Trọng tâm: Quy trình 5 bước (Inspect $\rightarrow$ Invariant $\rightarrow$ Smallest slice $\rightarrow$ Verify $\rightarrow$ Report), kỷ luật phase scope.
+- Đọc: `skills/implementation/SKILL.md` kết hợp `skills/testing/SKILL.md`
+- Trọng tâm: Chu trình phát triển (feature branch $\rightarrow$ implementation $\rightarrow$ typecheck $\rightarrow$ lint $\rightarrow$ tests $\rightarrow$ build $\rightarrow$ commit $\rightarrow$ review/audit $\rightarrow$ merge main).
 
 ### Trường hợp 5: Viết bài test hoặc sửa lỗi hồi quy
 - Đọc: `skills/testing/SKILL.md`
 - Trọng tâm: Ưu tiên bảo vệ Domain Invariants > UI detail; mọi bug số lượng phải có regression test.
 
-### Trường hợp 6: Đánh giá kết quả thử nghiệm thực tế hoặc quyết định dừng/tiếp tục
+### Trường hợp 6: Thao tác Git, commit, branch, CI pipeline hoặc chuẩn bị merge
+- Đọc: `skills/github-workflow/SKILL.md`
+- Trọng tâm: 5 nhóm rule (Branching, Commit atomic, Pull/merge safety, CI tối thiểu, Agent permissions).
+
+### Trường hợp 7: Đánh giá kết quả thử nghiệm thực tế hoặc quyết định dừng/tiếp tục
 - Đọc: `skills/validation/SKILL.md`
 - Trọng tâm: Thang đo bằng chứng, quy tắc Stop-build sau P6 để đem sản phẩm ra vườn xác thực.
 
-### Trường hợp 7: Được yêu cầu review code hoặc kiểm tra hoàn thành phase
+### Trường hợp 8: Được yêu cầu review code hoặc kiểm tra hoàn thành phase
 - Đọc: `skills/review-audit/SKILL.md`
 - Trọng tâm: Thứ tự review (Correctness $\rightarrow$ Scope compliance $\rightarrow$ Architecture $\rightarrow$ UX $\rightarrow$ Tests), phân loại lỗi (BLOCKER, HIGH, MEDIUM, LOW).

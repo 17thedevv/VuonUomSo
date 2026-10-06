@@ -57,7 +57,7 @@ Bảo vệ kiến trúc tinh giản của **Vườn Ươm** trong giai đoạn P
 1. **Ranh giới Repository sạch**:
    React Component **MUST NOT** gọi trực tiếp `db.batches.add(...)` hay `db.table(...)`. Mọi truy xuất dữ liệu phải thông qua Repository Interface rõ ràng.
 2. **Domain độc lập 100%**:
-   Mọi file trong `src/domain/` **MUST NOT** import bất kỳ thư viện UI nào (React, React Router, HTML elements). Domain phải là Pure TypeScript.
+   Mọi file trong `web/src/domain/` **MUST NOT** import bất kỳ thư viện UI nào (React, React Router, HTML elements). Domain phải là Pure TypeScript.
 3. **Repository không chứa UI concern**:
    Repository **MUST NOT** xử lý định dạng hiển thị, chuỗi JSX, hay thông báo toast.
 4. **Logic nghiệp vụ test được độc lập**:
@@ -91,7 +91,7 @@ Bảng `events` trong cơ sở dữ liệu hiện tại là:
 ## 6. Architecture Review Checklist
 
 - [ ] Component UI có import `db` từ `data/db.ts` không? (Nếu có $\rightarrow$ VI PHẠM, phải chuyển sang Repository).
-- [ ] File trong `src/domain/` có import `react` không? (Nếu có $\rightarrow$ VI PHẠM).
+- [ ] File trong `web/src/domain/` có import `react` không? (Nếu có $\rightarrow$ VI PHẠM).
 - [ ] Có phát sinh generic abstraction vô ích làm mờ type safety không?
 - [ ] Có thêm dependency nặng nào vào `package.json` mà chưa được phép không?
 - [ ] Thay đổi schema DB có nâng cấp version tương thích không?

@@ -41,6 +41,7 @@ Skill system là một tập hợp các tài liệu vận hành được cấu t
     ├── architecture/       # Ranh giới phân tầng UI -> Domain -> Repository -> Dexie
     ├── implementation/     # Quy trình 5 bước code tính năng, kỷ luật nghiệm thu
     ├── testing/            # Thứ tự ưu tiên test, policy bắt buộc cho regression
+    ├── github-workflow/    # Quy tắc Git/GitHub, branching, atomic commits, merge safety, CI
     ├── validation/         # Thang đo bằng chứng thực tế, quy tắc STOP-BUILD sau P6
     └── review-audit/       # Quy trình 5 bước review/audit code, mô hình lỗi BLOCKER/HIGH
 ```
