@@ -23,6 +23,7 @@ import {
 import { settingsRepository, organizationRepository } from '../../data/repositories'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
+import { validationTracker } from '../../validation/validationTracker'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 
 function formatDateTime(iso: string): string {
@@ -105,6 +106,7 @@ export const MoreScreen: React.FC = () => {
       const { jsonString } = await exportWorkspaceBackup()
       const filename = generateBackupFilename()
       downloadBackupFile(jsonString, filename)
+      void validationTracker.actionCompleted('backup_exported')
       setStatusMsg(`Đã tải tệp sao lưu về máy (${filename}).`)
     } catch (err) {
       console.error(err)
@@ -167,6 +169,7 @@ export const MoreScreen: React.FC = () => {
     setRestoreError(null)
     try {
       await restoreWorkspaceBackup(backupJsonString)
+      void validationTracker.actionCompleted('backup_restored')
       setStatusMsg('Đã khôi phục dữ liệu thành công!')
       setSelectedFileName(null)
       setBackupJsonString(null)

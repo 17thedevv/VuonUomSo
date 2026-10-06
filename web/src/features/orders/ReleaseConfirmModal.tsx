@@ -3,6 +3,7 @@ import { AlertCircle, RotateCcw } from 'lucide-react'
 import type { ResolvedReservation } from '../../services/reservationService'
 import { formatQuantity } from '../../domain/quantity'
 import { releaseReservation } from '../../services/reservationService'
+import { validationTracker } from '../../validation/validationTracker'
 
 export interface ReleaseConfirmModalProps {
   isOpen: boolean
@@ -27,6 +28,7 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
     setError(null)
     try {
       await releaseReservation({ reservationId: reservation.id })
+      void validationTracker.actionCompleted('reservation_released')
       onSuccess(
         `Đã bỏ giữ ${formatQuantity(reservation.quantity)} cây từ ${reservation.sourceLabel}. Số cây này đã trở lại cây còn bán.`
       )

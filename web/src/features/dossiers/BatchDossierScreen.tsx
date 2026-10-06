@@ -23,6 +23,7 @@ import {
 import { contactRepository, organizationRepository } from '../../data/repositories'
 import type { Contact } from '../../domain/contact'
 import type { Organization } from '../../domain/organization'
+import { validationTracker } from '../../validation/validationTracker'
 import {
   MATERIAL_TYPE_LABELS,
   DOSSIER_COMPLETENESS_LABELS,
@@ -48,6 +49,12 @@ export const BatchDossierScreen: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isEditing) {
+      void validationTracker.formStarted('dossier_saved')
+    }
+  }, [isEditing])
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null)
   const [printDate] = useState(() => new Date().toLocaleDateString('vi-VN'))
 
@@ -173,10 +180,12 @@ export const BatchDossierScreen: React.FC = () => {
         note: note.trim() || undefined
       })
 
+      void validationTracker.actionCompleted('dossier_saved')
       setSaveSuccessMsg('Đã lưu hồ sơ lô cây thành công.')
       await loadData()
       setIsEditing(false)
     } catch (err) {
+      void validationTracker.actionFailed('dossier_saved', 'validation')
       console.error('Error saving dossier:', err)
       setSaveError(
         err instanceof Error ? err.message : 'Chưa lưu được hồ sơ. Thông tin bạn vừa nhập vẫn được giữ trên màn hình.'

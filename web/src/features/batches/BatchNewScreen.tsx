@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { createBatch } from '../../services/batchService'
 import { Sprout, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
+import { validationTracker } from '../../validation/validationTracker'
 
 const COMMON_VARIETIES = [
   'Keo lai BV16',
@@ -34,6 +35,10 @@ export const BatchNewScreen: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  useEffect(() => {
+    void validationTracker.formStarted('batch_created')
+  }, [])
+
   const effectiveVariety = isCustomVariety ? customVariety.trim() : selectedVariety
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,11 +47,13 @@ export const BatchNewScreen: React.FC = () => {
 
     if (!effectiveVariety) {
       setFormError('Vui lòng chọn hoặc nhập tên giống cây.')
+      void validationTracker.actionFailed('batch_created', 'validation')
       return
     }
 
     if (!parsedQuantity || parsedQuantity <= 0) {
       setFormError('Vui lòng nhập số lượng cây ban đầu lớn hơn 0.')
+      void validationTracker.actionFailed('batch_created', 'validation')
       return
     }
 
@@ -65,8 +72,10 @@ export const BatchNewScreen: React.FC = () => {
     setIsSubmitting(false)
 
     if (result.success && result.batch) {
+      void validationTracker.actionCompleted('batch_created')
       navigate(`/batches/${result.batch.id}`, { replace: true })
     } else {
+      void validationTracker.actionFailed('batch_created', 'storage')
       setFormError(result.error || 'Chưa lưu được lô cây. Dữ liệu bạn vừa nhập vẫn còn trên màn hình.')
     }
   }

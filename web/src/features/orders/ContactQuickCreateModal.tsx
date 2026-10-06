@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import type { Contact } from '../../domain/contact'
 import { createContact } from '../../services/contactService'
 import { X, UserPlus, AlertCircle, Phone, Check } from 'lucide-react'
+import { validationTracker } from '../../validation/validationTracker'
 
 export interface ContactQuickCreateModalProps {
   isOpen: boolean
@@ -41,11 +42,13 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
     setIsSubmitting(false)
 
     if (result.success && result.contact) {
+      void validationTracker.actionCompleted('contact_created')
       onSuccess(result.contact)
       onClose()
     } else if (result.duplicateWarning && result.existingContact) {
       setDuplicateWarning(result.existingContact)
     } else {
+      void validationTracker.actionFailed('contact_created', 'validation')
       setError(result.error || 'Chưa lưu được thông tin khách hàng.')
     }
   }

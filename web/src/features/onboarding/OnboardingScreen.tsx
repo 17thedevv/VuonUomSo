@@ -7,6 +7,7 @@ import { resetDemoData } from '../../data/seed'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { OfflineBadge } from '../../shared/components/OfflineBadge'
+import { validationTracker } from '../../validation/validationTracker'
 
 interface CapabilityOption {
   key: OrganizationCapability
@@ -68,8 +69,11 @@ export const OnboardingScreen: React.FC = () => {
         payload: { name: trimmedName, capabilities: selectedCaps }
       })
 
+      void validationTracker.actionCompleted('onboarding_completed')
+
       navigate('/today', { replace: true })
     } catch (err) {
+      void validationTracker.actionFailed('onboarding_completed', 'storage')
       setError('Có lỗi xảy ra khi lưu. Vui lòng thử lại.')
       console.error(err)
     } finally {

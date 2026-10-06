@@ -6,6 +6,7 @@ import { formatQuantity } from '../../domain/quantity'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { reserveOwnBatch, reserveExternalSupplier } from '../../services/reservationService'
+import { validationTracker } from '../../validation/validationTracker'
 
 export type ReserveSource =
   | {
@@ -67,6 +68,12 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
     setError(null)
   }, [isOpen, source, orderShortage])
 
+  useEffect(() => {
+    if (isOpen) {
+      void validationTracker.formStarted('reservation_created')
+    }
+  }, [isOpen])
+
   if (!isOpen || !source) return null
 
   const isOwnBatch = source.type === 'own_batch'
@@ -96,7 +103,12 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isInvalid || quantity === null || isSubmitting) return
+    if (isInvalid || quantity === null || isSubmitting) {
+      if (isInvalid) {
+        void validationTracker.actionFailed('reservation_created', isOverBatch || isOverOrder ? 'insufficient_stock' : 'validation')
+      }
+      return
+    }
 
     setIsSubmitting(true)
     setError(null)
@@ -113,6 +125,7 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
           remaining === 0
             ? `Đã giữ ${formatQuantity(quantity)} cây từ ${sourceName}. Đơn đã giữ đủ!`
             : `Đã giữ ${formatQuantity(quantity)} cây từ ${sourceName}. Đơn còn thiếu ${formatQuantity(remaining)} cây.`
+        void validationTracker.actionCompleted('reservation_created')
         onSuccess(msg)
       } else {
         await reserveExternalSupplier({
@@ -125,11 +138,13 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
           remaining === 0
             ? `Đã giữ ${formatQuantity(quantity)} cây từ ${sourceName}. Đơn đã giữ đủ!`
             : `Đã giữ ${formatQuantity(quantity)} cây từ ${sourceName}. Đơn còn thiếu ${formatQuantity(remaining)} cây.`
+        void validationTracker.actionCompleted('reservation_created')
         onSuccess(msg)
       }
       onClose()
     } catch (err: unknown) {
       console.error('Error reserving trees:', err)
+      void validationTracker.actionFailed('reservation_created', 'domain_conflict')
       if (err instanceof Error) {
         setError(err.message)
       } else {
