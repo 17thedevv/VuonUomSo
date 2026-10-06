@@ -56,14 +56,42 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
       const s = session as Record<string, unknown>
       if (typeof s.participantCode !== 'string' || !s.participantCode.trim()) {
         errors.push('Mã người tham gia (participantCode) không được rỗng.')
-      } else if (s.participantCode.includes('@')) {
-        errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa ký tự email.')
+      } else {
+        const code = s.participantCode.trim()
+        if (code.includes('@') || /\.(com|vn|net|org)/i.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa ký tự email.')
+        }
+        if (/^(\+?84|0)\d+/i.test(code) || /\d{7,}/.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa số điện thoại.')
+        }
+        if (/^\d+$/.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia là dãy số đơn thuần.')
+        }
+        if (/\s/.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa khoảng trắng.')
+        }
       }
     }
   }
 
   if (!Array.isArray(obj.events)) {
     errors.push('Danh sách sự kiện (events) phải là mảng.')
+  } else {
+    for (const event of obj.events) {
+      if (!event || typeof event !== 'object') continue
+      const e = event as Record<string, unknown>
+      if (typeof e.participantCode === 'string') {
+        const code = e.participantCode.trim()
+        if (code.includes('@') || /\.(com|vn|net|org)/i.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia là email.')
+          break
+        }
+        if (/^(\+?84|0)\d+/i.test(code) || /\d{7,}/.test(code)) {
+          errors.push('Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia là số điện thoại.')
+          break
+        }
+      }
+    }
   }
 
   if (!obj.summary || typeof obj.summary !== 'object') {
@@ -79,6 +107,7 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
 /**
  * Builds a validated, read-only validation export envelope.
  * Strictly guarantees ZERO business records (batches, orders, contacts, etc.) are included.
+ * Excludes demo mode sessions and events by default to maintain research telemetry integrity.
  */
 export async function buildValidationExportData(options?: {
   includeDemo?: boolean
@@ -86,12 +115,16 @@ export async function buildValidationExportData(options?: {
   exportData: VuonUomValidationExportV1
   jsonString: string
 }> {
-  const [sessions, events] = await Promise.all([
+  const includeDemo = options?.includeDemo ?? false
+  const [allSessions, allEvents] = await Promise.all([
     validationRepository.getAllPilotSessions(),
     validationRepository.getAllValidationEvents()
   ])
 
-  const summary = buildValidationSummary(sessions, events, options)
+  const sessions = includeDemo ? allSessions : allSessions.filter((s) => s.mode !== 'demo')
+  const events = includeDemo ? allEvents : allEvents.filter((e) => e.mode === 'pilot')
+
+  const summary = buildValidationSummary(sessions, events, { includeDemo })
 
   const exportData: VuonUomValidationExportV1 = {
     format: VALIDATION_EXPORT_FORMAT,

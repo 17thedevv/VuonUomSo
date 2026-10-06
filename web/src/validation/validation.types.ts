@@ -22,6 +22,7 @@ export interface PilotSession {
   consent: 'accepted'
   startedAt: string // ISO string
   endedAt?: string // ISO string
+  mode?: 'pilot' | 'demo'
 
   supportLevel?: SupportLevel
   wouldUseNextWeek?: ReturnIntention

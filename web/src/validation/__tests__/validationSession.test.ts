@@ -26,6 +26,9 @@ describe('ValidationSession Service & Repository', () => {
     // Rejects empty
     expect(() => sanitizeParticipantCode('   ')).toThrow('Mã người thử không được để trống.')
 
+    // Rejects too short
+    expect(() => sanitizeParticipantCode('P')).toThrow('Mã người thử phải có ít nhất 2 ký tự')
+
     // Rejects too long
     expect(() => sanitizeParticipantCode('P'.repeat(25))).toThrow('Mã người thử quá dài')
 
@@ -34,6 +37,15 @@ describe('ValidationSession Service & Repository', () => {
 
     // Rejects phone numbers (PII)
     expect(() => sanitizeParticipantCode('0912345678')).toThrow('Không dùng số điện thoại')
+    expect(() => sanitizeParticipantCode('+84912345678')).toThrow('Không dùng số điện thoại')
+    expect(() => sanitizeParticipantCode('84912345678')).toThrow('Không dùng số điện thoại')
+
+    // Rejects emails (PII)
+    expect(() => sanitizeParticipantCode('user@domain.com')).toThrow('Không dùng địa chỉ email')
+    expect(() => sanitizeParticipantCode('pilot@vuon.vn')).toThrow('Không dùng địa chỉ email')
+
+    // Rejects pure numbers
+    expect(() => sanitizeParticipantCode('123456')).toThrow('Mã người thử phải chứa ít nhất một chữ cái')
   })
 
   it('starts a new pilot session and enforces max 1 active session invariant', async () => {
@@ -44,6 +56,7 @@ describe('ValidationSession Service & Repository', () => {
     expect(session.consent).toBe('accepted')
     expect(session.startedAt).toBeDefined()
     expect(session.endedAt).toBeUndefined()
+    expect(session.mode).toBe('pilot')
 
     // Query active session
     const active = await getActivePilotSession()
