@@ -134,8 +134,8 @@ export const OrdersScreen: React.FC = () => {
       />
 
       {/* Filter Tabs / Pills */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2.5 overflow-x-auto no-scrollbar">
-        <div className="flex items-center gap-2 min-w-max">
+      <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 overflow-x-auto no-scrollbar">
+        <div className="max-w-6xl mx-auto flex items-center gap-2 min-w-max">
           {FILTER_OPTIONS.map((opt) => {
             const active = filter === opt.key
             return (
@@ -157,7 +157,7 @@ export const OrdersScreen: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="p-4 space-y-3 flex-1 flex flex-col">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full space-y-4 flex-1 flex flex-col">
         {loading ? (
           <div className="text-center py-12 text-xs text-slate-400">
             Đang tải danh sách đơn hàng...
@@ -195,13 +195,15 @@ export const OrdersScreen: React.FC = () => {
             />
           </div>
         ) : (
-          displayedOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onClick={() => navigate(`/orders/${order.id}`)}
-            />
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {displayedOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onClick={() => navigate(`/orders/${order.id}`)}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -118,86 +118,93 @@ export const ShipmentDetailScreen: React.FC = () => {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <PageHeader title={`Chuyến giao #${shipment.id}`} showBack backTo="/shipments" />
 
-      <div className="p-4 max-w-xl mx-auto w-full space-y-4 pb-16">
-        {/* Status & Quantity Header Card */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Trạng thái chuyến
-            </span>
-            <StatusBadge status={shipment.status} />
-          </div>
-
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center justify-between">
-            <div>
-              <div className="text-xs text-slate-500 font-medium">
-                {isCompleted ? 'Số cây đã bốc xuất' : 'Số cây dự kiến bốc'}
+      <div className="max-w-6xl mx-auto w-full p-4 sm:p-6 pb-16">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start space-y-4 lg:space-y-0">
+          {/* Left Column: Status, Quantity, Customer & Order Info */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Status & Quantity Header Card */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Trạng thái chuyến
+                </span>
+                <StatusBadge status={shipment.status} />
               </div>
-              <div className="text-xl font-extrabold text-slate-900 mt-0.5">
-                {formatQuantity(displayQuantity)} cây
+
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    {isCompleted ? 'Số cây đã bốc xuất' : 'Số cây dự kiến bốc'}
+                  </div>
+                  <div className="text-xl font-extrabold text-slate-900 mt-0.5">
+                    {formatQuantity(displayQuantity)} cây
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {vanQuantity} vạn
+                  </span>
+                </div>
+              </div>
+
+              {/* Date & Meta */}
+              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>
+                    {isCompleted && shipment.shippedAt
+                      ? `Xuất vườn: ${formatDate(shipment.shippedAt)}`
+                      : shipment.plannedDate
+                      ? `Ngày hẹn: ${formatDate(shipment.plannedDate)}`
+                      : `Ngày tạo: ${formatDate(shipment.createdAt)}`}
+                  </span>
+                </div>
+
+                {shipment.note && (
+                  <div className="flex items-center gap-1.5 col-span-2 text-slate-500 italic bg-slate-50 p-2 rounded">
+                    <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>&ldquo;{shipment.note}&rdquo;</span>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="text-right">
-              <span className="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                {vanQuantity} vạn
-              </span>
-            </div>
-          </div>
 
-          {/* Date & Meta */}
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 pt-1">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>
-                {isCompleted && shipment.shippedAt
-                  ? `Xuất vườn: ${formatDate(shipment.shippedAt)}`
-                  : shipment.plannedDate
-                  ? `Ngày hẹn: ${formatDate(shipment.plannedDate)}`
-                  : `Ngày tạo: ${formatDate(shipment.createdAt)}`}
-              </span>
-            </div>
+            {/* Customer & Order Context Card */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Thông tin người nhận
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900">{customer?.name ?? 'Khách hàng'}</h3>
+                  <div className="text-xs text-slate-500 font-medium">{order.variety}</div>
+                </div>
 
-            {shipment.note && (
-              <div className="flex items-center gap-1.5 col-span-2 text-slate-500 italic bg-slate-50 p-2 rounded">
-                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>&ldquo;{shipment.note}&rdquo;</span>
+                {customer?.phone && (
+                  <a
+                    href={`tel:${customer.phone}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold border border-emerald-200"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Gọi điện</span>
+                  </a>
+                )}
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Customer & Order Context Card */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Thông tin người nhận
-              </span>
-              <h3 className="text-sm font-bold text-slate-900">{customer?.name ?? 'Khách hàng'}</h3>
-              <div className="text-xs text-slate-500 font-medium">{order.variety}</div>
+              <div className="border-t border-slate-100 pt-2 flex items-center justify-between text-xs">
+                <span className="text-slate-500">Đơn hàng liên kết:</span>
+                <Link
+                  to={`/orders/${order.id}`}
+                  className="font-bold text-emerald-700 hover:underline"
+                >
+                  #{order.id} (Xem chi tiết)
+                </Link>
+              </div>
             </div>
-
-            {customer?.phone && (
-              <a
-                href={`tel:${customer.phone}`}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold border border-emerald-200"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Gọi điện</span>
-              </a>
-            )}
           </div>
 
-          <div className="border-t border-slate-100 pt-2 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Đơn hàng liên kết:</span>
-            <Link
-              to={`/orders/${order.id}`}
-              className="font-bold text-emerald-700 hover:underline"
-            >
-              #{order.id} (Xem chi tiết)
-            </Link>
-          </div>
-        </div>
+          {/* Right Column: Physical Stock Breakdown, Invariant Warning, Action Buttons */}
+          <div className="lg:col-span-5 space-y-4">
 
         {/* Physical Stock Reduction Breakdown */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
@@ -299,6 +306,8 @@ export const ShipmentDetailScreen: React.FC = () => {
             </SecondaryButton>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {/* Confirmation Modal */}

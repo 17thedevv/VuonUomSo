@@ -20,8 +20,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   const navigate = useNavigate()
 
   return (
-    <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-xs border-b border-slate-200 px-4 py-3">
-      <div className="flex items-center justify-between min-h-[44px]">
+    <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-xs border-b border-slate-200 px-4 sm:px-6 py-3">
+      <div className="max-w-6xl mx-auto w-full flex items-center justify-between min-h-[44px]">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {showBack && (
             <button

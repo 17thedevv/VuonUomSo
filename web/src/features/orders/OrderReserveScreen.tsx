@@ -146,7 +146,7 @@ export const OrderReserveScreen: React.FC = () => {
         backTo={`/orders/${order.id}`}
       />
 
-      <div className="p-4 max-w-5xl mx-auto w-full space-y-4">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-4 pb-16">
         {/* Success toast / notification banner */}
         {notification && (
           <div className="bg-emerald-50 border border-emerald-300 text-emerald-900 p-3 rounded-2xl flex items-center justify-between text-xs animate-in fade-in slide-in-from-top-2 duration-200">

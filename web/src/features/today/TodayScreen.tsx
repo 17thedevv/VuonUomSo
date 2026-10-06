@@ -168,29 +168,31 @@ export const TodayScreen: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
       {/* Brand & Organization Header */}
-      <div className="bg-emerald-800 text-white px-4 pt-5 pb-6">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-emerald-200 font-bold">
-              Vườn Ươm
-            </span>
-            {appMode === 'demo' && (
-              <span className="bg-emerald-900/80 border border-emerald-600 text-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                Bản mẫu
+      <div className="bg-emerald-800 text-white px-4 sm:px-6 pt-5 pb-6">
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider text-emerald-200 font-bold">
+                Vườn Ươm
               </span>
-            )}
+              {appMode === 'demo' && (
+                <span className="bg-emerald-900/80 border border-emerald-600 text-emerald-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  Bản mẫu
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-emerald-200 font-medium">{todayDate}</span>
           </div>
-          <span className="text-xs text-emerald-200 font-medium">{todayDate}</span>
+          <h1 className="text-xl lg:text-2xl font-bold tracking-tight text-white truncate">
+            {org?.name || 'Vườn của tôi'}
+          </h1>
+          <p className="text-xs text-emerald-200/90 mt-0.5">Sổ cây giống trên điện thoại</p>
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-white truncate">
-          {org?.name || 'Vườn của tôi'}
-        </h1>
-        <p className="text-xs text-emerald-200/90 mt-0.5">Sổ cây giống trên điện thoại</p>
       </div>
 
       {/* Primary Action Button */}
-      <div className="px-4 -mt-3">
-        <div className="shadow-md rounded-xl overflow-hidden">
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 -mt-3">
+        <div className="shadow-md rounded-xl overflow-hidden max-w-sm">
           <PrimaryButton
             onClick={() => navigate('/orders/new')}
             className="text-base font-bold py-3.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900"
@@ -201,10 +203,13 @@ export const TodayScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="px-4 py-5 space-y-5">
-        {/* SECTION: CÂY HÔM NAY */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 py-6">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-6 lg:space-y-0">
+          {/* Left Column: Stats & Shipments */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* SECTION: CÂY HÔM NAY */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
               CÂY HÔM NAY
             </h2>
@@ -318,118 +323,124 @@ export const TodayScreen: React.FC = () => {
           </div>
         )}
 
-        {/* SECTION: VIỆC CẦN LÀM */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              VIỆC CẦN LÀM
-            </h2>
-            <button
-              onClick={() => navigate('/orders')}
-              className="text-xs text-emerald-700 font-semibold hover:underline flex items-center gap-0.5"
-            >
-              Xem đơn hàng ({pendingOrdersCount})
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
           </div>
 
-          <div className="space-y-2">
-            {/* Attention batches notification */}
-            {attentionBatches.map((b) => (
-              <div
-                key={`att_${b.id}`}
-                onClick={() => navigate(`/batches/${b.id}`)}
-                role="button"
-                tabIndex={0}
-                className="bg-amber-50/90 border border-amber-300 p-3.5 rounded-xl flex items-start gap-3 cursor-pointer active:bg-amber-100 transition-colors"
-              >
-                <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
-                  <AlertTriangle className="w-3.5 h-3.5 stroke-[2.5]" />
-                </div>
-                <div className="min-w-0 flex-1 text-xs">
-                  <div className="font-bold text-amber-950">
-                    {b.code} · Sắp quá lứa
-                  </div>
-                  <div className="text-amber-900 mt-0.5">
-                    {b.variety} — Nên bán trước{' '}
-                    <strong>{formatShortDate(b.preferredSellBefore)}</strong> (tránh rễ ăn sâu)
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-amber-700 shrink-0 self-center" />
-              </div>
-            ))}
-
-            {/* Orders requiring attention (shortage > 0) */}
-            {attentionOrders.map((order) => {
-              const isShortage = order.shortage > 0
-
-              return (
-                <div
-                  key={`ord_${order.id}`}
-                  onClick={() => navigate(`/orders/${order.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors"
+          {/* Right Column: Attention & Tasks */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* SECTION: VIỆC CẦN LÀM */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  VIỆC CẦN LÀM
+                </h2>
+                <button
+                  onClick={() => navigate('/orders')}
+                  className="text-xs text-emerald-700 font-semibold hover:underline flex items-center gap-0.5"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-slate-900 text-sm">
-                        {order.customerName}
-                      </span>
-                      {isShortage ? (
-                        <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md">
-                          {order.displayStatus.label}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md">
-                          Đã giữ đủ
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-slate-600">
-                      {formatQuantity(order.requestedQuantity)} cây {order.variety}
-                    </div>
-                    {order.requestedDate && (
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        Lấy ngày: {formatShortDate(order.requestedDate)}
-                      </div>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
-                </div>
-              )
-            })}
-
-            {batches.length === 0 && (
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto">
-                  <Sprout className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-slate-800 text-sm">Chưa có dữ liệu trong vườn</h3>
-                <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Hãy tạo lô giống đầu tiên để theo dõi số lượng cây đang ươm, cây đủ bán và ghi đơn cho khách.
-                </p>
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/batches/new')}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-xs"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>+ Tạo lô đầu tiên</span>
-                  </button>
-                </div>
+                  Xem đơn hàng ({pendingOrdersCount})
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            )}
 
-            {batches.length > 0 &&
-              attentionBatches.length === 0 &&
-              attentionOrders.length === 0 &&
-              plannedShipments.length === 0 && (
-                <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
-                  Không có việc gấp nào cần xử lý hôm nay.
-                </div>
-              )}
+              <div className="space-y-2">
+                {/* Attention batches notification */}
+                {attentionBatches.map((b) => (
+                  <div
+                    key={`att_${b.id}`}
+                    onClick={() => navigate(`/batches/${b.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    className="bg-amber-50/90 border border-amber-300 p-3.5 rounded-xl flex items-start gap-3 cursor-pointer active:bg-amber-100 transition-colors"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </div>
+                    <div className="min-w-0 flex-1 text-xs">
+                      <div className="font-bold text-amber-950">
+                        {b.code} · Sắp quá lứa
+                      </div>
+                      <div className="text-amber-900 mt-0.5">
+                        {b.variety} — Nên bán trước{' '}
+                        <strong>{formatShortDate(b.preferredSellBefore)}</strong> (tránh rễ ăn sâu)
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-700 shrink-0 self-center" />
+                  </div>
+                ))}
+
+                {/* Orders requiring attention (shortage > 0) */}
+                {attentionOrders.map((order) => {
+                  const isShortage = order.shortage > 0
+
+                  return (
+                    <div
+                      key={`ord_${order.id}`}
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                      role="button"
+                      tabIndex={0}
+                      className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer active:bg-slate-50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-slate-900 text-sm">
+                            {order.customerName}
+                          </span>
+                          {isShortage ? (
+                            <span className="text-[11px] font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md">
+                              {order.displayStatus.label}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md">
+                              Đã giữ đủ
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          {formatQuantity(order.requestedQuantity)} cây {order.variety}
+                        </div>
+                        {order.requestedDate && (
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            Lấy ngày: {formatShortDate(order.requestedDate)}
+                          </div>
+                        )}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
+                    </div>
+                  )
+                })}
+
+                {batches.length === 0 && (
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto">
+                      <Sprout className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-sm">Chưa có dữ liệu trong vườn</h3>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      Hãy tạo lô giống đầu tiên để theo dõi số lượng cây đang ươm, cây đủ bán và ghi đơn cho khách.
+                    </p>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/batches/new')}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-xs"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>+ Tạo lô đầu tiên</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {batches.length > 0 &&
+                  attentionBatches.length === 0 &&
+                  attentionOrders.length === 0 &&
+                  plannedShipments.length === 0 && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+                      Không có việc gấp nào cần xử lý hôm nay.
+                    </div>
+                  )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

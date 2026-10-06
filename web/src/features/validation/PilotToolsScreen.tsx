@@ -64,7 +64,7 @@ export const PilotToolsScreen: React.FC = () => {
         backTo="/more"
       />
 
-      <div className="p-4 max-w-xl mx-auto w-full space-y-4">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-4">
         {/* Status / Error Toast */}
         {statusMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
@@ -80,29 +80,35 @@ export const PilotToolsScreen: React.FC = () => {
           </div>
         )}
 
-        {/* 1. Pilot Session Control Panel */}
-        <PilotSessionPanel />
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0 items-start">
+          {/* Column 1: Session panel & Report link */}
+          <div className="space-y-4">
+            {/* 1. Pilot Session Control Panel */}
+            <PilotSessionPanel />
 
-        {/* 2. Validation Report Card */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
-          <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-emerald-700" />
-            Báo cáo tổng hợp (Validation Report)
-          </h2>
-          <p className="text-xs text-slate-500">
-            Xem phân tích các chỉ số kích hoạt A1/A2/A3, tỷ lệ hoàn thành tác vụ, phản hồi hỗ trợ và mức độ sẵn sàng chi trả (WTP).
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/validation')}
-            className="w-full min-h-[44px] py-2 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 active:bg-slate-100 transition-colors flex items-center justify-center gap-2"
-          >
-            <BarChart3 className="w-4 h-4" />
-            Xem bảng điều khiển báo cáo
-          </button>
-        </div>
+            {/* 2. Validation Report Card */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+              <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-emerald-700" />
+                Báo cáo tổng hợp (Validation Report)
+              </h2>
+              <p className="text-xs text-slate-500">
+                Xem phân tích các chỉ số kích hoạt A1/A2/A3, tỷ lệ hoàn thành tác vụ, phản hồi hỗ trợ và mức độ sẵn sàng chi trả (WTP).
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/validation')}
+                className="w-full min-h-[44px] py-2 px-4 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 active:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Xem bảng điều khiển báo cáo
+              </button>
+            </div>
+          </div>
 
-        {/* 3. Validation Export Card */}
+          {/* Column 2: Export & Reset */}
+          <div className="space-y-4">
+            {/* 3. Validation Export Card */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <Download className="w-4 h-4 text-emerald-700" />
@@ -143,7 +149,9 @@ export const PilotToolsScreen: React.FC = () => {
             {isClearing ? 'Đang xóa...' : 'Xóa toàn bộ dữ liệu thử nghiệm'}
           </button>
         </div>
+        </div>
       </div>
     </div>
+  </div>
   )
 }

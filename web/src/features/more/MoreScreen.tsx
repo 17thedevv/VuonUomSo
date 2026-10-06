@@ -192,7 +192,7 @@ export const MoreScreen: React.FC = () => {
     <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
       <PageHeader title="Thêm" subtitle="Cài đặt & Quản lý dữ liệu" />
 
-      <div className="p-4 space-y-4 max-w-xl mx-auto w-full pb-16">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full pb-16 space-y-4 sm:space-y-6">
         {/* Status notification */}
         {statusMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
@@ -201,8 +201,11 @@ export const MoreScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Current State Info */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0 items-start">
+          {/* Column 1: Workspace info, Shipments, Backup & Restore */}
+          <div className="space-y-4">
+            {/* Current State Info */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-500">Cơ sở:</span>
             <span className="font-bold text-slate-800">{orgName}</span>
@@ -258,7 +261,10 @@ export const MoreScreen: React.FC = () => {
 
         {/* Pilot Tools & Survey */}
         <PilotSessionPanel />
+      </div>
 
+      {/* Column 2: Reporting, Backup, Restore & Danger zone */}
+      <div className="space-y-4">
         {/* Validation Report & Tools Link */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
@@ -463,6 +469,8 @@ export const MoreScreen: React.FC = () => {
             Xóa dữ liệu & Bắt đầu lại
           </button>
         </div>
+        </div>
+      </div>
 
         {/* App Info */}
         <div className="text-center pt-2 pb-4 text-xs text-slate-400 space-y-1">
