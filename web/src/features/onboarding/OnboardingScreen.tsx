@@ -95,37 +95,41 @@ export const OnboardingScreen: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 max-w-[440px] mx-auto">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 sm:p-6 lg:p-12 w-full max-w-6xl mx-auto">
       <OfflineBadge />
 
-      <div className="pt-6">
-        {/* Branding */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 mb-3 shadow-xs">
-            <Sprout className="w-8 h-8" />
+      <div className="pt-6 my-auto lg:grid lg:grid-cols-12 lg:gap-12 lg:items-center">
+        {/* Branding (Left on Desktop, Top on Mobile) */}
+        <div className="lg:col-span-5 text-center lg:text-left mb-8 lg:mb-0">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 mb-4 shadow-xs">
+            <Sprout className="w-9 h-9" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Vườn Ươm</h1>
-          <p className="text-sm font-medium text-emerald-800 mt-1">Sổ cây giống trên điện thoại</p>
+          <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Vườn Ươm</h1>
+          <p className="text-base font-semibold text-emerald-800 mt-1">Sổ cây giống trên điện thoại</p>
+          <p className="hidden lg:block text-sm text-slate-500 mt-4 leading-relaxed">
+            Sổ tay quản lý lâm nghiệp thực tế: phân biệt rõ tồn kho vật lý, cây đủ chuẩn và số lượng còn bán; giữ cây và xuất xe an toàn, không lo bán khống.
+          </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <div>
-            <label htmlFor="garden-name" className="block text-sm font-bold text-slate-800 mb-1.5">
-              Tên vườn / cơ sở
-            </label>
-            <input
-              id="garden-name"
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                if (error) setError(null)
-              }}
-              placeholder="VD: Vườn ươm Tuấn Sơn, Vườn Bác Bình..."
-              className="w-full px-4 py-3 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-slate-900 placeholder:text-slate-400 min-h-[48px]"
-            />
-          </div>
+        {/* Form & Actions (Right on Desktop) */}
+        <div className="lg:col-span-7 w-full max-w-xl mx-auto lg:mx-0">
+          <form onSubmit={handleSubmit} className="space-y-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+            <div>
+              <label htmlFor="garden-name" className="block text-sm font-bold text-slate-800 mb-1.5">
+                Tên vườn / cơ sở
+              </label>
+              <input
+                id="garden-name"
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  if (error) setError(null)
+                }}
+                placeholder="VD: Vườn ươm Tuấn Sơn, Vườn Bác Bình..."
+                className="w-full px-4 py-3 text-base rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-slate-900 placeholder:text-slate-400 min-h-[48px]"
+              />
+            </div>
 
           <div>
             <label className="block text-sm font-bold text-slate-800 mb-2">
@@ -176,27 +180,28 @@ export const OnboardingScreen: React.FC = () => {
             </PrimaryButton>
           </div>
         </form>
-      </div>
 
-      {/* Demo Seed Shortcut for Prototype Evaluation */}
-      <div className="py-6 text-center space-y-3">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200"></div>
+        {/* Demo Seed Shortcut for Prototype Evaluation */}
+        <div className="py-6 text-center space-y-3">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-slate-50 px-2 text-slate-400">hoặc thử nghiệm ngay</span>
+            </div>
           </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-slate-50 px-2 text-slate-400">hoặc thử nghiệm ngay</span>
-          </div>
+          <SecondaryButton
+            fullWidth
+            type="button"
+            onClick={handleUseDemoData}
+            disabled={isSubmitting}
+          >
+            Dùng thử với dữ liệu mẫu (Vườn Hồng Anh)
+          </SecondaryButton>
         </div>
-        <SecondaryButton
-          fullWidth
-          type="button"
-          onClick={handleUseDemoData}
-          disabled={isSubmitting}
-        >
-          Dùng thử với dữ liệu mẫu (Vườn Hồng Anh)
-        </SecondaryButton>
       </div>
     </div>
+  </div>
   )
 }

@@ -154,8 +154,11 @@ export const BatchDetailScreen: React.FC = () => {
         rightAction={<StatusBadge status={batch.status} />}
       />
 
-      <div className="p-4 space-y-4">
-        {/* Quantity overview cards */}
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full pb-16">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-5 lg:space-y-0">
+          {/* Left Column: Metrics, Attention, Actions, Batch Info */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Quantity overview cards */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -267,7 +270,10 @@ export const BatchDetailScreen: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
 
+      {/* Right Column: Dossier & History */}
+      <div className="lg:col-span-5 space-y-5">
         {/* Hồ sơ nguồn gốc (Batch Dossier) */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
@@ -376,6 +382,8 @@ export const BatchDetailScreen: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
+  </div>
 
       {/* Inventory Update Modal */}
       <InventoryUpdateModal
