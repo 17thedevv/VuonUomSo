@@ -7,16 +7,24 @@ import {
   Clock,
   History,
   Trees,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react'
 import {
   batchRepository,
   reservationRepository,
-  eventRepository
+  eventRepository,
+  dossierRepository
 } from '../../data/repositories'
 import type { Batch } from '../../domain/batch'
 import type { Reservation } from '../../domain/reservation'
 import type { DomainEvent } from '../../analytics/events'
+import type { BatchDossier } from '../../domain/dossier'
+import {
+  deriveDossierCompleteness,
+  DOSSIER_COMPLETENESS_LABELS,
+  MATERIAL_TYPE_LABELS
+} from '../../domain/dossier'
 import {
   availableQuantityForBatch,
   reservedQuantityForBatch,
@@ -29,6 +37,7 @@ import { formatShortDate } from '../../domain/date'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { StatusBadge } from '../../shared/components/StatusBadge'
 import { EmptyState } from '../../shared/components/EmptyState'
+import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { InventoryUpdateModal } from './InventoryUpdateModal'
 import { undoService } from '../../services/undoService'
 
@@ -36,6 +45,7 @@ export const BatchDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [batch, setBatch] = useState<Batch | null>(null)
+  const [dossier, setDossier] = useState<BatchDossier | null>(null)
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [events, setEvents] = useState<DomainEvent[]>([])
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
@@ -45,14 +55,16 @@ export const BatchDetailScreen: React.FC = () => {
   const fetchData = useCallback(async () => {
     if (!id) return
     try {
-      const [b, r, allEvents] = await Promise.all([
+      const [b, r, allEvents, dos] = await Promise.all([
         batchRepository.getById(id),
         reservationRepository.getByBatchId(id),
-        eventRepository.getAll()
+        eventRepository.getAll(),
+        dossierRepository.getByBatchId(id)
       ])
 
       setBatch(b)
       setReservations(r)
+      setDossier(dos)
 
       // Filter events related to this batch
       const batchEvents = allEvents.filter(
@@ -252,6 +264,81 @@ export const BatchDetailScreen: React.FC = () => {
               <p className="bg-slate-50 p-2.5 rounded-lg text-slate-700 leading-relaxed">
                 {batch.sourceNote}
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Hồ sơ nguồn gốc (Batch Dossier) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Hồ sơ nguồn gốc</span>
+            </h4>
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                dossier
+                  ? deriveDossierCompleteness(dossier) === 'referenced'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-sky-100 text-sky-800'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {DOSSIER_COMPLETENESS_LABELS[deriveDossierCompleteness(dossier)]}
+            </span>
+          </div>
+
+          {dossier ? (
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1.5">
+                <div className="flex justify-between text-slate-600">
+                  <span>Loại vật liệu:</span>
+                  <span className="font-semibold text-slate-800">
+                    {MATERIAL_TYPE_LABELS[dossier.materialType]}
+                  </span>
+                </div>
+                {dossier.sourceName && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Nguồn / nơi lấy:</span>
+                    <span className="font-semibold text-slate-800 truncate max-w-[200px]">
+                      {dossier.sourceName}
+                    </span>
+                  </div>
+                )}
+                {dossier.sourceLotCode && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Mã lô nguồn:</span>
+                    <span className="font-semibold text-slate-800">
+                      {dossier.sourceLotCode}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-600 pt-1 border-t border-slate-200/60">
+                  <span>Chứng từ tham chiếu:</span>
+                  <span className="font-bold text-emerald-700">
+                    {dossier.documents.length > 0 ? `${dossier.documents.length} chứng từ` : 'Chưa có'}
+                  </span>
+                </div>
+              </div>
+
+              <SecondaryButton
+                fullWidth
+                onClick={() => navigate(`/dossiers/${batch.id}`)}
+              >
+                XEM HỒ SƠ
+              </SecondaryButton>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-500">
+                Chưa ghi nhận thông tin nguồn vật liệu ban đầu và chứng từ tham chiếu cho lô cây này.
+              </p>
+              <SecondaryButton
+                fullWidth
+                onClick={() => navigate(`/dossiers/${batch.id}`)}
+              >
+                THÊM HỒ SƠ
+              </SecondaryButton>
             </div>
           )}
         </div>

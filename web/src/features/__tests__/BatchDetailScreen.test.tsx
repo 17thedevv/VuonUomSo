@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { BatchDetailScreen } from '../batches/BatchDetailScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
+import { db } from '../../data/db'
 
 describe('BatchDetailScreen', () => {
   beforeEach(async () => {
@@ -106,6 +107,35 @@ describe('BatchDetailScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Không tìm thấy lô cây này')).toBeInTheDocument()
+    })
+  })
+
+  it('renders dossier section and shows completeness status for batch', async () => {
+    // Add dossier for demo batch
+    await db.dossiers.add({
+      id: 'dos_test_detail',
+      batchId: 'batch_bv16_12',
+      materialType: 'cutting',
+      sourceName: 'Vườn cây đầu dòng Ba Vì',
+      sourceLotCode: 'BV16-01',
+      documents: [{ id: 'd1', title: 'Phiếu nguồn giống' }],
+      createdAt: '2026-09-01',
+      updatedAt: '2026-09-01'
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/batches/batch_bv16_12']}>
+        <Routes>
+          <Route path="/batches/:id" element={<BatchDetailScreen />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Hồ sơ nguồn gốc')).toBeInTheDocument()
+      expect(screen.getByText('Có chứng từ tham chiếu')).toBeInTheDocument()
+      expect(screen.getByText('Vườn cây đầu dòng Ba Vì')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'XEM HỒ SƠ' })).toBeInTheDocument()
     })
   })
 })

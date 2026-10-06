@@ -7,7 +7,8 @@ import type { Reservation } from '../domain/reservation'
 import {
   shippedQuantityForOrder,
   remainingToShipForOrder,
-  validateShipmentLineAllocation
+  validateShipmentLineAllocation,
+  validateShipmentQuantity
 } from '../domain/shipment'
 import { remainingReservationQuantity } from '../domain/reservation'
 import { formatQuantity } from '../domain/quantity'
@@ -289,6 +290,30 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
 
       if (shipment.status !== 'planned') {
         throw new Error('Chỉ có thể xác nhận chuyến giao đang ở trạng thái dự kiến.')
+      }
+
+      // Verify lines non-empty
+      if (!shipment.lines || shipment.lines.length === 0) {
+        throw new Error('Chuyến giao không có dòng phân bổ cây.')
+      }
+
+      // Verify line quantities and uniqueness first
+      const seenReservationIds = new Set<string>()
+      for (const line of shipment.lines) {
+        const qtyCheck = validateShipmentQuantity(line.quantity)
+        if (!qtyCheck.valid) {
+          throw new Error(qtyCheck.error)
+        }
+        if (seenReservationIds.has(line.reservationId)) {
+          throw new Error('Chuyến giao có dòng giữ cây bị trùng lặp.')
+        }
+        seenReservationIds.add(line.reservationId)
+      }
+
+      // Verify sum of lines equals plannedQuantity
+      const totalLinesQuantity = shipment.lines.reduce((sum, l) => sum + l.quantity, 0)
+      if (totalLinesQuantity !== shipment.plannedQuantity) {
+        throw new Error('Tổng số cây trong các dòng không khớp với số lượng dự kiến của chuyến giao.')
       }
 
       // 2. Re-read order at commit time
