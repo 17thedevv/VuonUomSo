@@ -69,8 +69,8 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    // Verify database version is now 3
-    expect(appDb.verno).toBe(3)
+    // Verify database version is now 4
+    expect(appDb.verno).toBe(4)
 
     // 5. Verify existing data preserved
     const loadedBatch = await appDb.batches.get('batch_old')
@@ -158,7 +158,7 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const appDb = new VuonUomDatabase(testDbName)
     await appDb.open()
 
-    expect(appDb.verno).toBe(3)
+    expect(appDb.verno).toBe(4)
 
     // Check backfilled fulfilledQuantity on reservations
     const resActive = await appDb.reservations.get('res_active_v2')
@@ -201,6 +201,93 @@ describe('Database Schema Migration (v1 -> v2 -> v3)', () => {
     const plannedList = await appDb.shipments.where('status').equals('planned').toArray()
     expect(plannedList.length).toBe(1)
     expect(plannedList[0].id).toBe('ship_planned_1')
+
+    appDb.close()
+  })
+
+  it('migrates from v3 to v4 adding dossiers table while preserving all data', async () => {
+    // 1. Create a pure v3 database instance simulating a user after Phase P4
+    const v3Db = new Dexie(testDbName)
+    v3Db.version(1).stores({
+      organizations: 'id, name',
+      settings: 'key',
+      contacts: 'id, name',
+      batches: 'id, code, variety, status, createdAt',
+      orders: 'id, customerId, status',
+      reservations: 'id, orderId, batchId, status',
+      shipments: 'id, orderId, status',
+      events: 'id, type, entityType, entityId, createdAt'
+    })
+    v3Db.version(2).stores({
+      reservations: 'id, orderId, batchId, supplierId, status'
+    })
+    v3Db.version(3).stores({
+      reservations: 'id, orderId, batchId, supplierId, status',
+      shipments: 'id, orderId, status, plannedDate, shippedAt, createdAt'
+    })
+
+    await v3Db.open()
+
+    // Insert v3 records
+    await v3Db.table('batches').add({
+      id: 'batch_p4',
+      code: 'BV16 #10',
+      variety: 'Keo lai BV16',
+      initialQuantity: 10000,
+      currentQuantity: 8000,
+      readyQuantity: 7000,
+      status: 'ready',
+      createdAt: '2026-10-01'
+    })
+
+    await v3Db.table('orders').add({
+      id: 'order_p4',
+      customerId: 'cust_01',
+      variety: 'Keo lai BV16',
+      requestedQuantity: 5000,
+      status: 'partially_shipped'
+    })
+
+    v3Db.close()
+
+    // 2. Open with VuonUomDatabase v4
+    const appDb = new VuonUomDatabase(testDbName)
+    await appDb.open()
+
+    expect(appDb.verno).toBe(4)
+
+    // Check existing records preserved
+    const batch = await appDb.batches.get('batch_p4')
+    expect(batch?.code).toBe('BV16 #10')
+    expect(batch?.currentQuantity).toBe(8000)
+
+    const order = await appDb.orders.get('order_p4')
+    expect(order?.status).toBe('partially_shipped')
+
+    // 3. Test saving dossier and querying by batchId index
+    await appDb.dossiers.put({
+      id: 'dos_p4_01',
+      batchId: 'batch_p4',
+      materialType: 'cutting',
+      sourceName: 'Vườn cây đầu dòng Ba Vì',
+      sourceLocation: 'Hà Nội',
+      documents: [
+        {
+          id: 'doc_1',
+          title: 'Hồ sơ cây đầu dòng',
+          number: 'BV16-01'
+        }
+      ],
+      createdAt: '2026-10-06T10:00:00.000Z',
+      updatedAt: '2026-10-06T10:00:00.000Z'
+    })
+
+    const foundDossier = await appDb.dossiers.where('batchId').equals('batch_p4').first()
+    expect(foundDossier).not.toBeNull()
+    expect(foundDossier?.id).toBe('dos_p4_01')
+    expect(foundDossier?.materialType).toBe('cutting')
+    expect(foundDossier?.sourceName).toBe('Vườn cây đầu dòng Ba Vì')
+    expect(foundDossier?.documents.length).toBe(1)
 
     appDb.close()
   })

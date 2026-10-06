@@ -1,51 +1,15 @@
-import {
-  organizationRepository,
-  batchRepository,
-  contactRepository,
-  orderRepository,
-  reservationRepository,
-  shipmentRepository,
-  eventRepository
-} from './repositories'
+export * from './backup/backup.types'
+export * from './backup/backup.normalize'
+export * from './backup/backup.validate'
+export * from './backup/backup.export'
+export * from './backup/backup.restore'
 
-export interface DatabaseBackup {
-  version: number
-  exportedAt: string
-  organization: unknown
-  batches: unknown[]
-  contacts: unknown[]
-  orders: unknown[]
-  reservations: unknown[]
-  shipments: unknown[]
-  events: unknown[]
-}
+import { exportWorkspaceBackup } from './backup/backup.export'
 
 /**
- * Exports all local data to a serializable JSON-compatible structure.
+ * Backward compatibility helper for exporting database to JSON.
  */
 export async function exportDatabaseToJson(): Promise<string> {
-  const [organization, batches, contacts, orders, reservations, shipments, events] =
-    await Promise.all([
-      organizationRepository.getCurrent(),
-      batchRepository.getAll(),
-      contactRepository.getAll(),
-      orderRepository.getAll(),
-      reservationRepository.getAll(),
-      shipmentRepository.getAll(),
-      eventRepository.getAll()
-    ])
-
-  const backup: DatabaseBackup = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    organization,
-    batches,
-    contacts,
-    orders,
-    reservations,
-    shipments,
-    events
-  }
-
-  return JSON.stringify(backup, null, 2)
+  const { jsonString } = await exportWorkspaceBackup()
+  return jsonString
 }

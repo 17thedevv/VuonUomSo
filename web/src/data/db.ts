@@ -5,6 +5,7 @@ import type { Contact } from '../domain/contact'
 import type { Order } from '../domain/order'
 import type { Reservation } from '../domain/reservation'
 import type { Shipment } from '../domain/shipment'
+import type { BatchDossier } from '../domain/dossier'
 import type { DomainEvent } from '../analytics/events'
 
 export interface AppSetting {
@@ -20,6 +21,7 @@ export class VuonUomDatabase extends Dexie {
   orders!: EntityTable<Order, 'id'>
   reservations!: EntityTable<Reservation, 'id'>
   shipments!: EntityTable<Shipment, 'id'>
+  dossiers!: EntityTable<BatchDossier, 'id'>
   events!: EntityTable<DomainEvent, 'id'>
 
   constructor(dbName = 'VuonUomDB') {
@@ -66,6 +68,10 @@ export class VuonUomDatabase extends Dexie {
           }
         })
       })
+
+    this.version(4).stores({
+      dossiers: 'id, batchId, updatedAt'
+    })
   }
 }
 
