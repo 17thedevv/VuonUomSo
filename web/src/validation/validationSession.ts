@@ -1,11 +1,12 @@
 import { validationRepository } from './validation.repository'
 import { settingsRepository } from '../data/repositories'
-import type {
-  PilotSession,
-  SupportLevel,
-  ReturnIntention,
-  WillingnessToPay,
-  UsefulArea
+import {
+  PARTICIPANT_CODE_REGEX,
+  type PilotSession,
+  type SupportLevel,
+  type ReturnIntention,
+  type WillingnessToPay,
+  type UsefulArea
 } from './validation.types'
 
 export const ACTIVE_SESSION_STORAGE_KEY = 'vuonuom_active_pilot_session_id'
@@ -70,39 +71,19 @@ function clearStoredSessionId(): void {
 }
 
 /**
- * Validates and sanitizes a participant code (e.g. "P01", "P02").
- * Rejects full names, spaces, emails, phone numbers, or pure numeric IDs to strictly protect privacy.
+ * Validates and sanitizes a participant code (e.g. "P01", "P002", "P1234").
+ * Strictly enforces pseudonymous code format (^P\d{2,4}$) and rejects real names (e.g. ANHHUNG),
+ * spaces, emails, and phone numbers to guarantee field anonymity.
  */
 export function sanitizeParticipantCode(code: string): string {
   const trimmed = code.trim().toUpperCase()
   if (!trimmed) {
     throw new Error('Mã người thử không được để trống.')
   }
-  if (trimmed.length < 2) {
-    throw new Error('Mã người thử phải có ít nhất 2 ký tự (ví dụ: P01, P02).')
-  }
-  if (trimmed.length > 20) {
-    throw new Error('Mã người thử quá dài (tối đa 20 ký tự).')
-  }
-  // Disallow spaces (likely full name)
-  if (/\s/.test(trimmed)) {
-    throw new Error('Mã người thử không được chứa khoảng trắng (dùng mã như P01, P02).')
-  }
-  // Disallow email patterns
-  if (/@|\.(COM|VN|NET|ORG)/.test(trimmed)) {
-    throw new Error('Không dùng địa chỉ email làm mã người thử. Hãy dùng mã ẩn danh như P01, P02.')
-  }
-  // Disallow phone numbers (starts with 0, 84, +84, or has >= 7 digits)
-  if (/^(\+?84|0)\d+/.test(trimmed) || /\d{7,}/.test(trimmed)) {
-    throw new Error('Không dùng số điện thoại làm mã người thử. Hãy dùng mã ẩn danh như P01, P02.')
-  }
-  // Allow only alphanumeric, dash, underscore
-  if (!/^[A-Z0-9_-]+$/.test(trimmed)) {
-    throw new Error('Mã người thử chỉ được chứa chữ cái, số, dấu gạch nối (-) hoặc gạch dưới (_).')
-  }
-  // Disallow purely numeric codes
-  if (!/[A-Z]/.test(trimmed)) {
-    throw new Error('Mã người thử phải chứa ít nhất một chữ cái (ví dụ: P01, P02).')
+  if (!PARTICIPANT_CODE_REGEX.test(trimmed)) {
+    throw new Error(
+      'Mã người thử không đúng định dạng ẩn danh chuẩn (ví dụ: P01, P002, P1234).'
+    )
   }
   return trimmed
 }
@@ -110,6 +91,8 @@ export function sanitizeParticipantCode(code: string): string {
 /**
  * Starts a new pilot session with explicit consent and pseudonymous participant code.
  * Enforces the invariant: at most ONE active pilot session at any time.
+ * Fail-conservative: Only explicit 'pilot' mode grants pilot status.
+ * Any missing, unknown, or errored app_mode fails safe to 'demo'.
  */
 export async function startPilotSession(
   participantCodeInput: string,
@@ -122,13 +105,15 @@ export async function startPilotSession(
 
   const participantCode = sanitizeParticipantCode(participantCodeInput)
 
-  let mode: 'pilot' | 'demo' = modeInput ?? 'pilot'
-  if (!modeInput) {
+  let mode: 'pilot' | 'demo' = 'demo'
+  if (modeInput === 'pilot') {
+    mode = 'pilot'
+  } else if (!modeInput) {
     try {
       const modeVal = await settingsRepository.get('app_mode')
-      mode = modeVal === 'demo' ? 'demo' : 'pilot'
+      mode = modeVal === 'pilot' ? 'pilot' : 'demo'
     } catch {
-      mode = 'pilot'
+      mode = 'demo'
     }
   }
 

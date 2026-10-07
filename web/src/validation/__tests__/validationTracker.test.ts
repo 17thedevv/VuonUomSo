@@ -88,15 +88,37 @@ describe('Route Canonicalizer & ValidationTracker', () => {
       expect(failEvt?.failureKind).toBe('insufficient_stock')
     })
 
-    it('tags events with mode "demo" when in demo mode', async () => {
+    it('tracker event mode equals session.mode even if app_mode changes mid-session', async () => {
+      // 1. Session created as pilot
+      await settingsRepository.set('app_mode', 'pilot')
+      const pilotSession = await startPilotSession('p01', 'accepted')
+      expect(pilotSession.mode).toBe('pilot')
+
+      // Mid-session app_mode settings drift to demo
       await settingsRepository.set('app_mode', 'demo')
-      await startPilotSession('p02', 'accepted')
 
+      // Event MUST snapshot from session.mode ('pilot')
       await validationTracker.actionCompleted('batch_created')
+      const events1 = await db.validationEvents.toArray()
+      expect(events1.length).toBe(1)
+      expect(events1[0].mode).toBe('pilot') // Equals session.mode!
 
-      const events = await db.validationEvents.toArray()
-      expect(events.length).toBe(1)
-      expect(events[0].mode).toBe('demo')
+      // 2. Legacy session lacking mode (undefined) snapshots as non-pilot ('demo')
+      await db.pilotSessions.clear()
+      await db.validationEvents.clear()
+      const legacySession = {
+        id: 'sess_legacy',
+        participantCode: 'P02',
+        consent: 'accepted' as const,
+        startedAt: new Date().toISOString()
+        // mode is undefined!
+      }
+      await validationRepository.savePilotSession(legacySession)
+
+      await validationTracker.actionCompleted('order_created')
+      const events2 = await db.validationEvents.toArray()
+      expect(events2.length).toBe(1)
+      expect(events2[0].mode).toBe('demo')
     })
 
     it('critical invariant: tracker exceptions never throw or break caller', async () => {
