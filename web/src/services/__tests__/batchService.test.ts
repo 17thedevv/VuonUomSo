@@ -3,12 +3,15 @@ import {
   extractVarietyPrefix,
   generateBatchCode,
   createBatch,
-  updateBatchInventory
+  updateBatchInventory,
+  updateBatchReadyQuantity
 } from '../batchService'
 import { batchRepository, eventRepository } from '../../data/repositories'
 import { clearAllData } from '../../data/seed'
 import { undoService } from '../undoService'
 import type { Batch } from '../../domain/batch'
+import { availableQuantityForBatch, commitmentShortageForBatch } from '../../domain/quantity'
+import type { Reservation } from '../../domain/reservation'
 
 describe('batchService', () => {
   beforeEach(async () => {
@@ -213,6 +216,197 @@ describe('batchService', () => {
 
       expect(result.success).toBe(true)
       expect(result.batch?.status).toBe('depleted')
+    })
+
+    // Scenario E: Atomic inventory correction when living < ready
+    it('Scenario E: requires confirmation when living < ready and commits atomically when provided', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 50000
+      })
+      const batch = created.batch!
+      // Set living=45.200, ready=32.000
+      await updateBatchInventory({ batchId: batch.id, newQuantity: 45200 })
+      await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 32000 })
+
+      // 1. User checks inventory: living = 28.000 without newReadyQuantity -> rejected
+      const failResult = await updateBatchInventory({
+        batchId: batch.id,
+        newQuantity: 28000
+      })
+      expect(failResult.success).toBe(false)
+      expect(failResult.error).toContain('không thể thấp hơn số cây đang được tính là đủ bán')
+
+      // 2. User tries newReadyQuantity > newLiving (29.000 > 28.000) -> rejected
+      const failReadyResult = await updateBatchInventory({
+        batchId: batch.id,
+        newQuantity: 28000,
+        newReadyQuantity: 29000
+      })
+      expect(failReadyResult.success).toBe(false)
+      expect(failReadyResult.error).toContain('không thể lớn hơn số cây còn sống')
+
+      // 3. User enters living = 28.000 and confirmed ready = 27.000 -> committed atomically
+      const successResult = await updateBatchInventory({
+        batchId: batch.id,
+        newQuantity: 28000,
+        newReadyQuantity: 27000,
+        note: 'Kiểm kê sau đợt bão'
+      })
+      expect(successResult.success).toBe(true)
+      expect(successResult.batch?.currentQuantity).toBe(28000)
+      expect(successResult.batch?.readyQuantity).toBe(27000)
+      expect(successResult.batch?.status).toBe('ready')
+
+      // Verify persisted
+      const saved = await batchRepository.getById(batch.id)
+      expect(saved?.currentQuantity).toBe(28000)
+      expect(saved?.readyQuantity).toBe(27000)
+
+      // Verify events recorded
+      const events = await eventRepository.getAll()
+      const invEvent = events.find((e) => e.type === 'batch_inventory_updated' && e.entityId === batch.id)
+      expect(invEvent).toBeDefined()
+      const readyEvent = events.find((e) => e.type === 'batch_ready_stock_updated' && e.entityId === batch.id)
+      expect(readyEvent).toBeDefined()
+    })
+  })
+
+  describe('updateBatchReadyQuantity', () => {
+    // Scenario A: Propagating -> partial ready increase
+    it('Scenario A: supports partial ready increase from 0, updates status to ready', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 45200
+      })
+      const batch = created.batch!
+      expect(batch.readyQuantity).toBe(0)
+      expect(batch.status).toBe('propagating')
+
+      // Update ready partially to 10.000
+      const result = await updateBatchReadyQuantity({
+        batchId: batch.id,
+        newReadyQuantity: 10000,
+        note: 'Lứa đầu đạt chuẩn'
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.batch?.readyQuantity).toBe(10000)
+      expect(result.batch?.status).toBe('ready')
+      expect(result.previousReadyQuantity).toBe(0)
+      expect(result.difference).toBe(10000)
+
+      // Available quantity is 10.000
+      expect(availableQuantityForBatch(result.batch!, [])).toBe(10000)
+    })
+
+    // Scenario B: Progressive ready increase
+    it('Scenario B: allows progressive ready quantity increases (10k -> 25k -> 32k)', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 45200
+      })
+      const batch = created.batch!
+
+      await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 10000 })
+      const step2 = await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 25000 })
+      expect(step2.success).toBe(true)
+      expect(step2.batch?.readyQuantity).toBe(25000)
+      expect(step2.difference).toBe(15000)
+
+      const step3 = await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 32000 })
+      expect(step3.success).toBe(true)
+      expect(step3.batch?.readyQuantity).toBe(32000)
+      expect(step3.difference).toBe(7000)
+    })
+
+    // Scenario C: Decrease ready below reserved allows commitment shortage to surface
+    it('Scenario C: allows decreasing ready below reservations without blocking (reveals shortage)', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 30000
+      })
+      const batch = created.batch!
+
+      // Batch ready = 20.000
+      await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 20000 })
+
+      // Active reservation of 18.000
+      const reservations: Reservation[] = [
+        {
+          id: 'res_c',
+          orderId: 'ord_c',
+          sourceType: 'own_batch',
+          batchId: batch.id,
+          quantity: 18000,
+          status: 'active',
+          createdAt: new Date().toISOString()
+        }
+      ]
+
+      // Culling / mortality reduces ready to 15.000 (< 18.000 reserved)
+      const result = await updateBatchReadyQuantity({
+        batchId: batch.id,
+        newReadyQuantity: 15000,
+        note: 'Loại 5.000 cây bị sâu ngọn'
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.batch?.readyQuantity).toBe(15000)
+
+      // Invariants check: available = 0, shortage = 3.000
+      expect(availableQuantityForBatch(result.batch!, reservations)).toBe(0)
+      expect(commitmentShortageForBatch(result.batch!, reservations)).toBe(3000)
+    })
+
+    // Scenario D: Reject update ready > living or < 0
+    it('Scenario D: rejects newReadyQuantity > currentQuantity or < 0', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 45000
+      })
+      const batch = created.batch!
+
+      // Try ready = 50.000 > living (45.000)
+      const overResult = await updateBatchReadyQuantity({
+        batchId: batch.id,
+        newReadyQuantity: 50000
+      })
+      expect(overResult.success).toBe(false)
+      expect(overResult.error).toContain('không thể lớn hơn số cây còn sống')
+
+      // Try ready < 0
+      const negativeResult = await updateBatchReadyQuantity({
+        batchId: batch.id,
+        newReadyQuantity: -100
+      })
+      expect(negativeResult.success).toBe(false)
+      expect(negativeResult.error).toContain('không thể âm')
+    })
+
+    // Scenario H: Undo restores previous readyQuantity and derived status
+    it('Scenario H: supports undo for updateBatchReadyQuantity', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 40000
+      })
+      const batch = created.batch!
+
+      // Update ready to 15.000
+      await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 15000 })
+      let current = await batchRepository.getById(batch.id)
+      expect(current?.readyQuantity).toBe(15000)
+      expect(current?.status).toBe('ready')
+
+      // Perform undo
+      const undoRes = await undoService.undoLastMutation()
+      expect(undoRes.success).toBe(true)
+      expect(undoRes.revertedType).toBe('update_ready_quantity')
+
+      // Verified restored to 0, status restored to propagating
+      current = await batchRepository.getById(batch.id)
+      expect(current?.readyQuantity).toBe(0)
+      expect(current?.status).toBe('propagating')
     })
   })
 })

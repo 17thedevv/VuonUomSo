@@ -264,6 +264,52 @@ describe('Service: Shipment & Physical Fulfillment', () => {
       expect(order.status).toBe('shipped')
     })
 
+    it('Scenario G: marks batch as depleted when shipment exhausts remaining stock (10k/10k -> 0/0 -> depleted)', async () => {
+      const depleteBatch: Batch = {
+        id: 'b_deplete',
+        code: 'DEP #01',
+        variety: 'Keo lai BV16',
+        initialQuantity: 10000,
+        currentQuantity: 10000,
+        readyQuantity: 10000,
+        status: 'ready',
+        createdAt: '2026-09-01'
+      }
+      await db.batches.add(depleteBatch)
+
+      const depleteOrder: Order = {
+        id: 'ord_deplete',
+        customerId: 'cust_01',
+        variety: 'Keo lai BV16',
+        requestedQuantity: 10000,
+        status: 'reserved'
+      }
+      await db.orders.add(depleteOrder)
+
+      const depleteRes: Reservation = {
+        id: 'res_deplete',
+        orderId: 'ord_deplete',
+        sourceType: 'own_batch',
+        batchId: 'b_deplete',
+        quantity: 10000,
+        status: 'active',
+        createdAt: '2026-09-01'
+      }
+      await db.reservations.add(depleteRes)
+
+      const { shipment } = await createShipment({
+        orderId: 'ord_deplete',
+        lines: [{ reservationId: 'res_deplete', quantity: 10000 }]
+      })
+
+      await confirmShipment({ shipmentId: shipment.id })
+
+      const updatedBatch = (await db.batches.get('b_deplete'))!
+      expect(updatedBatch.currentQuantity).toBe(0)
+      expect(updatedBatch.readyQuantity).toBe(0)
+      expect(updatedBatch.status).toBe('depleted')
+    })
+
     it('is idempotent on duplicate confirmation calls', async () => {
       const { shipment } = await createShipment({
         orderId: ORDER_ID,

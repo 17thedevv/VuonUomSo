@@ -3,6 +3,7 @@ import type { Batch } from '../batch'
 import {
   isBatchAttention,
   getBatchDisplayStatus,
+  deriveBatchStatus,
   sortBatchesForDisplay,
   filterBatches,
   type BatchWithAvailability
@@ -160,6 +161,23 @@ describe('Domain: Batch calculations & filters', () => {
       const filtered = filterBatches(batches, 'propagating')
       expect(filtered).toHaveLength(1)
       expect(filtered[0]?.id).toBe('3')
+    })
+  })
+
+  describe('deriveBatchStatus', () => {
+    it('returns depleted when currentQuantity is 0 or negative', () => {
+      expect(deriveBatchStatus({ currentQuantity: 0, readyQuantity: 0 })).toBe('depleted')
+      expect(deriveBatchStatus({ currentQuantity: -5, readyQuantity: 0 })).toBe('depleted')
+      expect(deriveBatchStatus({ currentQuantity: 0, readyQuantity: 100 })).toBe('depleted')
+    })
+
+    it('returns ready when currentQuantity > 0 and readyQuantity > 0', () => {
+      expect(deriveBatchStatus({ currentQuantity: 10000, readyQuantity: 5000 })).toBe('ready')
+      expect(deriveBatchStatus({ currentQuantity: 10000, readyQuantity: 10000 })).toBe('ready')
+    })
+
+    it('returns propagating when currentQuantity > 0 and readyQuantity === 0', () => {
+      expect(deriveBatchStatus({ currentQuantity: 10000, readyQuantity: 0 })).toBe('propagating')
     })
   })
 })

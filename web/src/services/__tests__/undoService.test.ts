@@ -128,4 +128,34 @@ describe('undoService', () => {
     const events = await eventRepository.getAll()
     expect(events.some((e) => e.type === 'mutation_undone' && e.entityId === testOrder.id)).toBe(true)
   })
+
+  it('successfully undoes "update_ready_quantity" mutation and restores previous ready quantity and status', async () => {
+    const testBatch: Batch = {
+      id: 'batch_test_ready',
+      code: 'AH1 #02',
+      variety: 'Keo lai AH1',
+      initialQuantity: 30000,
+      currentQuantity: 30000,
+      readyQuantity: 15000,
+      status: 'ready',
+      createdAt: new Date().toISOString()
+    }
+    await batchRepository.save(testBatch)
+
+    undoService.recordMutation({
+      type: 'update_ready_quantity',
+      batchId: testBatch.id,
+      batchCode: testBatch.code,
+      previousReadyQuantity: 0,
+      description: 'Đã cập nhật cây đủ bán'
+    })
+
+    const result = await undoService.undoLastMutation()
+    expect(result.success).toBe(true)
+    expect(result.revertedType).toBe('update_ready_quantity')
+
+    const updated = await batchRepository.getById(testBatch.id)
+    expect(updated?.readyQuantity).toBe(0)
+    expect(updated?.status).toBe('propagating')
+  })
 })
