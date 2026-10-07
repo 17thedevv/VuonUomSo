@@ -31,6 +31,24 @@ export type BatchWithAvailability = Batch & {
 export type BatchFilterType = 'all' | 'ready' | 'attention' | 'propagating'
 
 /**
+ * Derives batch presentation status strictly from quantities:
+ * - currentQuantity <= 0 -> 'depleted'
+ * - currentQuantity > 0 && readyQuantity > 0 -> 'ready'
+ * - currentQuantity > 0 && readyQuantity === 0 -> 'propagating'
+ */
+export function deriveBatchStatus(
+  batch: Pick<Batch, 'currentQuantity' | 'readyQuantity'>
+): BatchStatus {
+  if (batch.currentQuantity <= 0) {
+    return 'depleted'
+  }
+  if (batch.readyQuantity > 0) {
+    return 'ready'
+  }
+  return 'propagating'
+}
+
+/**
  * Checks if a batch requires attention due to upcoming or passed sell-before date.
  */
 export function isBatchAttention(batch: Batch, referenceDate?: Date): boolean {

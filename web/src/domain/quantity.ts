@@ -90,6 +90,16 @@ export function availableQuantityForBatch(batch: Batch, reservations: Reservatio
 }
 
 /**
+ * Shortage of commitment on a batch:
+ * max(reservedOutstanding(batch) - readyQuantity, 0)
+ * Returns positive number when ready stock was reduced below committed reservations.
+ */
+export function commitmentShortageForBatch(batch: Batch, reservations: Reservation[]): number {
+  const reserved = reservedOutstandingQuantityForBatch(batch.id, reservations)
+  return Math.max(reserved - batch.readyQuantity, 0)
+}
+
+/**
  * Survival rate calculation: currentQuantity / initialQuantity
  */
 export function survivalRate(currentQuantity: number, initialQuantity: number): number {

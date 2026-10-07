@@ -1,5 +1,6 @@
 import { batchRepository, orderRepository, eventRepository } from '../data/repositories'
 import { releaseReservation } from './reservationService'
+import { deriveBatchStatus } from '../domain/batch'
 
 export type ReversibleMutation =
   | {
@@ -13,6 +14,14 @@ export type ReversibleMutation =
       batchId: string
       batchCode: string
       previousQuantity: number
+      previousReadyQuantity?: number
+      description: string
+    }
+  | {
+      type: 'update_ready_quantity'
+      batchId: string
+      batchCode: string
+      previousReadyQuantity: number
       description: string
     }
   | {
@@ -115,12 +124,14 @@ class UndoService {
         }
 
         const oldCurrent = batch.currentQuantity
+        const oldReady = batch.readyQuantity
         batch.currentQuantity = mutation.previousQuantity
 
-        // If batch was marked depleted but now has stock, adjust status appropriately
-        if (batch.status === 'depleted' && mutation.previousQuantity > 0) {
-          batch.status = batch.readyQuantity > 0 ? 'ready' : 'propagating'
+        if (mutation.previousReadyQuantity !== undefined) {
+          batch.readyQuantity = mutation.previousReadyQuantity
         }
+
+        batch.status = deriveBatchStatus(batch)
 
         await batchRepository.save(batch)
 
@@ -133,7 +144,9 @@ class UndoService {
             action: 'restore_inventory',
             batchCode: mutation.batchCode,
             fromQuantity: oldCurrent,
-            restoredQuantity: mutation.previousQuantity
+            restoredQuantity: mutation.previousQuantity,
+            fromReadyQuantity: mutation.previousReadyQuantity !== undefined ? oldReady : undefined,
+            restoredReadyQuantity: mutation.previousReadyQuantity
           }
         })
 
@@ -142,6 +155,40 @@ class UndoService {
           success: true,
           message: `Đã hoàn tác kiểm kê lô ${mutation.batchCode}: Khôi phục về ${mutation.previousQuantity.toLocaleString('vi-VN')} cây.`,
           revertedType: 'update_inventory'
+        }
+      }
+
+      if (mutation.type === 'update_ready_quantity') {
+        const batch = await batchRepository.getById(mutation.batchId)
+        if (!batch) {
+          this.clearLastMutation()
+          return { success: false, message: 'Lô cây không còn tồn tại.' }
+        }
+
+        const oldReady = batch.readyQuantity
+        batch.readyQuantity = mutation.previousReadyQuantity
+        batch.status = deriveBatchStatus(batch)
+
+        await batchRepository.save(batch)
+
+        // Record undo event
+        await eventRepository.record({
+          type: 'mutation_undone',
+          entityType: 'batch',
+          entityId: mutation.batchId,
+          payload: {
+            action: 'restore_ready_quantity',
+            batchCode: mutation.batchCode,
+            fromReadyQuantity: oldReady,
+            restoredReadyQuantity: mutation.previousReadyQuantity
+          }
+        })
+
+        this.clearLastMutation()
+        return {
+          success: true,
+          message: `Đã hoàn tác cập nhật cây đủ bán lô ${mutation.batchCode}: Khôi phục về ${mutation.previousReadyQuantity.toLocaleString('vi-VN')} cây.`,
+          revertedType: 'update_ready_quantity'
         }
       }
 
