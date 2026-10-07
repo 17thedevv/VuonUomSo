@@ -32,8 +32,8 @@
 | Phase | Tên giai đoạn | Trạng thái | Quyền hạn của Agent |
 | :--- | :--- | :--- | :--- |
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
-| **FC1** | **Batch Stock Lifecycle** | **NEXT / CURRENT** | **ĐƯỢC PHÉP CODE**: Thao tác riêng "Cập nhật cây đủ bán", ready tăng/giảm từng phần, derived status, event history |
-| **FC2** | **Order Lifecycle & Corrections** | **PLANNED** | Chờ FC1 hoàn thành và merge |
+| **FC1** | **Batch Stock Lifecycle** | **DONE** | Thao tác riêng "Cập nhật cây đủ bán", ready tăng/giảm từng phần, derived status, event history |
+| **FC2** | **Order Lifecycle & Corrections** | **NEXT** | Chờ FC1 review & merge |
 | **FC3** | **Reservation Reconciliation** | **PLANNED** | Chờ FC2 hoàn thành và merge |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
