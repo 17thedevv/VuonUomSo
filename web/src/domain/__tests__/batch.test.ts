@@ -10,24 +10,32 @@ import {
 } from '../batch'
 
 describe('Domain: Batch calculations & filters', () => {
-  const createMockBatch = (overrides: Partial<Batch>): Batch => ({
-    id: 'test_batch_1',
-    code: 'TEST #01',
-    variety: 'Keo lai BV16',
-    initialQuantity: 10000,
-    currentQuantity: 9500,
-    readyQuantity: 9000,
-    status: 'ready',
-    createdAt: '2026-06-01',
-    ...overrides
-  })
+  const createMockBatch = (overrides: Partial<Batch>): Batch => {
+    const current = overrides.currentQuantity ?? (overrides.status === 'depleted' ? 0 : 9500)
+    const ready =
+      overrides.readyQuantity ??
+      (overrides.status === 'propagating' || overrides.status === 'nearly_ready' || overrides.status === 'depleted'
+        ? 0
+        : 9000)
+    return {
+      id: 'test_batch_1',
+      code: 'TEST #01',
+      variety: 'Keo lai BV16',
+      initialQuantity: 10000,
+      currentQuantity: current,
+      readyQuantity: ready,
+      status: 'ready',
+      createdAt: '2026-06-01',
+      ...overrides
+    }
+  }
 
   describe('isBatchAttention', () => {
     it('returns true if batch is ready and preferredSellBefore is within 14 days', () => {
       const now = new Date()
       const closeDate = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString()
       const batch = createMockBatch({
-        status: 'ready',
+        readyQuantity: 9000,
         preferredSellBefore: closeDate
       })
       expect(isBatchAttention(batch, now)).toBe(true)
@@ -37,17 +45,18 @@ describe('Domain: Batch calculations & filters', () => {
       const now = new Date()
       const farDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
       const batch = createMockBatch({
-        status: 'ready',
+        readyQuantity: 9000,
         preferredSellBefore: farDate
       })
       expect(isBatchAttention(batch, now)).toBe(false)
     })
 
-    it('returns false if batch is not ready even if preferredSellBefore is close', () => {
+    it('returns false if batch is not ready (readyQuantity = 0) even if preferredSellBefore is close', () => {
       const now = new Date()
       const closeDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString()
       const batch = createMockBatch({
         status: 'nearly_ready',
+        readyQuantity: 0,
         preferredSellBefore: closeDate
       })
       expect(isBatchAttention(batch, now)).toBe(false)
@@ -55,7 +64,7 @@ describe('Domain: Batch calculations & filters', () => {
 
     it('returns false if batch has no preferredSellBefore', () => {
       const batch = createMockBatch({
-        status: 'ready',
+        readyQuantity: 9000,
         preferredSellBefore: undefined
       })
       expect(isBatchAttention(batch)).toBe(false)
@@ -63,45 +72,64 @@ describe('Domain: Batch calculations & filters', () => {
   })
 
   describe('getBatchDisplayStatus', () => {
-    it('returns correct Vietnamese terminology', () => {
-      const readyBatch = createMockBatch({ status: 'ready' })
+    it('returns correct Vietnamese terminology based on derived status', () => {
+      const readyBatch = createMockBatch({ currentQuantity: 9500, readyQuantity: 9000 })
       expect(getBatchDisplayStatus(readyBatch, false)).toBe('Đang bán')
       expect(getBatchDisplayStatus(readyBatch, true)).toBe('Sắp quá lứa')
 
-      const nearlyReadyBatch = createMockBatch({ status: 'nearly_ready' })
-      expect(getBatchDisplayStatus(nearlyReadyBatch, false)).toBe('Sắp bán được')
-
-      const propagatingBatch = createMockBatch({ status: 'propagating' })
+      const propagatingBatch = createMockBatch({ currentQuantity: 9500, readyQuantity: 0 })
       expect(getBatchDisplayStatus(propagatingBatch, false)).toBe('Đang ươm')
 
-      const depletedBatch = createMockBatch({ status: 'depleted' })
+      const depletedBatch = createMockBatch({ currentQuantity: 0, readyQuantity: 0 })
       expect(getBatchDisplayStatus(depletedBatch, false)).toBe('Đã xuất hết')
+    })
+
+    it('derives legacy batch with status nearly_ready and ready=0 as "Đang ươm" (propagating)', () => {
+      const demoBatch = createMockBatch({
+        code: 'AH1 #07',
+        currentQuantity: 30100,
+        readyQuantity: 0,
+        status: 'nearly_ready' as any
+      })
+      expect(deriveBatchStatus(demoBatch)).toBe('propagating')
+      expect(getBatchDisplayStatus(demoBatch, false)).toBe('Đang ươm')
+    })
+
+    it('derives legacy batch with status propagating but ready > 0 as "Đang bán" (ready)', () => {
+      const legacyBatch = createMockBatch({
+        code: 'LEGACY #01',
+        currentQuantity: 10000,
+        readyQuantity: 5000,
+        status: 'propagating' as any
+      })
+      expect(deriveBatchStatus(legacyBatch)).toBe('ready')
+      expect(getBatchDisplayStatus(legacyBatch, false)).toBe('Đang bán')
     })
   })
 
   describe('sortBatchesForDisplay', () => {
-    it('sorts attention batches first, followed by ready, nearly_ready, propagating, depleted', () => {
+    it('sorts attention batches first, followed by ready, propagating, depleted', () => {
       const batches: BatchWithAvailability[] = [
         {
-          ...createMockBatch({ id: '1', code: 'B1', status: 'nearly_ready' }),
+          ...createMockBatch({ id: '1', code: 'B1', currentQuantity: 9500, readyQuantity: 0 }),
           reservedQuantity: 0,
           availableQuantity: 0,
           isAttention: false
         },
         {
-          ...createMockBatch({ id: '2', code: 'B2', status: 'ready' }),
+          ...createMockBatch({ id: '2', code: 'B2', currentQuantity: 9500, readyQuantity: 5000 }),
           reservedQuantity: 0,
           availableQuantity: 5000,
           isAttention: false
         },
         {
-          ...createMockBatch({ id: '3', code: 'B3', status: 'ready' }),
+          ...createMockBatch({ id: '3', code: 'B3', currentQuantity: 9500, readyQuantity: 3000 }),
           reservedQuantity: 0,
           availableQuantity: 3000,
           isAttention: true // attention should be first!
         },
         {
-          ...createMockBatch({ id: '4', code: 'B4', status: 'depleted' }),
+          ...createMockBatch({ id: '4', code: 'B4', currentQuantity: 0, readyQuantity: 0 }),
           reservedQuantity: 0,
           availableQuantity: 0,
           isAttention: false
@@ -116,25 +144,25 @@ describe('Domain: Batch calculations & filters', () => {
   describe('filterBatches', () => {
     const batches: BatchWithAvailability[] = [
       {
-        ...createMockBatch({ id: '1', status: 'ready' }),
+        ...createMockBatch({ id: '1', currentQuantity: 9500, readyQuantity: 5000 }),
         reservedQuantity: 0,
         availableQuantity: 5000,
         isAttention: false
       },
       {
-        ...createMockBatch({ id: '2', status: 'ready' }),
+        ...createMockBatch({ id: '2', currentQuantity: 9500, readyQuantity: 3000 }),
         reservedQuantity: 0,
         availableQuantity: 3000,
         isAttention: true
       },
       {
-        ...createMockBatch({ id: '3', status: 'nearly_ready' }),
+        ...createMockBatch({ id: '3', currentQuantity: 9500, readyQuantity: 0, status: 'nearly_ready' as any }),
         reservedQuantity: 0,
         availableQuantity: 0,
         isAttention: false
       },
       {
-        ...createMockBatch({ id: '4', status: 'depleted' }),
+        ...createMockBatch({ id: '4', currentQuantity: 0, readyQuantity: 0 }),
         reservedQuantity: 0,
         availableQuantity: 0,
         isAttention: false

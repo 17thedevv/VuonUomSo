@@ -34,7 +34,7 @@ import {
   formatQuantity,
   formatSurvivalRate
 } from '../../domain/quantity'
-import { isBatchAttention, getBatchDisplayStatus } from '../../domain/batch'
+import { isBatchAttention, getBatchDisplayStatus, deriveBatchStatus } from '../../domain/batch'
 import { formatShortDate } from '../../domain/date'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { StatusBadge } from '../../shared/components/StatusBadge'
@@ -156,7 +156,7 @@ export const BatchDetailScreen: React.FC = () => {
         subtitle={batch.variety}
         showBack
         backTo="/batches"
-        rightAction={<StatusBadge status={batch.status} />}
+        rightAction={<StatusBadge status={deriveBatchStatus(batch)} />}
       />
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full pb-16">

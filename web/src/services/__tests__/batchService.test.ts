@@ -408,5 +408,33 @@ describe('batchService', () => {
       expect(current?.readyQuantity).toBe(0)
       expect(current?.status).toBe('propagating')
     })
+
+    // Scenario I: Intervening mutation prevents undo and protects stock from resurrection
+    it('Scenario I: rejects undo if batch was modified after updateBatchReadyQuantity', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 30000
+      })
+      const batch = created.batch!
+
+      // 1. Update ready to 20.000
+      await updateBatchReadyQuantity({ batchId: batch.id, newReadyQuantity: 20000 })
+
+      // 2. Intervening mutation: simulate a shipment or inventory check that reduced stock
+      const intermediate = (await batchRepository.getById(batch.id))!
+      intermediate.currentQuantity = 20000
+      intermediate.readyQuantity = 5000
+      await batchRepository.save(intermediate)
+
+      // 3. Attempt undo: must be safely rejected
+      const undoRes = await undoService.undoLastMutation()
+      expect(undoRes.success).toBe(false)
+      expect(undoRes.message).toBe('Không thể hoàn tác vì lô đã thay đổi sau thao tác này.')
+
+      // 4. Stock must NOT be resurrected
+      const finalBatch = await batchRepository.getById(batch.id)
+      expect(finalBatch?.currentQuantity).toBe(20000)
+      expect(finalBatch?.readyQuantity).toBe(5000)
+    })
   })
 })

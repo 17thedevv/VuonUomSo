@@ -1,4 +1,5 @@
-import { batchRepository, orderRepository, eventRepository } from '../data/repositories'
+import { db } from '../data/db'
+import { createDomainEvent } from '../analytics/events'
 import { releaseReservation } from './reservationService'
 import { deriveBatchStatus } from '../domain/batch'
 
@@ -15,6 +16,8 @@ export type ReversibleMutation =
       batchCode: string
       previousQuantity: number
       previousReadyQuantity?: number
+      expectedCurrentQuantity?: number
+      expectedReadyQuantity?: number
       description: string
     }
   | {
@@ -22,6 +25,8 @@ export type ReversibleMutation =
       batchId: string
       batchCode: string
       previousReadyQuantity: number
+      expectedReadyQuantity?: number
+      expectedCurrentQuantity?: number
       description: string
     }
   | {
@@ -88,24 +93,20 @@ class UndoService {
 
     try {
       if (mutation.type === 'create_batch') {
-        const batch = await batchRepository.getById(mutation.batchId)
+        const batch = await db.batches.get(mutation.batchId)
         if (!batch) {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
         }
 
-        // Delete newly created batch
-        await batchRepository.delete(mutation.batchId)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'batch',
-          entityId: mutation.batchId,
-          payload: {
+        // Delete newly created batch in transaction
+        await db.transaction('rw', [db.batches, db.events], async () => {
+          await db.batches.delete(mutation.batchId)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
             action: 'delete_batch',
             batchCode: mutation.batchCode
-          }
+          })
+          await db.events.put(undoEvent)
         })
 
         this.clearLastMutation()
@@ -117,10 +118,22 @@ class UndoService {
       }
 
       if (mutation.type === 'update_inventory') {
-        const batch = await batchRepository.getById(mutation.batchId)
+        const batch = await db.batches.get(mutation.batchId)
         if (!batch) {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
+        }
+
+        // Guard against intervening mutations
+        if (
+          (mutation.expectedCurrentQuantity !== undefined && batch.currentQuantity !== mutation.expectedCurrentQuantity) ||
+          (mutation.expectedReadyQuantity !== undefined && batch.readyQuantity !== mutation.expectedReadyQuantity)
+        ) {
+          this.clearLastMutation()
+          return {
+            success: false,
+            message: 'Không thể hoàn tác vì lô đã thay đổi sau thao tác này.'
+          }
         }
 
         const oldCurrent = batch.currentQuantity
@@ -133,21 +146,17 @@ class UndoService {
 
         batch.status = deriveBatchStatus(batch)
 
-        await batchRepository.save(batch)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'batch',
-          entityId: mutation.batchId,
-          payload: {
+        await db.transaction('rw', [db.batches, db.events], async () => {
+          await db.batches.put(batch)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
             action: 'restore_inventory',
             batchCode: mutation.batchCode,
             fromQuantity: oldCurrent,
             restoredQuantity: mutation.previousQuantity,
             fromReadyQuantity: mutation.previousReadyQuantity !== undefined ? oldReady : undefined,
             restoredReadyQuantity: mutation.previousReadyQuantity
-          }
+          })
+          await db.events.put(undoEvent)
         })
 
         this.clearLastMutation()
@@ -159,29 +168,37 @@ class UndoService {
       }
 
       if (mutation.type === 'update_ready_quantity') {
-        const batch = await batchRepository.getById(mutation.batchId)
+        const batch = await db.batches.get(mutation.batchId)
         if (!batch) {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
+        }
+
+        // Guard against intervening mutations
+        if (
+          (mutation.expectedReadyQuantity !== undefined && batch.readyQuantity !== mutation.expectedReadyQuantity) ||
+          (mutation.expectedCurrentQuantity !== undefined && batch.currentQuantity !== mutation.expectedCurrentQuantity)
+        ) {
+          this.clearLastMutation()
+          return {
+            success: false,
+            message: 'Không thể hoàn tác vì lô đã thay đổi sau thao tác này.'
+          }
         }
 
         const oldReady = batch.readyQuantity
         batch.readyQuantity = mutation.previousReadyQuantity
         batch.status = deriveBatchStatus(batch)
 
-        await batchRepository.save(batch)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'batch',
-          entityId: mutation.batchId,
-          payload: {
+        await db.transaction('rw', [db.batches, db.events], async () => {
+          await db.batches.put(batch)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
             action: 'restore_ready_quantity',
             batchCode: mutation.batchCode,
             fromReadyQuantity: oldReady,
             restoredReadyQuantity: mutation.previousReadyQuantity
-          }
+          })
+          await db.events.put(undoEvent)
         })
 
         this.clearLastMutation()
@@ -193,25 +210,21 @@ class UndoService {
       }
 
       if (mutation.type === 'create_order') {
-        const order = await orderRepository.getById(mutation.orderId)
+        const order = await db.orders.get(mutation.orderId)
         if (!order) {
           this.clearLastMutation()
           return { success: false, message: 'Đơn hàng không còn tồn tại.' }
         }
 
-        // Delete newly created order
-        await orderRepository.delete(mutation.orderId)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'order',
-          entityId: mutation.orderId,
-          payload: {
+        // Delete newly created order in transaction
+        await db.transaction('rw', [db.orders, db.events], async () => {
+          await db.orders.delete(mutation.orderId)
+          const undoEvent = createDomainEvent('mutation_undone', 'order', mutation.orderId, {
             action: 'delete_order',
             orderId: mutation.orderId,
             customerName: mutation.customerName
-          }
+          })
+          await db.events.put(undoEvent)
         })
 
         this.clearLastMutation()

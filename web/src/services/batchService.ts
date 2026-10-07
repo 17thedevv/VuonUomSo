@@ -1,5 +1,7 @@
 import { type Batch, deriveBatchStatus } from '../domain/batch'
-import { batchRepository, eventRepository } from '../data/repositories'
+import { batchRepository } from '../data/repositories'
+import { db } from '../data/db'
+import { createDomainEvent } from '../analytics/events'
 import { undoService } from './undoService'
 import { formatQuantity } from '../domain/quantity'
 
@@ -149,22 +151,19 @@ export async function createBatch(input: CreateBatchInput): Promise<CreateBatchR
   }
 
   try {
-    await batchRepository.save(newBatch)
+    await db.transaction('rw', [db.batches, db.events], async () => {
+      await db.batches.put(newBatch)
 
-    // Record creation event
-    await eventRepository.record({
-      type: 'batch_created',
-      entityType: 'batch',
-      entityId: newBatch.id,
-      payload: {
+      const createEvent = createDomainEvent('batch_created', 'batch', newBatch.id, {
         message: `Tạo lô ${newBatch.code} (${formatQuantity(newBatch.initialQuantity)} cây ban đầu)`,
         code: newBatch.code,
         variety: newBatch.variety,
         initialQuantity: newBatch.initialQuantity
-      }
+      })
+      await db.events.put(createEvent)
     })
 
-    // Register reversible mutation for Undo
+    // Register reversible mutation for Undo after transaction commit
     undoService.recordMutation({
       type: 'create_batch',
       batchId: newBatch.id,
@@ -243,8 +242,6 @@ export async function updateBatchInventory(
   batch.status = deriveBatchStatus(batch)
 
   try {
-    await batchRepository.save(batch)
-
     const diffText =
       difference < 0
         ? `Hao hụt ${formatQuantity(Math.abs(difference))} cây`
@@ -257,11 +254,10 @@ export async function updateBatchInventory(
         ? `, cây đủ bán ${readyDifference > 0 ? `tăng ${formatQuantity(readyDifference)}` : `giảm ${formatQuantity(Math.abs(readyDifference))}`}`
         : ''
 
-    await eventRepository.record({
-      type: 'batch_inventory_updated',
-      entityType: 'batch',
-      entityId: batch.id,
-      payload: {
+    await db.transaction('rw', [db.batches, db.events], async () => {
+      await db.batches.put(batch)
+
+      const invEvent = createDomainEvent('batch_inventory_updated', 'batch', batch.id, {
         message: `Kiểm kê còn ${formatQuantity(newQuantity)} cây (${diffText}${readyText})`,
         previousQuantity,
         newQuantity,
@@ -270,32 +266,31 @@ export async function updateBatchInventory(
         newReadyQuantity: readyDifference !== 0 ? targetReadyQuantity : undefined,
         readyDifference: readyDifference !== 0 ? readyDifference : undefined,
         note: input.note?.trim() || undefined
-      }
-    })
+      })
+      await db.events.put(invEvent)
 
-    // If readyQuantity changed, also emit batch_ready_stock_updated event for timeline clarity
-    if (readyDifference !== 0) {
-      await eventRepository.record({
-        type: 'batch_ready_stock_updated',
-        entityType: 'batch',
-        entityId: batch.id,
-        payload: {
+      // If readyQuantity changed, also emit batch_ready_stock_updated event for timeline clarity
+      if (readyDifference !== 0) {
+        const readyEvent = createDomainEvent('batch_ready_stock_updated', 'batch', batch.id, {
           message: `Điều chỉnh cây đủ bán theo kiểm kê: ${formatQuantity(targetReadyQuantity)} cây (${readyDifference < 0 ? `Giảm ${formatQuantity(Math.abs(readyDifference))}` : `Tăng ${formatQuantity(readyDifference)}`})`,
           previousReadyQuantity,
           newReadyQuantity: targetReadyQuantity,
           difference: readyDifference,
           note: input.note?.trim() || undefined
-        }
-      })
-    }
+        })
+        await db.events.put(readyEvent)
+      }
+    })
 
-    // Register reversible mutation for Undo
+    // Register reversible mutation for Undo after transaction commit
     undoService.recordMutation({
       type: 'update_inventory',
       batchId: batch.id,
       batchCode: batch.code,
       previousQuantity,
       previousReadyQuantity: readyDifference !== 0 ? previousReadyQuantity : undefined,
+      expectedCurrentQuantity: newQuantity,
+      expectedReadyQuantity: targetReadyQuantity,
       description: `Đã cập nhật kiểm kê lô ${batch.code}`
     })
 
@@ -353,8 +348,6 @@ export async function updateBatchReadyQuantity(
   batch.status = deriveBatchStatus(batch)
 
   try {
-    await batchRepository.save(batch)
-
     const diffText =
       difference < 0
         ? `Giảm ${formatQuantity(Math.abs(difference))} cây`
@@ -362,25 +355,27 @@ export async function updateBatchReadyQuantity(
         ? `Tăng ${formatQuantity(difference)} cây`
         : 'Số lượng không đổi'
 
-    await eventRepository.record({
-      type: 'batch_ready_stock_updated',
-      entityType: 'batch',
-      entityId: batch.id,
-      payload: {
+    await db.transaction('rw', [db.batches, db.events], async () => {
+      await db.batches.put(batch)
+
+      const readyEvent = createDomainEvent('batch_ready_stock_updated', 'batch', batch.id, {
         message: `Cập nhật cây đủ bán: ${formatQuantity(newReadyQuantity)} cây (${diffText})`,
         previousReadyQuantity,
         newReadyQuantity,
         difference,
         note: input.note?.trim() || undefined
-      }
+      })
+      await db.events.put(readyEvent)
     })
 
-    // Register reversible mutation for Undo
+    // Register reversible mutation for Undo after transaction commit
     undoService.recordMutation({
       type: 'update_ready_quantity',
       batchId: batch.id,
       batchCode: batch.code,
       previousReadyQuantity,
+      expectedReadyQuantity: newReadyQuantity,
+      expectedCurrentQuantity: batch.currentQuantity,
       description: `Đã cập nhật cây đủ bán lô ${batch.code}`
     })
 
