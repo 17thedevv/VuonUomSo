@@ -108,13 +108,16 @@ describe('Validation Export & Privacy Controls', () => {
       }
     })
 
-    it('strictly enforces participant code privacy and forbids email, phone, and pure-digit PII', () => {
+    it('strictly enforces participant code privacy and forbids email, phone, pure-digit, and real name PII', () => {
       const piiSamples = [
+        'ANHHUNG',
+        'Anh Hung',
         'user@example.com',
         '0912345678',
         '+84988111222',
         '1234567',
-        'Anh Nam'
+        'P1',
+        'P12345'
       ]
 
       for (const piiCode of piiSamples) {
@@ -163,6 +166,7 @@ describe('Validation Export & Privacy Controls', () => {
         consent: 'accepted',
         startedAt: '2026-10-06T09:00:00.000Z',
         endedAt: '2026-10-06T09:40:00.000Z',
+        mode: 'pilot',
         supportLevel: 'none',
         wouldUseNextWeek: 'yes',
         willingnessToPay: '50_100k',
@@ -205,7 +209,7 @@ describe('Validation Export & Privacy Controls', () => {
       expect(parsed.sessions[0].id).toBe('sess_exp_01')
     })
 
-    it('strictly excludes demo mode sessions and events by default to prevent contamination', async () => {
+    it('strictly excludes demo mode and legacy missing-mode sessions and events by default', async () => {
       const pilotSession: PilotSession = {
         id: 'sess_pilot',
         participantCode: 'P01',
@@ -214,12 +218,20 @@ describe('Validation Export & Privacy Controls', () => {
         endedAt: '2026-10-06T09:40:00.000Z',
         mode: 'pilot'
       }
-      const demoSession: PilotSession = {
-        id: 'sess_demo',
-        participantCode: 'DEMO01',
+      const legacyMissingModeSession: PilotSession = {
+        id: 'sess_legacy',
+        participantCode: 'P02',
         consent: 'accepted',
         startedAt: '2026-10-06T10:00:00.000Z',
-        endedAt: '2026-10-06T10:30:00.000Z',
+        endedAt: '2026-10-06T10:30:00.000Z'
+        // mode is undefined!
+      }
+      const demoSession: PilotSession = {
+        id: 'sess_demo',
+        participantCode: 'P03',
+        consent: 'accepted',
+        startedAt: '2026-10-06T11:00:00.000Z',
+        endedAt: '2026-10-06T11:30:00.000Z',
         mode: 'demo'
       }
       const pilotEvent: ValidationEvent = {
@@ -234,19 +246,20 @@ describe('Validation Export & Privacy Controls', () => {
       const demoEvent: ValidationEvent = {
         id: 'evt_demo',
         sessionId: 'sess_demo',
-        participantCode: 'DEMO01',
+        participantCode: 'P03',
         mode: 'demo',
         type: 'action_completed',
         action: 'shipment_completed',
-        createdAt: '2026-10-06T10:15:00.000Z'
+        createdAt: '2026-10-06T11:15:00.000Z'
       }
 
       await validationRepository.savePilotSession(pilotSession)
+      await validationRepository.savePilotSession(legacyMissingModeSession)
       await validationRepository.savePilotSession(demoSession)
       await validationRepository.recordValidationEvent(pilotEvent)
       await validationRepository.recordValidationEvent(demoEvent)
 
-      // Default export: includeDemo = false
+      // Default export: includeDemo = false -> strictly only sess_pilot (mode === 'pilot')
       const { exportData } = await buildValidationExportData()
 
       expect(exportData.sessions).toHaveLength(1)
@@ -255,11 +268,11 @@ describe('Validation Export & Privacy Controls', () => {
       expect(exportData.events[0].id).toBe('evt_pilot')
       expect(exportData.summary.totalParticipants).toBe(1)
 
-      // Explicitly including demo:
+      // Explicitly including demo: includes all 3 sessions
       const withDemo = await buildValidationExportData({ includeDemo: true })
-      expect(withDemo.exportData.sessions).toHaveLength(2)
+      expect(withDemo.exportData.sessions).toHaveLength(3)
       expect(withDemo.exportData.events).toHaveLength(2)
-      expect(withDemo.exportData.summary.totalParticipants).toBe(2)
+      expect(withDemo.exportData.summary.totalParticipants).toBe(3)
     })
   })
 

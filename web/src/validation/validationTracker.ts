@@ -1,6 +1,5 @@
 import { getActivePilotSession } from './validationSession'
 import { validationRepository } from './validation.repository'
-import { settingsRepository } from '../data/repositories'
 import type {
   ValidationRoute,
   ValidationAction,
@@ -9,13 +8,13 @@ import type {
 } from './validation.types'
 
 class ValidationTracker {
-  private async resolveMode(): Promise<'pilot' | 'demo'> {
-    try {
-      const modeVal = await settingsRepository.get('app_mode')
-      return modeVal === 'demo' ? 'demo' : 'pilot'
-    } catch {
-      return 'pilot'
-    }
+  /**
+   * Derives event mode strictly from active session snapshot.
+   * If session mode is 'pilot', event is 'pilot'.
+   * Legacy sessions lacking mode or demo sessions snapshot as 'demo'.
+   */
+  private resolveMode(session: { mode?: 'pilot' | 'demo' }): 'pilot' | 'demo' {
+    return session.mode === 'pilot' ? 'pilot' : 'demo'
   }
 
   /**
@@ -27,7 +26,7 @@ class ValidationTracker {
       const session = await getActivePilotSession()
       if (!session) return
 
-      const mode = await this.resolveMode()
+      const mode = this.resolveMode(session)
       const event: ValidationEvent = {
         id: `vevt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         sessionId: session.id,
@@ -55,7 +54,7 @@ class ValidationTracker {
       const session = await getActivePilotSession()
       if (!session) return
 
-      const mode = await this.resolveMode()
+      const mode = this.resolveMode(session)
       const event: ValidationEvent = {
         id: `vevt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         sessionId: session.id,
@@ -83,7 +82,7 @@ class ValidationTracker {
       const session = await getActivePilotSession()
       if (!session) return
 
-      const mode = await this.resolveMode()
+      const mode = this.resolveMode(session)
       const event: ValidationEvent = {
         id: `vevt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         sessionId: session.id,
@@ -112,7 +111,7 @@ class ValidationTracker {
       const session = await getActivePilotSession()
       if (!session) return
 
-      const mode = await this.resolveMode()
+      const mode = this.resolveMode(session)
       const event: ValidationEvent = {
         id: `vevt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         sessionId: session.id,

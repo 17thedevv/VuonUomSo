@@ -1,6 +1,9 @@
 import { validationRepository } from './validation.repository'
 import { buildValidationSummary } from './validationMetrics'
-import type { VuonUomValidationExportV1 } from './validation.types'
+import {
+  PARTICIPANT_CODE_REGEX,
+  type VuonUomValidationExportV1
+} from './validation.types'
 
 export const VALIDATION_EXPORT_FORMAT = 'vuonuom-validation'
 export const VALIDATION_EXPORT_FORMAT_VERSION = 1
@@ -57,18 +60,11 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
       if (typeof s.participantCode !== 'string' || !s.participantCode.trim()) {
         errors.push('Mã người tham gia (participantCode) không được rỗng.')
       } else {
-        const code = s.participantCode.trim()
-        if (code.includes('@') || /\.(com|vn|net|org)/i.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa ký tự email.')
-        }
-        if (/^(\+?84|0)\d+/i.test(code) || /\d{7,}/.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa số điện thoại.')
-        }
-        if (/^\d+$/.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia là dãy số đơn thuần.')
-        }
-        if (/\s/.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa khoảng trắng.')
+        const code = s.participantCode.trim().toUpperCase()
+        if (!PARTICIPANT_CODE_REGEX.test(code)) {
+          errors.push(
+            `Vi phạm ranh giới ẩn danh: mã người tham gia '${s.participantCode}' không đúng định dạng chuẩn (P01..P9999).`
+          )
         }
       }
     }
@@ -81,13 +77,11 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
       if (!event || typeof event !== 'object') continue
       const e = event as Record<string, unknown>
       if (typeof e.participantCode === 'string') {
-        const code = e.participantCode.trim()
-        if (code.includes('@') || /\.(com|vn|net|org)/i.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia là email.')
-          break
-        }
-        if (/^(\+?84|0)\d+/i.test(code) || /\d{7,}/.test(code)) {
-          errors.push('Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia là số điện thoại.')
+        const code = e.participantCode.trim().toUpperCase()
+        if (!PARTICIPANT_CODE_REGEX.test(code)) {
+          errors.push(
+            `Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia '${e.participantCode}' không đúng định dạng chuẩn (P01..P9999).`
+          )
           break
         }
       }
@@ -107,7 +101,7 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
 /**
  * Builds a validated, read-only validation export envelope.
  * Strictly guarantees ZERO business records (batches, orders, contacts, etc.) are included.
- * Excludes demo mode sessions and events by default to maintain research telemetry integrity.
+ * Excludes demo mode and legacy missing-mode sessions and events by default to maintain research telemetry integrity.
  */
 export async function buildValidationExportData(options?: {
   includeDemo?: boolean
@@ -121,7 +115,7 @@ export async function buildValidationExportData(options?: {
     validationRepository.getAllValidationEvents()
   ])
 
-  const sessions = includeDemo ? allSessions : allSessions.filter((s) => s.mode !== 'demo')
+  const sessions = includeDemo ? allSessions : allSessions.filter((s) => s.mode === 'pilot')
   const events = includeDemo ? allEvents : allEvents.filter((e) => e.mode === 'pilot')
 
   const summary = buildValidationSummary(sessions, events, { includeDemo })
