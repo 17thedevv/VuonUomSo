@@ -65,7 +65,7 @@ export function getBatchDisplayStatus(batch: Batch, isAttention: boolean): strin
     case 'ready':
       return 'Đang bán'
     case 'depleted':
-      return 'Đã xuất hết'
+      return 'Đã hết'
     case 'propagating':
     default:
       return 'Đang ươm'

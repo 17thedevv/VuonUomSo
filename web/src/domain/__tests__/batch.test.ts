@@ -81,7 +81,7 @@ describe('Domain: Batch calculations & filters', () => {
       expect(getBatchDisplayStatus(propagatingBatch, false)).toBe('Đang ươm')
 
       const depletedBatch = createMockBatch({ currentQuantity: 0, readyQuantity: 0 })
-      expect(getBatchDisplayStatus(depletedBatch, false)).toBe('Đã xuất hết')
+      expect(getBatchDisplayStatus(depletedBatch, false)).toBe('Đã hết')
     })
 
     it('derives legacy batch with status nearly_ready and ready=0 as "Đang ươm" (propagating)', () => {

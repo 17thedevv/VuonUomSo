@@ -260,5 +260,33 @@ describe('BatchDetailScreen', () => {
       expect(screen.getByText('27.000')).toBeInTheDocument()
     })
   })
+
+  it('displays "Đã hết" badge when batch currentQuantity is 0', async () => {
+    // Save depleted batch
+    await db.batches.put({
+      id: 'batch_depleted_test',
+      code: 'DEPLETED #01',
+      variety: 'Keo tai tuong',
+      createdAt: new Date().toISOString(),
+      initialQuantity: 10000,
+      currentQuantity: 0,
+      readyQuantity: 0,
+      status: 'depleted'
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/batches/batch_depleted_test']}>
+        <Routes>
+          <Route path="/batches/:id" element={<BatchDetailScreen />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('DEPLETED #01')).toBeInTheDocument()
+    })
+
+    expect(screen.getAllByText('Đã hết').length).toBeGreaterThanOrEqual(1)
+  })
 })
 

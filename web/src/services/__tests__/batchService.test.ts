@@ -7,9 +7,10 @@ import {
   updateBatchReadyQuantity
 } from '../batchService'
 import { batchRepository, eventRepository } from '../../data/repositories'
+import { db } from '../../data/db'
 import { clearAllData } from '../../data/seed'
 import { undoService } from '../undoService'
-import type { Batch } from '../../domain/batch'
+import { type Batch, deriveBatchStatus, getBatchDisplayStatus } from '../../domain/batch'
 import { availableQuantityForBatch, commitmentShortageForBatch } from '../../domain/quantity'
 import type { Reservation } from '../../domain/reservation'
 
@@ -435,6 +436,172 @@ describe('batchService', () => {
       const finalBatch = await batchRepository.getById(batch.id)
       expect(finalBatch?.currentQuantity).toBe(20000)
       expect(finalBatch?.readyQuantity).toBe(5000)
+    })
+
+    // Scenario J: Consecutive and interleaved mutations do not lose updates
+    it('Scenario J: consecutive and interleaved mutations do not lose updates', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 50000
+      })
+      const batchId = created.batch!.id
+
+      // Mutation 1: Update ready quantity to 20.000
+      const res1 = await updateBatchReadyQuantity({ batchId, newReadyQuantity: 20000 })
+      expect(res1.success).toBe(true)
+
+      // Mutation 2: Inventory check reports 48.000 living, keeping ready at 20.000
+      const res2 = await updateBatchInventory({
+        batchId,
+        newQuantity: 48000,
+        newReadyQuantity: 20000
+      })
+      expect(res2.success).toBe(true)
+
+      // Verify persisted state has both updates
+      const finalBatch = await batchRepository.getById(batchId)
+      expect(finalBatch?.currentQuantity).toBe(48000)
+      expect(finalBatch?.readyQuantity).toBe(20000)
+      expect(finalBatch?.status).toBe('ready')
+    })
+
+    // Scenario K: Intervening shipment is not overwritten by inventory update or Undo
+    it('Scenario K: intervening shipment is not overwritten by inventory update or Undo', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 40000
+      })
+      const batchId = created.batch!.id
+
+      // 1. Set ready quantity to 25.000 (Undo recorded expecting current=40.000, ready=25.000)
+      await updateBatchReadyQuantity({ batchId, newReadyQuantity: 25000 })
+
+      // 2. Interleaved shipment occurs transactionally: reduces physical current to 25.000 and ready to 10.000
+      await db.transaction('rw', [db.batches, db.events], async () => {
+        const b = (await db.batches.get(batchId))!
+        b.currentQuantity = 25000
+        b.readyQuantity = 10000
+        b.status = 'ready'
+        await db.batches.put(b)
+      })
+
+      // 3. Inventory update attempts to set living to 20.000 without newReadyQuantity:
+      // It validates against REAL post-shipment persisted state (ready=10.000), not the pre-shipment state (ready=25.000)!
+      // Since living (20.000) >= real ready (10.000), this succeeds without forcing user to lower ready below 20.000!
+      const invRes = await updateBatchInventory({ batchId, newQuantity: 20000 })
+      expect(invRes.success).toBe(true)
+      expect(invRes.batch?.currentQuantity).toBe(20000)
+      expect(invRes.batch?.readyQuantity).toBe(10000) // Preserved shipment ready quantity
+
+      // 4. Stale Undo from step 1 attempts to run:
+      // Must be rejected because batch quantities changed, protecting shipment stock from resurrection
+      undoService.recordMutation({
+        type: 'update_ready_quantity',
+        batchId,
+        batchCode: 'BV16 #01',
+        previousReadyQuantity: 0,
+        expectedReadyQuantity: 25000,
+        expectedCurrentQuantity: 40000,
+        description: 'Stale mutation'
+      })
+      const staleUndoRes = await undoService.undoLastMutation()
+      expect(staleUndoRes.success).toBe(false)
+      expect(staleUndoRes.message).toBe('Không thể hoàn tác vì lô đã thay đổi sau thao tác này.')
+
+      // Verify stock remains current=20.000, ready=10.000
+      const finalBatch = await batchRepository.getById(batchId)
+      expect(finalBatch?.currentQuantity).toBe(20000)
+      expect(finalBatch?.readyQuantity).toBe(10000)
+    })
+
+    // Scenario L: NaN / Infinity rejected and data kept intact
+    it('Scenario L: explicitly rejects NaN and Infinity on boundary and preserves data', async () => {
+      // 1. createBatch rejects NaN and Infinity
+      const nanCreate = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: NaN
+      })
+      expect(nanCreate.success).toBe(false)
+      expect(nanCreate.error).toContain('lớn hơn 0')
+
+      const infCreate = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: Infinity
+      })
+      expect(infCreate.success).toBe(false)
+      expect(infCreate.error).toContain('lớn hơn 0')
+
+      // Create valid batch
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 30000
+      })
+      const batchId = created.batch!.id
+
+      // 2. updateBatchInventory rejects NaN and Infinity
+      const nanInv = await updateBatchInventory({
+        batchId,
+        newQuantity: NaN
+      })
+      expect(nanInv.success).toBe(false)
+      expect(nanInv.error).toContain('không thể âm')
+
+      const infInv = await updateBatchInventory({
+        batchId,
+        newQuantity: Infinity
+      })
+      expect(infInv.success).toBe(false)
+      expect(infInv.error).toContain('không thể âm')
+
+      const nanReadyInv = await updateBatchInventory({
+        batchId,
+        newQuantity: 25000,
+        newReadyQuantity: NaN
+      })
+      expect(nanReadyInv.success).toBe(false)
+      expect(nanReadyInv.error).toContain('không thể âm')
+
+      // 3. updateBatchReadyQuantity rejects NaN and Infinity
+      const nanReady = await updateBatchReadyQuantity({
+        batchId,
+        newReadyQuantity: NaN
+      })
+      expect(nanReady.success).toBe(false)
+      expect(nanReady.error).toContain('không thể âm')
+
+      const infReady = await updateBatchReadyQuantity({
+        batchId,
+        newReadyQuantity: Infinity
+      })
+      expect(infReady.success).toBe(false)
+      expect(infReady.error).toContain('không thể âm')
+
+      // Verify batch remains completely intact
+      const intact = await batchRepository.getById(batchId)
+      expect(intact?.currentQuantity).toBe(30000)
+      expect(intact?.readyQuantity).toBe(0)
+    })
+
+    // Scenario M: Batch with current=0 derives depleted ("Đã hết")
+    it('Scenario M: derives status as depleted ("Đã hết") when current reaches 0', async () => {
+      const created = await createBatch({
+        variety: 'Keo lai BV16',
+        initialQuantity: 10000
+      })
+      const batchId = created.batch!.id
+
+      // Inventory check reports 0 living trees (e.g. all dead or culled)
+      const result = await updateBatchInventory({
+        batchId,
+        newQuantity: 0,
+        newReadyQuantity: 0
+      })
+      expect(result.success).toBe(true)
+      expect(result.batch?.status).toBe('depleted')
+
+      const reloaded = (await batchRepository.getById(batchId))!
+      expect(deriveBatchStatus(reloaded)).toBe('depleted')
+      expect(getBatchDisplayStatus(reloaded, false)).toBe('Đã hết')
     })
   })
 })
