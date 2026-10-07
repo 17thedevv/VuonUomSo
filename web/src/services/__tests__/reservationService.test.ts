@@ -156,6 +156,42 @@ describe('Service: reservationService (Phase P3)', () => {
     expect(allRes).toHaveLength(0)
   })
 
+  // Scenario F: Batch.status is not authority for sellability
+  it('Scenario F: allows reservation when availableQuantity > 0 even if batch.status is propagating or mismatched', async () => {
+    const batch: Batch = {
+      id: 'b_prop_ready',
+      code: 'PROP #01',
+      variety: 'Keo lai BV16',
+      createdAt: '2026-09-01T00:00:00.000Z',
+      initialQuantity: 50000,
+      currentQuantity: 45000,
+      readyQuantity: 15000,
+      status: 'propagating' // Legacy/stale status, but ready has 15k
+    }
+    const order: Order = {
+      id: 'ord_f',
+      customerId: 'cust_1',
+      variety: 'Keo lai BV16',
+      requestedQuantity: 10000,
+      status: 'open'
+    }
+    await db.batches.put(batch)
+    await db.orders.put(order)
+
+    // Eligible candidate options include this batch because available > 0
+    const options = await getReservationOptions(order.id)
+    expect(options?.ownBatches.some((b) => b.id === 'b_prop_ready')).toBe(true)
+
+    // Committing reservation succeeds
+    const resResult = await reserveOwnBatch({
+      orderId: order.id,
+      batchId: batch.id,
+      quantity: 10000
+    })
+    expect(resResult.success).toBe(true)
+    expect(resResult.reservation.quantity).toBe(10000)
+  })
+
   // =========================================================================
   // Section 55: Critical test — release reservation
   // =========================================================================
