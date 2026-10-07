@@ -274,7 +274,7 @@ export const BatchDossierScreen: React.FC = () => {
       </div>
 
       {/* Main Container */}
-      <div className="p-4 max-w-2xl mx-auto w-full space-y-4 pb-16 print:p-0 print:max-w-none print:space-y-3">
+      <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full space-y-4 pb-16 print:p-0 print:max-w-none print:space-y-3">
         {/* Print Only Header */}
         <div className="hidden print:block border-b-2 border-slate-800 pb-3 mb-4">
           <div className="flex justify-between items-start">

@@ -28,39 +28,88 @@ export const TASK_LABELS: Record<ValidationAction, string> = {
 }
 
 /**
- * Returns the count of unique participant codes.
+ * Canonical Vietnam timezone used for field pilot day boundaries (UTC+7).
  */
-export function countParticipants(sessions: PilotSession[]): number {
-  const codes = new Set(sessions.map((s) => s.participantCode.toUpperCase()))
+export const FIELD_PILOT_TIMEZONE = 'Asia/Ho_Chi_Minh'
+
+/**
+ * Derives local calendar date string (YYYY-MM-DD) in Vietnam local time (UTC+7).
+ * Prevents UTC day rollover mismatch (e.g. 5:00 AM VN time being 22:00 UTC previous day).
+ */
+export function toLocalCalendarDay(
+  isoString: string,
+  timeZone = FIELD_PILOT_TIMEZONE
+): string {
+  try {
+    const date = new Date(isoString)
+    if (Number.isNaN(date.getTime())) {
+      return isoString.slice(0, 10)
+    }
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+    return formatter.format(date)
+  } catch {
+    const date = new Date(isoString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+}
+
+/**
+ * Returns the count of unique participant codes.
+ * Excludes demo mode and legacy missing-mode sessions by default.
+ */
+export function countParticipants(
+  sessions: PilotSession[],
+  includeDemo = false
+): number {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
+  const codes = new Set(targetSessions.map((s) => s.participantCode.toUpperCase()))
   return codes.size
 }
 
 /**
  * Counts total, completed, and in-progress pilot sessions.
+ * Excludes demo mode and legacy missing-mode sessions by default.
  */
-export function countPilotSessions(sessions: PilotSession[]): {
+export function countPilotSessions(
+  sessions: PilotSession[],
+  includeDemo = false
+): {
   total: number
   completed: number
   active: number
 } {
-  const completed = sessions.filter((s) => !!s.endedAt).length
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
+  const completed = targetSessions.filter((s) => !!s.endedAt).length
   return {
-    total: sessions.length,
+    total: targetSessions.length,
     completed,
-    active: sessions.length - completed
+    active: targetSessions.length - completed
   }
 }
 
 /**
  * Counts participants who returned across at least 2 distinct calendar days.
- * Calendar day is derived from startedAt in local ISO date slice (YYYY-MM-DD).
+ * Calendar day is derived from startedAt using local Vietnam calendar date (Asia/Ho_Chi_Minh).
+ * Excludes demo mode and legacy missing-mode sessions by default.
  */
-export function countReturningParticipants(sessions: PilotSession[]): number {
+export function countReturningParticipants(
+  sessions: PilotSession[],
+  includeDemo = false
+): number {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const daysByParticipant = new Map<string, Set<string>>()
 
-  for (const s of sessions) {
+  for (const s of targetSessions) {
     const code = s.participantCode.toUpperCase()
-    const day = s.startedAt.slice(0, 10)
+    const day = toLocalCalendarDay(s.startedAt)
     if (!daysByParticipant.has(code)) {
       daysByParticipant.set(code, new Set())
     }
@@ -79,89 +128,143 @@ export function countReturningParticipants(sessions: PilotSession[]): number {
 
 /**
  * Derives A1, A2, and A3 activation levels for participants based on raw events.
- * Excludes demo mode events by default to prevent inflating pilot evidence.
+ * Excludes demo mode events and sessions by default to prevent inflating pilot evidence.
+ * Strict guards:
+ * - Participants MUST originate from valid pilot sessions; orphan/mismatched events cannot create participants.
+ * - Requires participant to achieve A2 first.
+ * - Requires at least ONE action_completed belonging to the core workflow on a subsequent calendar day (post-A2).
+ *   Completed session alone without core action only counts towards returningParticipants, NOT A3.
  */
 export function deriveActivationMetrics(
   sessions: PilotSession[],
   events: ValidationEvent[],
   includeDemo = false
 ): ActivationMetrics {
+  const validSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const validEvents = includeDemo ? events : events.filter((e) => e.mode === 'pilot')
 
-  // Group completed actions by participant
-  const completedActionsByParticipant = new Map<string, Set<ValidationAction>>()
-  const participantActiveDays = new Map<string, Set<string>>()
-
-  for (const s of sessions) {
+  // Map participant codes to valid sessions
+  const sessionsByParticipant = new Map<string, PilotSession[]>()
+  for (const s of validSessions) {
     const code = s.participantCode.toUpperCase()
-    const day = s.startedAt.slice(0, 10)
-    if (!participantActiveDays.has(code)) {
-      participantActiveDays.set(code, new Set())
+    if (!sessionsByParticipant.has(code)) {
+      sessionsByParticipant.set(code, [])
     }
-    participantActiveDays.get(code)!.add(day)
+    sessionsByParticipant.get(code)!.push(s)
   }
 
+  // Participants MUST originate from valid pilot sessions.
+  // Orphan or mismatched events without a valid pilot session CANNOT create a participant.
+  const validParticipantCodes = new Set<string>(
+    validSessions.map((s) => s.participantCode.toUpperCase())
+  )
+
+  // Map participant codes to valid action events (only for recognized participants)
+  const actionEventsByParticipant = new Map<string, ValidationEvent[]>()
   for (const e of validEvents) {
     if (e.type === 'action_completed') {
       const code = e.participantCode.toUpperCase()
-      if (!completedActionsByParticipant.has(code)) {
-        completedActionsByParticipant.set(code, new Set())
+      if (validParticipantCodes.has(code)) {
+        if (!actionEventsByParticipant.has(code)) {
+          actionEventsByParticipant.set(code, [])
+        }
+        actionEventsByParticipant.get(code)!.push(e)
       }
-      completedActionsByParticipant.get(code)!.add(e.action)
     }
   }
 
-  const allParticipantCodes = new Set(sessions.map((s) => s.participantCode.toUpperCase()))
+  const CORE_ACTION_KEYS = new Set<ValidationAction>([
+    'batch_created',
+    'inventory_updated',
+    'order_created',
+    'reservation_created',
+    'shipment_planned',
+    'shipment_completed',
+    'dossier_saved'
+  ])
+
   let a1Count = 0
   let a2Count = 0
   let a3Count = 0
 
-  for (const code of allParticipantCodes) {
-    const actions = completedActionsByParticipant.get(code) || new Set<ValidationAction>()
-    const days = participantActiveDays.get(code) || new Set<string>()
+  for (const code of validParticipantCodes) {
+    const pEvents = actionEventsByParticipant.get(code) || []
 
-    // A1: Data Entry (at least 1 batch_created, inventory_updated, or order_created)
-    const hasA1 =
-      actions.has('batch_created') ||
-      actions.has('inventory_updated') ||
-      actions.has('order_created')
+    // Sort action events chronologically
+    const sortedActionEvents = [...pEvents].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    const completedActions = new Set<ValidationAction>()
+    let hasA1 = false
+    let hasA2 = false
+    let a2Day: string | null = null
+
+    for (const evt of sortedActionEvents) {
+      if (evt.action) {
+        completedActions.add(evt.action)
+      }
+
+      if (!hasA1) {
+        if (
+          completedActions.has('batch_created') ||
+          completedActions.has('inventory_updated') ||
+          completedActions.has('order_created')
+        ) {
+          hasA1 = true
+        }
+      }
+
+      if (!hasA2) {
+        const distinctCoreCount = Array.from(CORE_ACTION_KEYS).filter((k) =>
+          completedActions.has(k)
+        ).length
+
+        const hasHighValueStep =
+          completedActions.has('reservation_created') ||
+          completedActions.has('shipment_planned') ||
+          completedActions.has('shipment_completed') ||
+          (completedActions.has('inventory_updated') && completedActions.has('batch_created'))
+
+        if (distinctCoreCount >= 2 && hasHighValueStep) {
+          hasA2 = true
+          a2Day = toLocalCalendarDay(evt.createdAt)
+        }
+      }
+    }
 
     if (hasA1) {
       a1Count++
     }
 
-    // A2: Core Workflow (at least 2 distinct core actions AND a value-creation step)
-    const coreActionKeys: ValidationAction[] = [
-      'batch_created',
-      'inventory_updated',
-      'order_created',
-      'reservation_created',
-      'shipment_planned',
-      'shipment_completed',
-      'dossier_saved'
-    ]
-    const distinctCoreCount = coreActionKeys.filter((k) => actions.has(k)).length
-    const hasHighValueStep =
-      actions.has('reservation_created') ||
-      actions.has('shipment_planned') ||
-      actions.has('shipment_completed') ||
-      (actions.has('inventory_updated') && actions.has('batch_created'))
-
-    const hasA2 = distinctCoreCount >= 2 && hasHighValueStep
-
     if (hasA2) {
       a2Count++
-    }
 
-    // A3: Operational Return (Achieved A2 + returned on another calendar day)
-    const isReturning = days.size >= 2
-    if (hasA2 && isReturning) {
-      a3Count++
+      // Check for A3: Verified Operational Return
+      // Condition: Must have at least ONE action_completed belonging to core workflow on a calendar day AFTER achieving A2 (day > a2Day).
+      // Completed session alone on Day 2 without a core action only counts towards returningParticipants, NOT A3.
+      let hasA3 = false
+
+      if (a2Day) {
+        const hasPostA2CoreAction = sortedActionEvents.some((e) => {
+          if (!e.action || !CORE_ACTION_KEYS.has(e.action)) return false
+          const eDay = toLocalCalendarDay(e.createdAt)
+          return eDay > a2Day!
+        })
+
+        if (hasPostA2CoreAction) {
+          hasA3 = true
+        }
+      }
+
+      if (hasA3) {
+        a3Count++
+      }
     }
   }
 
   return {
-    totalParticipants: allParticipantCodes.size,
+    totalParticipants: validParticipantCodes.size,
     a1Count,
     a2Count,
     a3Count
@@ -214,14 +317,18 @@ export function summarizeTasks(
   }))
 }
 
-export function summarizeSupport(sessions: PilotSession[]): Record<SupportLevel, number> {
+export function summarizeSupport(
+  sessions: PilotSession[],
+  includeDemo = false
+): Record<SupportLevel, number> {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const counts: Record<SupportLevel, number> = {
     none: 0,
     once: 0,
     few: 0,
     many: 0
   }
-  for (const s of sessions) {
+  for (const s of targetSessions) {
     if (s.supportLevel && counts[s.supportLevel] !== undefined) {
       counts[s.supportLevel]++
     }
@@ -230,8 +337,10 @@ export function summarizeSupport(sessions: PilotSession[]): Record<SupportLevel,
 }
 
 export function summarizeWillingnessToPay(
-  sessions: PilotSession[]
+  sessions: PilotSession[],
+  includeDemo = false
 ): Record<WillingnessToPay, number> {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const counts: Record<WillingnessToPay, number> = {
     zero: 0,
     under_50k: 0,
@@ -240,7 +349,7 @@ export function summarizeWillingnessToPay(
     over_200k: 0,
     unsure: 0
   }
-  for (const s of sessions) {
+  for (const s of targetSessions) {
     if (s.willingnessToPay && counts[s.willingnessToPay] !== undefined) {
       counts[s.willingnessToPay]++
     }
@@ -249,14 +358,16 @@ export function summarizeWillingnessToPay(
 }
 
 export function summarizeReturnIntention(
-  sessions: PilotSession[]
+  sessions: PilotSession[],
+  includeDemo = false
 ): Record<ReturnIntention, number> {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const counts: Record<ReturnIntention, number> = {
     yes: 0,
     maybe: 0,
     no: 0
   }
-  for (const s of sessions) {
+  for (const s of targetSessions) {
     if (s.wouldUseNextWeek && counts[s.wouldUseNextWeek] !== undefined) {
       counts[s.wouldUseNextWeek]++
     }
@@ -264,7 +375,11 @@ export function summarizeReturnIntention(
   return counts
 }
 
-export function summarizeMostUsefulArea(sessions: PilotSession[]): Record<UsefulArea, number> {
+export function summarizeMostUsefulArea(
+  sessions: PilotSession[],
+  includeDemo = false
+): Record<UsefulArea, number> {
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
   const counts: Record<UsefulArea, number> = {
     stock: 0,
     orders: 0,
@@ -274,7 +389,7 @@ export function summarizeMostUsefulArea(sessions: PilotSession[]): Record<Useful
     backup: 0,
     other: 0
   }
-  for (const s of sessions) {
+  for (const s of targetSessions) {
     if (s.mostUsefulArea && counts[s.mostUsefulArea] !== undefined) {
       counts[s.mostUsefulArea]++
     }
@@ -284,6 +399,7 @@ export function summarizeMostUsefulArea(sessions: PilotSession[]): Record<Useful
 
 /**
  * Builds a deterministic, reproducible ValidationSummary from sessions and telemetry events.
+ * By default, excludes all demo mode and legacy missing-mode sessions and events.
  */
 export function buildValidationSummary(
   sessions: PilotSession[],
@@ -291,15 +407,18 @@ export function buildValidationSummary(
   options?: { includeDemo?: boolean }
 ): ValidationSummary {
   const includeDemo = options?.includeDemo ?? false
-  const totalParticipants = countParticipants(sessions)
-  const sessionCounts = countPilotSessions(sessions)
-  const returningParticipants = countReturningParticipants(sessions)
-  const activation = deriveActivationMetrics(sessions, events, includeDemo)
-  const tasks = summarizeTasks(events, includeDemo)
-  const support = summarizeSupport(sessions)
-  const willingnessToPay = summarizeWillingnessToPay(sessions)
-  const returnIntention = summarizeReturnIntention(sessions)
-  const mostUsefulArea = summarizeMostUsefulArea(sessions)
+  const targetSessions = includeDemo ? sessions : sessions.filter((s) => s.mode === 'pilot')
+  const targetEvents = includeDemo ? events : events.filter((e) => e.mode === 'pilot')
+
+  const totalParticipants = countParticipants(targetSessions, includeDemo)
+  const sessionCounts = countPilotSessions(targetSessions, includeDemo)
+  const returningParticipants = countReturningParticipants(targetSessions, includeDemo)
+  const activation = deriveActivationMetrics(targetSessions, targetEvents, includeDemo)
+  const tasks = summarizeTasks(targetEvents, includeDemo)
+  const support = summarizeSupport(targetSessions, includeDemo)
+  const willingnessToPay = summarizeWillingnessToPay(targetSessions, includeDemo)
+  const returnIntention = summarizeReturnIntention(targetSessions, includeDemo)
+  const mostUsefulArea = summarizeMostUsefulArea(targetSessions, includeDemo)
 
   // Positive WTP = any tier above zero and unsure
   const positiveWtpCount =

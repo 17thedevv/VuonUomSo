@@ -49,7 +49,8 @@ describe('Validation UI Components', () => {
         id: 'psess_ui_01',
         participantCode: 'P09',
         consent: 'accepted',
-        startedAt: new Date().toISOString()
+        startedAt: new Date().toISOString(),
+        mode: 'pilot'
       })
       if (typeof window !== 'undefined' && window.sessionStorage) {
         window.sessionStorage.setItem('vuonuom_active_pilot_session_id', 'psess_ui_01')
@@ -99,6 +100,7 @@ describe('Validation UI Components', () => {
         consent: 'accepted',
         startedAt: '2026-10-06T10:00:00.000Z',
         endedAt: '2026-10-06T10:30:00.000Z',
+        mode: 'pilot',
         supportLevel: 'none',
         wouldUseNextWeek: 'yes',
         willingnessToPay: '50_100k',

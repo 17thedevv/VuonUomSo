@@ -53,46 +53,48 @@ export const ShipmentsScreen: React.FC = () => {
       <PageHeader title="Chuyến giao" subtitle="Lên lịch xe & xuất cây rời vườn" />
 
       {/* Tabs */}
-      <div className="px-4 pt-2 pb-1 bg-white border-b border-slate-200">
-        <div className="flex gap-2 max-w-2xl mx-auto">
-          <button
-            type="button"
-            onClick={() => setFilter('all')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
-              filter === 'all'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Tất cả
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('planned')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
-              filter === 'planned'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Chờ giao
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter('completed')}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
-              filter === 'completed'
-                ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            Đã giao
-          </button>
+      <div className="px-4 sm:px-6 pt-2 pb-1 bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex gap-2 max-w-md">
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                filter === 'all'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Tất cả
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('planned')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                filter === 'planned'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Chờ giao
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('completed')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                filter === 'completed'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Đã giao
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3 flex-1 max-w-2xl mx-auto w-full">
+      <div className="p-4 sm:p-6 space-y-4 flex-1 max-w-6xl mx-auto w-full">
         {loading ? (
           <div className="text-center py-12 text-xs text-slate-400">Đang tải danh sách chuyến giao...</div>
         ) : shipments.length === 0 ? (
@@ -107,7 +109,8 @@ export const ShipmentsScreen: React.FC = () => {
             description="Để tạo chuyến giao mới, hãy vào chi tiết đơn hàng đã giữ cây và bấm 'Lên chuyến giao'."
           />
         ) : (
-          shipments.map((shipment) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {shipments.map((shipment) => {
             const isCompleted = shipment.status === 'completed'
             const displayQty = isCompleted ? shipment.shippedQuantity : shipment.plannedQuantity
             const vanQty = (displayQty / 10000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })
@@ -177,7 +180,8 @@ export const ShipmentsScreen: React.FC = () => {
                 )}
               </div>
             )
-          })
+          })}
+        </div>
         )}
       </div>
     </div>

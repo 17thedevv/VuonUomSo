@@ -7,6 +7,8 @@ import {
   summarizeTasks,
   summarizeSupport,
   summarizeWillingnessToPay,
+  summarizeReturnIntention,
+  summarizeMostUsefulArea,
   buildValidationSummary
 } from '../validationMetrics'
 import type { PilotSession, ValidationEvent } from '../validation.types'
@@ -19,6 +21,7 @@ describe('Validation Metrics Engine', () => {
       consent: 'accepted',
       startedAt: '2026-10-06T09:00:00.000Z',
       endedAt: '2026-10-06T09:30:00.000Z',
+      mode: 'pilot',
       supportLevel: 'none',
       wouldUseNextWeek: 'yes',
       willingnessToPay: '50_100k',
@@ -30,6 +33,7 @@ describe('Validation Metrics Engine', () => {
       consent: 'accepted',
       startedAt: '2026-10-08T10:00:00.000Z', // Distinct calendar day!
       endedAt: '2026-10-08T10:20:00.000Z',
+      mode: 'pilot',
       supportLevel: 'once',
       wouldUseNextWeek: 'yes',
       willingnessToPay: '50_100k',
@@ -41,6 +45,7 @@ describe('Validation Metrics Engine', () => {
       consent: 'accepted',
       startedAt: '2026-10-06T14:00:00.000Z',
       endedAt: '2026-10-06T14:45:00.000Z',
+      mode: 'pilot',
       supportLevel: 'many',
       wouldUseNextWeek: 'no',
       willingnessToPay: 'zero',
@@ -51,6 +56,7 @@ describe('Validation Metrics Engine', () => {
       participantCode: 'P03',
       consent: 'accepted',
       startedAt: '2026-10-07T11:00:00.000Z',
+      mode: 'pilot',
       // Active / Incomplete session
       supportLevel: undefined
     }
@@ -201,5 +207,300 @@ describe('Validation Metrics Engine', () => {
 
     expect(summary1.evidence.heavySupport.current).toBe(1)
     expect(summary1.evidence.heavySupport.total).toBe(3)
+  })
+
+  describe('P6 Evidence Integrity Hardening', () => {
+    it('missing-mode session excluded from pilot across all metric aggregators', () => {
+      const mixedSessions: PilotSession[] = [
+        {
+          id: 's_pilot',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: '2026-10-06T09:00:00.000Z',
+          endedAt: '2026-10-06T09:30:00.000Z',
+          mode: 'pilot',
+          supportLevel: 'none',
+          wouldUseNextWeek: 'yes',
+          willingnessToPay: '50_100k',
+          mostUsefulArea: 'stock'
+        },
+        {
+          id: 's_legacy_missing_mode',
+          participantCode: 'P02',
+          consent: 'accepted',
+          startedAt: '2026-10-07T09:00:00.000Z',
+          endedAt: '2026-10-07T09:30:00.000Z',
+          // mode is undefined! (Legacy pre-patch session)
+          supportLevel: 'many',
+          wouldUseNextWeek: 'yes',
+          willingnessToPay: 'over_200k',
+          mostUsefulArea: 'orders'
+        },
+        {
+          id: 's_demo',
+          participantCode: 'P03',
+          consent: 'accepted',
+          startedAt: '2026-10-08T09:00:00.000Z',
+          endedAt: '2026-10-08T09:30:00.000Z',
+          mode: 'demo',
+          supportLevel: 'few',
+          wouldUseNextWeek: 'no',
+          willingnessToPay: '100_200k',
+          mostUsefulArea: 'dossier'
+        }
+      ]
+
+      // By default (includeDemo = false): only s_pilot (mode === 'pilot') is counted
+      expect(countParticipants(mixedSessions)).toBe(1)
+      expect(countPilotSessions(mixedSessions).total).toBe(1)
+      expect(countReturningParticipants(mixedSessions)).toBe(0)
+    })
+
+    it('legacy missing-mode WTP/support excluded from pilot metrics', () => {
+      const legacySessions: PilotSession[] = [
+        {
+          id: 's_legacy',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: '2026-10-06T09:00:00.000Z',
+          endedAt: '2026-10-06T09:30:00.000Z',
+          // mode undefined!
+          supportLevel: 'many',
+          willingnessToPay: 'over_200k',
+          wouldUseNextWeek: 'yes',
+          mostUsefulArea: 'backup'
+        }
+      ]
+
+      // Under default pilot-only: must be excluded!
+      expect(summarizeSupport(legacySessions).many).toBe(0)
+      expect(summarizeWillingnessToPay(legacySessions).over_200k).toBe(0)
+      expect(summarizeReturnIntention(legacySessions).yes).toBe(0)
+      expect(summarizeMostUsefulArea(legacySessions).backup).toBe(0)
+
+      // When includeDemo = true: included
+      expect(summarizeSupport(legacySessions, true).many).toBe(1)
+      expect(summarizeWillingnessToPay(legacySessions, true).over_200k).toBe(1)
+    })
+
+    it('handles Vietnam local calendar day (UTC+7) boundary accurately', () => {
+      // 5:00 AM VN time on Oct 7 is 22:00 UTC on Oct 6
+      const earlyMorningVn = '2026-10-06T22:00:00.000Z'
+      // 9:00 AM VN time on Oct 7 is 02:00 UTC on Oct 7
+      const midMorningVn = '2026-10-07T02:00:00.000Z'
+
+      // Under UTC slice, these look like two different days ('2026-10-06' and '2026-10-07')
+      expect(earlyMorningVn.slice(0, 10)).not.toBe(midMorningVn.slice(0, 10))
+
+      // Under Vietnam local calendar day, both map to '2026-10-07'
+      const sessionsSameLocalDay: PilotSession[] = [
+        {
+          id: 's_morning1',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: earlyMorningVn,
+          endedAt: '2026-10-06T22:30:00.000Z',
+          mode: 'pilot'
+        },
+        {
+          id: 's_morning2',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: midMorningVn,
+          endedAt: '2026-10-07T02:30:00.000Z',
+          mode: 'pilot'
+        }
+      ]
+
+      // Must NOT be counted as returning on distinct calendar days
+      expect(countReturningParticipants(sessionsSameLocalDay)).toBe(0)
+
+      // Next local day: 1:00 AM VN time on Oct 8 is 18:00 UTC on Oct 7
+      const nextDayVn = '2026-10-07T18:00:00.000Z'
+      const sessionsDistinctLocalDays: PilotSession[] = [
+        ...sessionsSameLocalDay,
+        {
+          id: 's_next_day',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: nextDayVn,
+          endedAt: '2026-10-07T18:30:00.000Z',
+          mode: 'pilot'
+        }
+      ]
+
+      // Now counts as 1 returning participant
+      expect(countReturningParticipants(sessionsDistinctLocalDays)).toBe(1)
+    })
+
+    it('A2 + completed empty day2 => A3 false', () => {
+      // Participant achieves A2 on Day 1, and on Day 2 completes an empty session (e.g. opens, answers survey, no core action)
+      const sessions: PilotSession[] = [
+        {
+          id: 's1',
+          participantCode: 'P10',
+          consent: 'accepted',
+          startedAt: '2026-10-06T08:00:00.000Z',
+          endedAt: '2026-10-06T08:30:00.000Z',
+          mode: 'pilot'
+        },
+        {
+          id: 's2_day2',
+          participantCode: 'P10',
+          consent: 'accepted',
+          startedAt: '2026-10-07T08:00:00.000Z',
+          endedAt: '2026-10-07T08:15:00.000Z', // Completed session on Day 2!
+          mode: 'pilot',
+          supportLevel: 'none',
+          wouldUseNextWeek: 'yes'
+        }
+      ]
+
+      // Only Day 1 has actions (achieves A2)
+      const day1OnlyActions: ValidationEvent[] = [
+        {
+          id: 'e1',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'batch_created',
+          createdAt: '2026-10-06T08:05:00.000Z'
+        },
+        {
+          id: 'e2',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'order_created',
+          createdAt: '2026-10-06T08:10:00.000Z'
+        },
+        {
+          id: 'e3',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'reservation_created',
+          createdAt: '2026-10-06T08:15:00.000Z'
+        }
+      ]
+
+      // returningParticipants is 1 (attended 2 distinct calendar days)
+      expect(countReturningParticipants(sessions)).toBe(1)
+
+      // But A3 MUST BE FALSE because Day 2 had no core workflow action!
+      const metrics = deriveActivationMetrics(sessions, day1OnlyActions, false)
+      expect(metrics.a2Count).toBe(1)
+      expect(metrics.a3Count).toBe(0) // A3 false!
+    })
+
+    it('A2 + core action day2 => A3 true', () => {
+      const sessions: PilotSession[] = [
+        {
+          id: 's1',
+          participantCode: 'P10',
+          consent: 'accepted',
+          startedAt: '2026-10-06T08:00:00.000Z',
+          endedAt: '2026-10-06T08:30:00.000Z',
+          mode: 'pilot'
+        },
+        {
+          id: 's2_day2',
+          participantCode: 'P10',
+          consent: 'accepted',
+          startedAt: '2026-10-07T08:00:00.000Z',
+          endedAt: '2026-10-07T08:30:00.000Z',
+          mode: 'pilot'
+        }
+      ]
+
+      const actionsWithDay2Core: ValidationEvent[] = [
+        {
+          id: 'e1',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'batch_created',
+          createdAt: '2026-10-06T08:05:00.000Z'
+        },
+        {
+          id: 'e2',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'order_created',
+          createdAt: '2026-10-06T08:10:00.000Z'
+        },
+        {
+          id: 'e3',
+          sessionId: 's1',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'reservation_created',
+          createdAt: '2026-10-06T08:15:00.000Z'
+        },
+        // Core workflow action on Day 2!
+        {
+          id: 'e4_day2',
+          sessionId: 's2_day2',
+          participantCode: 'P10',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'shipment_completed',
+          createdAt: '2026-10-07T08:20:00.000Z'
+        }
+      ]
+
+      const metrics = deriveActivationMetrics(sessions, actionsWithDay2Core, false)
+      expect(metrics.a2Count).toBe(1)
+      expect(metrics.a3Count).toBe(1) // A3 true!
+    })
+
+    it('orphan/mismatched pilot event cannot create participant', () => {
+      // Only P01 has a valid pilot session
+      const validSessions: PilotSession[] = [
+        {
+          id: 's_p01',
+          participantCode: 'P01',
+          consent: 'accepted',
+          startedAt: '2026-10-06T08:00:00.000Z',
+          endedAt: '2026-10-06T08:30:00.000Z',
+          mode: 'pilot'
+        }
+      ]
+
+      // Events include orphan P99 (no pilot session exists for P99)
+      const eventsWithOrphan: ValidationEvent[] = [
+        {
+          id: 'e_p01',
+          sessionId: 's_p01',
+          participantCode: 'P01',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'batch_created',
+          createdAt: '2026-10-06T08:05:00.000Z'
+        },
+        {
+          id: 'e_orphan',
+          sessionId: 's_nonexistent',
+          participantCode: 'P99',
+          mode: 'pilot',
+          type: 'action_completed',
+          action: 'order_created',
+          createdAt: '2026-10-06T08:10:00.000Z'
+        }
+      ]
+
+      const metrics = deriveActivationMetrics(validSessions, eventsWithOrphan, false)
+
+      // Total participants must strictly be 1 (only P01), orphan P99 cannot create a participant!
+      expect(metrics.totalParticipants).toBe(1)
+      expect(metrics.a1Count).toBe(1) // Only P01
+    })
   })
 })

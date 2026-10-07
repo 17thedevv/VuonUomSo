@@ -72,7 +72,7 @@ export const ValidationReportScreen: React.FC = () => {
         backTo="/more"
       />
 
-      <div className="p-4 max-w-xl mx-auto w-full space-y-5">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full space-y-5">
         {/* Filter Toggle */}
         <div className="bg-white p-3.5 rounded-xl border border-slate-200/90 flex items-center justify-between text-xs">
           <span className="text-slate-600 font-medium">Bao gồm thao tác thử mẫu (Demo):</span>
@@ -87,8 +87,11 @@ export const ValidationReportScreen: React.FC = () => {
           </label>
         </div>
 
-        {/* Section 1: Thử nghiệm (Sample) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-5 lg:space-y-0 items-start">
+          {/* Column 1: Sample, Activation, Tasks, Support */}
+          <div className="space-y-5">
+            {/* Section 1: Thử nghiệm (Sample) */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
             <Users className="w-4 h-4 text-emerald-600" />
             <span>THỬ NGHIỆM</span>
@@ -201,7 +204,10 @@ export const ValidationReportScreen: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
 
+      {/* Column 2: WTP, Return intention, Evidence */}
+      <div className="space-y-5">
         {/* Section 6: Mức phí chấp nhận (WTP) */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
@@ -301,7 +307,9 @@ export const ValidationReportScreen: React.FC = () => {
             Báo cáo chỉ phản ánh bằng chứng thực tế khách quan. Quyết định GO / PIVOT / STOP do nhóm phát triển quyết định dựa trên dữ liệu.
           </div>
         </div>
+        </div>
       </div>
     </div>
+  </div>
   )
 }

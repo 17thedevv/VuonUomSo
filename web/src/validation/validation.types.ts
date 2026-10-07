@@ -16,12 +16,19 @@ export type UsefulArea =
   | 'backup'
   | 'other'
 
+/**
+ * Strictly pseudonymous participant code regex: P followed by 2 to 4 digits (e.g. P01, P002, P1234).
+ * Single source of truth for both runtime sanitization and export boundary verification.
+ */
+export const PARTICIPANT_CODE_REGEX = /^P\d{2,4}$/
+
 export interface PilotSession {
   id: string
   participantCode: string // e.g. "P01", "P02", uppercase/sanitized, no real names or phone
   consent: 'accepted'
   startedAt: string // ISO string
   endedAt?: string // ISO string
+  mode?: 'pilot' | 'demo'
 
   supportLevel?: SupportLevel
   wouldUseNextWeek?: ReturnIntention

@@ -7,6 +7,7 @@ import {
   sanitizeParticipantCode
 } from '../validationSession'
 import { validationRepository } from '../validation.repository'
+import { settingsRepository } from '../../data/repositories'
 import type { Batch } from '../../domain/batch'
 
 describe('ValidationSession Service & Repository', () => {
@@ -14,26 +15,63 @@ describe('ValidationSession Service & Repository', () => {
     await db.pilotSessions.clear()
     await db.validationEvents.clear()
     await db.batches.clear()
+    await settingsRepository.set('app_mode', 'pilot')
     if (typeof window !== 'undefined' && window.sessionStorage) {
       window.sessionStorage.clear()
     }
   })
 
-  it('sanitizes participant code and rejects invalid/PII patterns', () => {
+  it('accepts P01/P002 and strictly rejects ANHHUNG, spaces, phone, and email', () => {
+    // P01/P002 accepted
     expect(sanitizeParticipantCode('  p01  ')).toBe('P01')
-    expect(sanitizeParticipantCode('p-pilot_2')).toBe('P-PILOT_2')
+    expect(sanitizeParticipantCode('P002')).toBe('P002')
+    expect(sanitizeParticipantCode('P1234')).toBe('P1234')
+
+    // ANHHUNG rejected (no digits / real name)
+    expect(() => sanitizeParticipantCode('ANHHUNG')).toThrow('không đúng định dạng ẩn danh chuẩn')
+    expect(() => sanitizeParticipantCode('Anh Hung')).toThrow('không đúng định dạng ẩn danh chuẩn')
 
     // Rejects empty
     expect(() => sanitizeParticipantCode('   ')).toThrow('Mã người thử không được để trống.')
 
-    // Rejects too long
-    expect(() => sanitizeParticipantCode('P'.repeat(25))).toThrow('Mã người thử quá dài')
-
-    // Rejects spaces (likely full name)
-    expect(() => sanitizeParticipantCode('Anh Hung')).toThrow('không được chứa khoảng trắng')
+    // Rejects invalid digit counts (must be 2-4 digits)
+    expect(() => sanitizeParticipantCode('P1')).toThrow('không đúng định dạng ẩn danh chuẩn')
+    expect(() => sanitizeParticipantCode('P12345')).toThrow('không đúng định dạng ẩn danh chuẩn')
 
     // Rejects phone numbers (PII)
-    expect(() => sanitizeParticipantCode('0912345678')).toThrow('Không dùng số điện thoại')
+    expect(() => sanitizeParticipantCode('0912345678')).toThrow('không đúng định dạng ẩn danh chuẩn')
+    expect(() => sanitizeParticipantCode('+84912345678')).toThrow('không đúng định dạng ẩn danh chuẩn')
+    expect(() => sanitizeParticipantCode('84912345678')).toThrow('không đúng định dạng ẩn danh chuẩn')
+
+    // Rejects emails (PII)
+    expect(() => sanitizeParticipantCode('user@domain.com')).toThrow('không đúng định dạng ẩn danh chuẩn')
+    expect(() => sanitizeParticipantCode('pilot@vuon.vn')).toThrow('không đúng định dạng ẩn danh chuẩn')
+
+    // Rejects pure numbers
+    expect(() => sanitizeParticipantCode('123456')).toThrow('không đúng định dạng ẩn danh chuẩn')
+  })
+
+  it('unknown app_mode starts non-pilot (fail-conservative)', async () => {
+    // 1. Unknown mode string -> fails safe to demo
+    await settingsRepository.set('app_mode', 'banana' as unknown as 'pilot')
+    const session1 = await startPilotSession('p01', 'accepted')
+    expect(session1.mode).toBe('demo')
+
+    // Clean up session1
+    await completePilotSession({ sessionId: session1.id })
+
+    // 2. Missing setting entirely -> fails safe to demo
+    await db.settings.delete('app_mode')
+    const session2 = await startPilotSession('p02', 'accepted')
+    expect(session2.mode).toBe('demo')
+
+    // Clean up session2
+    await completePilotSession({ sessionId: session2.id })
+
+    // 3. Explicit pilot mode -> pilot
+    await settingsRepository.set('app_mode', 'pilot')
+    const session3 = await startPilotSession('p03', 'accepted')
+    expect(session3.mode).toBe('pilot')
   })
 
   it('starts a new pilot session and enforces max 1 active session invariant', async () => {
@@ -44,6 +82,7 @@ describe('ValidationSession Service & Repository', () => {
     expect(session.consent).toBe('accepted')
     expect(session.startedAt).toBeDefined()
     expect(session.endedAt).toBeUndefined()
+    expect(session.mode).toBe('pilot')
 
     // Query active session
     const active = await getActivePilotSession()

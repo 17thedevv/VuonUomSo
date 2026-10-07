@@ -22,7 +22,7 @@ describe('TodayScreen', () => {
     })
 
     expect(screen.getByText('Sổ cây giống trên điện thoại')).toBeInTheDocument()
-    expect(screen.getByText('+ GHI ĐƠN')).toBeInTheDocument()
+    expect(screen.getByText('GHI ĐƠN')).toBeInTheDocument()
     expect(screen.getByText('CÂY HÔM NAY')).toBeInTheDocument()
     expect(screen.getAllByText('Đủ bán').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Đã giữ').length).toBeGreaterThan(0)

@@ -1,6 +1,9 @@
 import { validationRepository } from './validation.repository'
 import { buildValidationSummary } from './validationMetrics'
-import type { VuonUomValidationExportV1 } from './validation.types'
+import {
+  PARTICIPANT_CODE_REGEX,
+  type VuonUomValidationExportV1
+} from './validation.types'
 
 export const VALIDATION_EXPORT_FORMAT = 'vuonuom-validation'
 export const VALIDATION_EXPORT_FORMAT_VERSION = 1
@@ -56,14 +59,33 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
       const s = session as Record<string, unknown>
       if (typeof s.participantCode !== 'string' || !s.participantCode.trim()) {
         errors.push('Mã người tham gia (participantCode) không được rỗng.')
-      } else if (s.participantCode.includes('@')) {
-        errors.push('Vi phạm ranh giới ẩn danh: mã người tham gia chứa ký tự email.')
+      } else {
+        const code = s.participantCode.trim().toUpperCase()
+        if (!PARTICIPANT_CODE_REGEX.test(code)) {
+          errors.push(
+            `Vi phạm ranh giới ẩn danh: mã người tham gia '${s.participantCode}' không đúng định dạng chuẩn (P01..P9999).`
+          )
+        }
       }
     }
   }
 
   if (!Array.isArray(obj.events)) {
     errors.push('Danh sách sự kiện (events) phải là mảng.')
+  } else {
+    for (const event of obj.events) {
+      if (!event || typeof event !== 'object') continue
+      const e = event as Record<string, unknown>
+      if (typeof e.participantCode === 'string') {
+        const code = e.participantCode.trim().toUpperCase()
+        if (!PARTICIPANT_CODE_REGEX.test(code)) {
+          errors.push(
+            `Vi phạm ranh giới ẩn danh: sự kiện chứa mã người tham gia '${e.participantCode}' không đúng định dạng chuẩn (P01..P9999).`
+          )
+          break
+        }
+      }
+    }
   }
 
   if (!obj.summary || typeof obj.summary !== 'object') {
@@ -79,6 +101,7 @@ export function validateValidationExport(data: unknown): { valid: boolean; error
 /**
  * Builds a validated, read-only validation export envelope.
  * Strictly guarantees ZERO business records (batches, orders, contacts, etc.) are included.
+ * Excludes demo mode and legacy missing-mode sessions and events by default to maintain research telemetry integrity.
  */
 export async function buildValidationExportData(options?: {
   includeDemo?: boolean
@@ -86,12 +109,16 @@ export async function buildValidationExportData(options?: {
   exportData: VuonUomValidationExportV1
   jsonString: string
 }> {
-  const [sessions, events] = await Promise.all([
+  const includeDemo = options?.includeDemo ?? false
+  const [allSessions, allEvents] = await Promise.all([
     validationRepository.getAllPilotSessions(),
     validationRepository.getAllValidationEvents()
   ])
 
-  const summary = buildValidationSummary(sessions, events, options)
+  const sessions = includeDemo ? allSessions : allSessions.filter((s) => s.mode === 'pilot')
+  const events = includeDemo ? allEvents : allEvents.filter((e) => e.mode === 'pilot')
+
+  const summary = buildValidationSummary(sessions, events, { includeDemo })
 
   const exportData: VuonUomValidationExportV1 = {
     format: VALIDATION_EXPORT_FORMAT,

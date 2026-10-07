@@ -2,7 +2,7 @@
 name: implementation
 description: >-
   Standardized coding workflow for implementing features in Vườn Ươm. Covers inspection,
-  identifying invariants, vertical slice development, rigorous verification, and scope discipline.
+  identifying invariants, vertical slice development, risk-based verification, and scope discipline.
 ---
 
 # Feature Implementation Workflow
@@ -10,6 +10,8 @@ description: >-
 ## 1. Purpose
 
 Chuẩn hóa quy trình thực hiện công việc lập trình của Agent: từ khâu khảo sát mã nguồn hiện có, xác định bất biến nghiệp vụ, triển khai lát cắt mỏng nhất (Vertical Slice), kiểm thử đến báo cáo kết quả.
+
+Mục tiêu là vừa giữ an toàn domain, vừa tránh feedback loop chậm do chạy full quality gate sau mọi chỉnh sửa nhỏ.
 
 ---
 
@@ -24,78 +26,140 @@ Chuẩn hóa quy trình thực hiện công việc lập trình của Agent: t�
 
 ---
 
-## 3. The 5-Step Implementation Workflow (Quy trình 5 bước bắt buộc)
+## 3. The 5-Step Implementation Workflow
 
 ```text
 Step 1: Inspect mã nguồn & Phase hiện tại
    ↓
-Step 2: Xác định các Invariants bị ảnh hưởng
+Step 2: Xác định Invariants + Risk Level
    ↓
-Step 3: Triển khai lát cắt nhỏ nhất (Vertical Slice)
+Step 3: Triển khai lát cắt nhỏ nhất
    ↓
-Step 4: Chạy bộ 4 lệnh kiểm tra chất lượng (Verification)
+Step 4: Verification theo mức rủi ro
    ↓
-Step 5: Viết báo cáo trung thực & minh bạch
+Step 5: Báo cáo trung thực & minh bạch
 ```
 
-### Bước 1 — Khảo sát (Inspect):
-- Đọc [.agent/PROJECT_STATE.md](../PROJECT_STATE.md) để biết phase hiện tại cho phép làm gì.
-- Kiểm tra các type liên quan trong `src/domain/`.
-- Kiểm tra repository hiện tại trong `src/data/repositories/`.
-- Đọc các test hiện có để nắm bắt kỳ vọng.
-- **QUY TẮC**: Không bao giờ tạo module song song (parallel implementation) nếu đã có code tương đương trong repo.
+### Bước 1 — Khảo sát
 
-### Bước 2 — Xác định bất biến (Identify Invariants):
-- Trước khi gõ dòng code đầu tiên, agent phải tự trả lời:
-  *Task này có đụng vào số lượng cây, tồn kho, giữ cây hay xuất giao không?*
-- Đọc kỹ `skills/domain-rules/SKILL.md` để ghi nhận các bất biến bắt buộc phải giữ nguyên.
+- Đọc `.agent/PROJECT_STATE.md` để biết phase hiện tại cho phép làm gì.
+- Kiểm tra type/domain liên quan.
+- Kiểm tra repository/service hiện tại.
+- Đọc test hiện có để nắm kỳ vọng.
+- Không tạo parallel implementation nếu đã có code tương đương.
 
-### Bước 3 — Triển khai lát cắt nhỏ nhất (Smallest Vertical Slice):
-Triển khai theo thứ tự từ trong ra ngoài:
-1. **Domain**: Type và Pure Functions tính toán (nếu có).
-2. **Data / Repository**: Các hàm lưu trữ hoặc query cần thiết.
-3. **UI / Screen**: Component hoặc Screen mobile-first ($360\text{px} - 430\text{px}$).
-4. **Tests**: Viết Unit / Integration test kiểm tra hành vi vừa thêm.
-- **QUY TẮC**: Không xây dựng hạ tầng/hàm trừu tượng cho những yêu cầu chưa tồn tại trong task hiện tại.
+### Bước 2 — Xác định Invariants + Risk Level
 
-### Bước 4 — Kiểm chứng nghiêm ngặt (Verification):
-Chạy đầy đủ 4 lệnh kiểm tra từ thư mục `web/` trước khi hoàn thành:
+Trước khi code, xác định task thuộc mức nào:
+
+```text
+LOW
+CSS / copy / layout / docs
+
+NORMAL
+UI behavior / form / navigation / non-critical service
+
+HIGH
+quantity / reservation / shipment / Dexie / migration /
+backup-restore / destructive reset / cross-entity integrity
+```
+
+Nếu HIGH phải đọc `domain-rules` và `testing` trước khi sửa.
+
+### Bước 3 — Triển khai lát cắt nhỏ nhất
+
+Thứ tự từ trong ra ngoài:
+
+1. Domain nếu có.
+2. Data / repository nếu có.
+3. Application/service.
+4. UI/screen.
+5. Tests phù hợp với behavior vừa thêm/sửa.
+
+Không xây hạ tầng cho nhu cầu chưa tồn tại.
+
+### Bước 4 — Verification theo mức rủi ro
+
+Không còn quy tắc “mỗi task nhỏ đều chạy full 4 lệnh ngay lập tức”.
+
+Dùng cadence trong `testing/SKILL.md`.
+
+#### Trong lúc làm
+
+```text
+LOW
+→ manual / visual check
+→ targeted tests nếu có logic
+
+NORMAL
+→ related tests
+→ typecheck/lint khi slice ổn định
+
+HIGH
+→ regression test
+→ related integration tests
+→ full suite trước handoff/push
+```
+
+#### Trước push / PR / merge / final handoff
+
+Chạy full gate ít nhất một lần trên exact head được bàn giao:
+
 ```bash
 cd web
-npm run typecheck   # TypeScript strict, không any, không lỗi type
-npm run lint        # Oxlint, 0 errors, 0 warnings
-npm test            # Vitest, 100% test suites pass
-npm run build       # Vite build + PWA service worker phát sinh thành công
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
-- Nếu task có sửa UI: Phải kiểm tra layout trên kích thước mobile viewport.
 
-### Bước 5 — Báo cáo chuẩn mực (Standard Report):
-Mọi báo cáo kết thúc task PHẢI gồm các mục:
-1. **Implemented**: Những gì đã làm.
-2. **Changed files**: Danh sách file đã tạo / sửa đổi kèm đường dẫn link.
-3. **Behavior**: Hành vi phần mềm sau khi sửa.
-4. **Tests**: Kết quả chạy test thực tế (số lượng test pass).
-5. **Deferred**: Những tính năng thuộc phase sau được để lại, không làm lấn sang.
-6. **Risks**: Rủi ro kỹ thuật hoặc lưu ý tồn đọng.
-- **CẤM**: Không được báo cáo PASS nếu chưa thực sự chạy câu lệnh trong terminal!
+Ngoại lệ duy nhất:
+
+- low-risk docs/CSS-only có thể dùng targeted/manual local checks và dựa vào exact-head CI full gate;
+- báo cáo phải nói rõ chưa chạy full local nếu đúng như vậy.
+
+Nếu task sửa UI: phải visual-check viewport liên quan; responsive bug phải kiểm đúng breakpoint gây lỗi.
+
+### Bước 5 — Báo cáo
+
+Báo cáo kết thúc task gồm:
+
+1. **Implemented**
+2. **Changed files**
+3. **Behavior**
+4. **Verification**
+   - targeted checks đã chạy;
+   - full checks đã chạy;
+   - CI nếu có.
+5. **Deferred**
+6. **Risks**
+
+Không được nói `all tests pass` nếu chỉ chạy targeted test.
 
 ---
 
-## 4. Scope Discipline (Kỷ luật phạm vi)
+## 4. Scope Discipline
 
-- Nếu task đang ở **Phase P1 (Read-only UX)**:
-  - Được phép làm: Xem danh sách lô, lọc theo giống, xem chi tiết đơn, xem người mua/gom.
-  - **TUYỆT ĐỐI KHÔNG** tự tiện làm form tạo lô mới hoặc form ghi đơn mới (thuộc P2).
-- Nếu phát hiện điểm cần cải tiến nhưng thuộc phase sau:
-  - **Ghi vào mục `Deferred` trong báo cáo, TUYỆT ĐỐI KHÔNG CODE**.
+- Không vượt roadmap hiện tại.
+- Bugfix phục vụ field validation được phép nếu không thêm product feature mới.
+- Nếu phát hiện việc ngoài scope, ghi vào Deferred.
+- Không trộn UI bugfix với domain/metric refactor nếu không cần thiết.
 
 ---
 
 ## 5. Checklist trước khi kết thúc Task
 
-- [ ] Đã chạy `npm run typecheck` và pass 0 lỗi?
-- [ ] Đã chạy `npm run lint` và pass 0 lỗi?
-- [ ] Đã chạy `npm test` và tất cả test đều pass?
-- [ ] Đã chạy `npm run build` và sinh bản build thành công?
-- [ ] Có tự tiện làm tính năng vượt quá phase hiện tại không?
-- [ ] Báo cáo có đầy đủ các mục Implemented, Changed files, Tests, Deferred, Risks không?
+### Low/Normal risk
+- [ ] Đã chạy targeted/related tests phù hợp?
+- [ ] Đã kiểm manual/visual nếu sửa UI?
+- [ ] Typecheck/lint đã chạy ở stable slice hoặc trước handoff?
+
+### High risk
+- [ ] Có regression test nếu cần?
+- [ ] Related integration tests pass?
+- [ ] Full suite + build pass trước push/handoff?
+
+### Final handoff / PR / merge
+- [ ] Exact head đã được full gate local hoặc CI?
+- [ ] Báo cáo phân biệt rõ local targeted vs full verification?
+- [ ] Không vượt scope?

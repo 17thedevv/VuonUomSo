@@ -108,21 +108,53 @@ describe('Validation Export & Privacy Controls', () => {
       }
     })
 
-    it('strictly enforces participant code privacy and forbids email PII', () => {
-      const withEmail = {
+    it('strictly enforces participant code privacy and forbids email, phone, pure-digit, and real name PII', () => {
+      const piiSamples = [
+        'ANHHUNG',
+        'Anh Hung',
+        'user@example.com',
+        '0912345678',
+        '+84988111222',
+        '1234567',
+        'P1',
+        'P12345'
+      ]
+
+      for (const piiCode of piiSamples) {
+        const payload = {
+          ...validSample,
+          sessions: [
+            {
+              id: 'ps_bad',
+              participantCode: piiCode,
+              consent: 'accepted' as const,
+              startedAt: '2026-10-06T14:00:00.000Z'
+            }
+          ]
+        }
+        const res = validateValidationExport(payload)
+        expect(res.valid).toBe(false)
+        expect(res.errors.some((e) => e.includes('Vi phạm ranh giới ẩn danh'))).toBe(true)
+      }
+
+      // Check event participantCode as well
+      const badEventPayload = {
         ...validSample,
-        sessions: [
+        events: [
           {
-            id: 'ps_bad',
-            participantCode: 'user@example.com',
-            consent: 'accepted' as const,
-            startedAt: '2026-10-06T14:00:00.000Z'
+            id: 'ev_bad',
+            sessionId: 'ps_01',
+            participantCode: '0988776655',
+            mode: 'pilot' as const,
+            type: 'action_completed' as const,
+            action: 'batch_created' as const,
+            createdAt: '2026-10-06T14:10:00.000Z'
           }
         ]
       }
-      const res = validateValidationExport(withEmail)
-      expect(res.valid).toBe(false)
-      expect(res.errors.some((e) => e.includes('Vi phạm ranh giới ẩn danh'))).toBe(true)
+      const resEvent = validateValidationExport(badEventPayload)
+      expect(resEvent.valid).toBe(false)
+      expect(resEvent.errors.some((e) => e.includes('Vi phạm ranh giới ẩn danh'))).toBe(true)
     })
   })
 
@@ -134,6 +166,7 @@ describe('Validation Export & Privacy Controls', () => {
         consent: 'accepted',
         startedAt: '2026-10-06T09:00:00.000Z',
         endedAt: '2026-10-06T09:40:00.000Z',
+        mode: 'pilot',
         supportLevel: 'none',
         wouldUseNextWeek: 'yes',
         willingnessToPay: '50_100k',
@@ -174,6 +207,72 @@ describe('Validation Export & Privacy Controls', () => {
       const parsed = JSON.parse(jsonString)
       expect(parsed.format).toBe('vuonuom-validation')
       expect(parsed.sessions[0].id).toBe('sess_exp_01')
+    })
+
+    it('strictly excludes demo mode and legacy missing-mode sessions and events by default', async () => {
+      const pilotSession: PilotSession = {
+        id: 'sess_pilot',
+        participantCode: 'P01',
+        consent: 'accepted',
+        startedAt: '2026-10-06T09:00:00.000Z',
+        endedAt: '2026-10-06T09:40:00.000Z',
+        mode: 'pilot'
+      }
+      const legacyMissingModeSession: PilotSession = {
+        id: 'sess_legacy',
+        participantCode: 'P02',
+        consent: 'accepted',
+        startedAt: '2026-10-06T10:00:00.000Z',
+        endedAt: '2026-10-06T10:30:00.000Z'
+        // mode is undefined!
+      }
+      const demoSession: PilotSession = {
+        id: 'sess_demo',
+        participantCode: 'P03',
+        consent: 'accepted',
+        startedAt: '2026-10-06T11:00:00.000Z',
+        endedAt: '2026-10-06T11:30:00.000Z',
+        mode: 'demo'
+      }
+      const pilotEvent: ValidationEvent = {
+        id: 'evt_pilot',
+        sessionId: 'sess_pilot',
+        participantCode: 'P01',
+        mode: 'pilot',
+        type: 'action_completed',
+        action: 'batch_created',
+        createdAt: '2026-10-06T09:15:00.000Z'
+      }
+      const demoEvent: ValidationEvent = {
+        id: 'evt_demo',
+        sessionId: 'sess_demo',
+        participantCode: 'P03',
+        mode: 'demo',
+        type: 'action_completed',
+        action: 'shipment_completed',
+        createdAt: '2026-10-06T11:15:00.000Z'
+      }
+
+      await validationRepository.savePilotSession(pilotSession)
+      await validationRepository.savePilotSession(legacyMissingModeSession)
+      await validationRepository.savePilotSession(demoSession)
+      await validationRepository.recordValidationEvent(pilotEvent)
+      await validationRepository.recordValidationEvent(demoEvent)
+
+      // Default export: includeDemo = false -> strictly only sess_pilot (mode === 'pilot')
+      const { exportData } = await buildValidationExportData()
+
+      expect(exportData.sessions).toHaveLength(1)
+      expect(exportData.sessions[0].id).toBe('sess_pilot')
+      expect(exportData.events).toHaveLength(1)
+      expect(exportData.events[0].id).toBe('evt_pilot')
+      expect(exportData.summary.totalParticipants).toBe(1)
+
+      // Explicitly including demo: includes all 3 sessions
+      const withDemo = await buildValidationExportData({ includeDemo: true })
+      expect(withDemo.exportData.sessions).toHaveLength(3)
+      expect(withDemo.exportData.events).toHaveLength(2)
+      expect(withDemo.exportData.summary.totalParticipants).toBe(3)
     })
   })
 

@@ -73,14 +73,22 @@ Hệ thống mô hình hóa bằng danh sách năng lực mềm dẻo (`capabili
 
 ```text
 P0 — Foundation                 [DONE]
-P1 — Read-only UX               [NEXT — CURRENT]
-P2 — Core write flow            [NOT STARTED]
-P3 — Reservation                [NOT STARTED]
-P4 — Shipment                   [NOT STARTED]
-P5 — Dossier + Backup           [NOT STARTED]
-P6 — Validation instrumentation [NOT STARTED]
+P1 — Read-only UX               [DONE]
+P2 — Core write flow            [DONE]
+P3 — Reservation                [DONE]
+P4 — Shipment                   [DONE]
+P5 — Dossier + Backup           [DONE]
+P6 — Validation instrumentation [DONE]
 ---------------------------------------------
-STOP CODE — GO TO NURSERY VALIDATION
+FC0 — Functional Contract Gate  [DONE / CLOSED]
+FC1 — Batch Stock Lifecycle     [NEXT — CURRENT]
+FC2 — Order Corrections         [PLANNED]
+FC3 — Shortage Reconciliation   [PLANNED]
+FC4 — External Supply           [PLANNED]
+FC5 — Fulfillment Completion    [PLANNED]
+FC6 — Pilot Hardening           [PLANNED]
+---------------------------------------------
+STOP CODE — GO TO NURSERY FIELD PILOT
 ```
 
 ---

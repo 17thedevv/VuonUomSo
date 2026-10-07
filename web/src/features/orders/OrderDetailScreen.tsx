@@ -229,9 +229,12 @@ export const OrderDetailScreen: React.FC = () => {
         backTo="/orders"
       />
 
-      <div className="p-4 space-y-4 max-w-xl mx-auto w-full pb-16">
-        {/* Customer & Requested Summary */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+      <div className="max-w-6xl mx-auto w-full p-4 sm:p-6 pb-16">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start space-y-4 lg:space-y-0">
+          {/* Left Column: Customer info, Shipments, Notes */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Customer & Requested Summary */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="font-bold text-slate-900 text-base">
@@ -377,6 +380,19 @@ export const OrderDetailScreen: React.FC = () => {
           )}
         </div>
 
+        {/* Note if exists */}
+        {order.note && (
+          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 text-xs space-y-1">
+            <span className="text-slate-500 font-medium">Ghi chú giao nhận:</span>
+            <p className="text-slate-700 leading-relaxed bg-slate-50 p-2.5 rounded-lg">
+              {order.note}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Right Column: Reservation Progress, Sources, History */}
+      <div className="lg:col-span-5 space-y-4">
         {/* Tiến độ giữ cây (Reservation Progress) */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
@@ -560,16 +576,8 @@ export const OrderDetailScreen: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Note if exists */}
-        {order.note && (
-          <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 text-xs space-y-1">
-            <span className="text-slate-500 font-medium">Ghi chú giao nhận:</span>
-            <p className="text-slate-700 leading-relaxed bg-slate-50 p-2.5 rounded-lg">
-              {order.note}
-            </p>
-          </div>
-        )}
+        </div>
+        </div>
       </div>
 
       {/* Release Confirmation Modal */}
