@@ -17,16 +17,28 @@
 
 ## 2. Roadmap Matrix & Current Phase
 
+### Giai đoạn kỹ thuật nền tảng (Foundation Phases):
+| Phase | Tên giai đoạn | Trạng thái | Ghi chú |
+| :--- | :--- | :--- | :--- |
+| **P0** | **Foundation** | **DONE** | AppShell, Dexie IDB, Routing, Seed, Parser, Tests |
+| **P1** | **Read-only UX** | **DONE** | Today, Batches, Orders, Invariants, Tests |
+| **P2** | **Core Write Flow** | **DONE** | Create Batch, Update Inventory, Quick Contact, Create Order, Undo |
+| **P3** | **Reservation** | **DONE** | Giữ cây lô nội bộ & nguồn ngoài, chống bán khống |
+| **P4** | **Shipment** | **DONE** | Danh sách chuyến xe, giao từng phần, trừ tồn kho vật lý |
+| **P5** | **Dossier + Backup** | **DONE** | Hồ sơ nguồn gốc lô cây; sao lưu/khôi phục JSON an toàn |
+| **P6** | **Validation Instrumentation** | **DONE** | Đo lường sự kiện thực địa, khảo sát pilot, xuất telemetry bảo mật |
+
+### Giai đoạn hoàn thiện nghiệp vụ thực tế (Functional Coverage Roadmap):
 | Phase | Tên giai đoạn | Trạng thái | Quyền hạn của Agent |
 | :--- | :--- | :--- | :--- |
-| **P0** | **Foundation** | **DONE** | Đã hoàn thành (AppShell, Dexie IDB, Routing, Seed, Parser, Tests) |
-| **P1** | **Read-only UX** | **DONE** | Đã hoàn thành (Today, Batches, BatchDetail, Orders, OrderDetail, Invariants, Tests) |
-| **P2** | **Core Write Flow** | **DONE** | Đã hoàn thành (Create Batch, Update Inventory, Quick Contact, Create Order, Undo, Invariants, Tests) |
-| **P3** | **Reservation** | **DONE** | Đã hoàn thành (Giữ cây từ lô nội bộ, giữ cây từ nguồn ngoài, nhả giữ cây, chống bán khống, undo, tests) |
-| **P4** | **Shipment** | **DONE / FROZEN** | Đã hoàn thành và đóng băng (Lên danh sách chuyến xe, giao hàng từng phần, trừ tồn kho vật lý current & ready, commit-time validation & atomicity, tests) |
-| **P5** | **Dossier + Backup** | **DONE** | Đã hoàn thành (Hồ sơ nguồn gốc lô cây, chứng từ tham chiếu, in/lưu nội bộ; Sao lưu/khôi phục toàn bộ workspace JSON versioned, atomic transaction rollback, validation, tests) |
-| **P6** | **Validation Instrumentation**| **DONE / FROZEN** | Đã hoàn thành và đóng băng (Đo lường sự kiện sử dụng, khảo sát pilot 4 câu hỏi, báo cáo kích hoạt A1/A2/A3 & WTP, xuất dữ liệu JSON, bảo vệ quyền riêng tư, tests) |
-| **STOP**| **USER VALIDATION** | **ACTIVE** | **DỪNG CODE**: Mang app ra vườn cho người dùng thật tại Hữu Lũng, Tuấn Sơn thử nghiệm; thu thập dữ liệu thực địa để quyết định GO / PIVOT / STOP. CẤM CODE TÍNH NĂNG MỚI. |
+| **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
+| **FC1** | **Batch Stock Lifecycle** | **NEXT / CURRENT** | **ĐƯỢC PHÉP CODE**: Thao tác riêng "Cập nhật cây đủ bán", ready tăng/giảm từng phần, derived status, event history |
+| **FC2** | **Order Lifecycle & Corrections** | **PLANNED** | Chờ FC1 hoàn thành và merge |
+| **FC3** | **Reservation Reconciliation** | **PLANNED** | Chờ FC2 hoàn thành và merge |
+| **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
+| **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
+| **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
+| **STOP**| **FIELD PILOT** | **PLANNED** | Mang app ra vườn sau khi hoàn thành FC6 |
 
 ---
 
