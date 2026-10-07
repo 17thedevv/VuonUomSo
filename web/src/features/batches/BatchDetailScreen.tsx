@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
   ClipboardList,
+  CheckCircle2,
   Plus,
   Clock,
   History,
@@ -28,6 +29,7 @@ import {
 import {
   availableQuantityForBatch,
   reservedQuantityForBatch,
+  commitmentShortageForBatch,
   survivalRate,
   formatQuantity,
   formatSurvivalRate
@@ -39,6 +41,7 @@ import { StatusBadge } from '../../shared/components/StatusBadge'
 import { EmptyState } from '../../shared/components/EmptyState'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { InventoryUpdateModal } from './InventoryUpdateModal'
+import { ReadyQuantityUpdateModal } from './ReadyQuantityUpdateModal'
 import { undoService } from '../../services/undoService'
 
 export const BatchDetailScreen: React.FC = () => {
@@ -49,6 +52,7 @@ export const BatchDetailScreen: React.FC = () => {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [events, setEvents] = useState<DomainEvent[]>([])
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
+  const [isReadyModalOpen, setIsReadyModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -140,6 +144,7 @@ export const BatchDetailScreen: React.FC = () => {
 
   const available = availableQuantityForBatch(batch, reservations)
   const reserved = reservedQuantityForBatch(batch.id, reservations)
+  const shortage = commitmentShortageForBatch(batch, reservations)
   const rate = survivalRate(batch.currentQuantity, batch.initialQuantity)
   const attention = isBatchAttention(batch)
   const displayStatus = getBatchDisplayStatus(batch, attention)
@@ -212,22 +217,45 @@ export const BatchDetailScreen: React.FC = () => {
           </div>
         )}
 
-        {/* Action Buttons (Read-only / Placeholder) */}
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setIsInventoryModalOpen(true)}
-            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <ClipboardList className="w-4 h-4 text-emerald-700" />
-            <span>KIỂM KÊ</span>
-          </button>
+        {/* Warning if commitment shortage exists */}
+        {shortage > 0 && (
+          <div className="bg-amber-50/90 border border-amber-300 text-amber-950 p-3.5 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <div className="font-bold">Thiếu {formatQuantity(shortage)} cây đã giữ cho khách</div>
+              <div className="text-amber-800 mt-0.5 leading-relaxed">
+                Số cây đủ bán ({formatQuantity(batch.readyQuantity)}) thấp hơn tổng cam kết giữ ({formatQuantity(reserved)} cây).
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons: Split Mental Models */}
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setIsInventoryModalOpen(true)}
+              className="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <ClipboardList className="w-4 h-4 text-emerald-700" />
+              <span>KIỂM KÊ CÂY SỐNG</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsReadyModalOpen(true)}
+              className="min-h-[46px] px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+              <span>CẬP NHẬT CÂY ĐỦ BÁN</span>
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={() => navigate(`/orders/new?batchId=${batch.id}&variety=${encodeURIComponent(batch.variety)}`)}
-            className="min-h-[46px] px-3 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+            className="w-full min-h-[46px] px-3 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
           >
             <Plus className="w-4 h-4" />
             <span>GHI ĐƠN</span>
@@ -390,6 +418,15 @@ export const BatchDetailScreen: React.FC = () => {
         batch={batch}
         isOpen={isInventoryModalOpen}
         onClose={() => setIsInventoryModalOpen(false)}
+        onSuccess={() => fetchData()}
+      />
+
+      {/* Ready Quantity Update Modal */}
+      <ReadyQuantityUpdateModal
+        batch={batch}
+        reservedQuantity={reserved}
+        isOpen={isReadyModalOpen}
+        onClose={() => setIsReadyModalOpen(false)}
         onSuccess={() => fetchData()}
       />
     </div>
