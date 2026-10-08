@@ -1,6 +1,6 @@
 # FC2 — Order Lifecycle & Corrections: slice 1
 
-Status: IMPLEMENTED / REVIEW PENDING. FC2 overall: IN PROGRESS.
+Status: ACCEPTED / MERGED via [PR #8](https://github.com/17thedevv/VuonUomSo/pull/8) at `bf3dee59fc0644663495ddf43d736b5535ff31e2`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37740026948). FC2 overall: IN PROGRESS; [slice 2](FC2-SLICE-2.md) is awaiting review.
 
 Base: PR #7 merged at `54a9fa3`, merge CI SUCCESS. Branch: `feat/fc2-order-lifecycle`.
 
