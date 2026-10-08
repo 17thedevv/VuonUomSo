@@ -1,6 +1,8 @@
 # FC3-2 — Batch Shortage Reconciliation + Own-Batch Transfer
 
-Status: **REVIEW PENDING**. FC3-0/FC3-1A/FC3-1B CLOSED; FC3-1 và FC3 overall **chưa DONE**. UI chưa bắt đầu.
+Status: **CLOSED / ACCEPTED / MERGED**. FC3-0/FC3-1A/FC3-1B CLOSED; FC3-1 và FC3 overall **chưa DONE**. **FC3-3 NEXT — UI + Cross-flow Hardening**, chưa bắt đầu.
+
+Người dùng nghiệm thu exact-head `5ea0e7a9dbe6d45c7dd084374991c2cb7cec1dd3`: PASS / MERGE READY. [PR #18](https://github.com/17thedevv/VuonUomSo/pull/18) merged tại `9d782458f173633f36c801d49668f78d02d91da4`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37772762007): typecheck, lint, full tests và build PASS. Exact-head gate: lint0/0 (147 files), 47 files / 626 tests PASS, PWA14 entries. Không phát hiện BLOCKER/HIGH trong phạm vi review FC3-2.
 
 Base: `main = 8577a793dea924a327e416f66b4de0e48a5a9be6`. Branch: `feat/fc3-reservation-reconciliation`.
 Authority: task FC3-2 của người dùng, [FC3 contract](FC3-FUNCTIONAL-CONTRACT.md), [FC3-1A safety](FC3-1A-SAFETY.md), [FC3-1B](FC3-1B-ORDER-REDUCTION.md).
@@ -78,4 +80,4 @@ Tests dùng domain assertions và real Dexie/services, không mock transaction. 
 
 Race tests cả hai thứ tự Trigger B với ready update, source commitment writer, target reservation, confirm shipment, cancel affected order. Source writer khi lô đang thiếu phải cập nhật ready rồi tạo commitment trong cùng writer transaction; Trigger B re-read và reject preview cũ. Trigger B thắng target writer thì incoming đã chiếm capacity, writer không thể over-reserve. Confirm thắng làm preview stale; confirm sau B chỉ giảm stock đúng shipment allocation.
 
-Local full gate: **typecheck PASS, lint0/0 (147 files), 47 files / 626 tests PASS, build PASS, PWA14 entries**. Có 133 regression mới (36 domain, 97 real-service). Hai suites mới: 133/133 PASS; related suites FC3-1B/Undo/backup đã chạy, full suite bảo vệ toàn bộ regressions cũ. Exact-head SHA/CI được ghi trong PR/handoff. Browser acceptance không áp dụng vì không có UI diff. **Chưa bắt đầu:** FC3-3 UI, FC4/FC5, shipment-line editing, external commitment mới, generic product/rename, schema/dependency mới. FC3-2 chỉ REVIEW PENDING cho tới nghiệm thu/merge; FC3-1 và FC3 overall chưa DONE.
+Local full gate: **typecheck PASS, lint0/0 (147 files), 47 files / 626 tests PASS, build PASS, PWA14 entries**. Có 133 regression mới (36 domain, 97 real-service). Hai suites mới: 133/133 PASS; related suites FC3-1B/Undo/backup đã chạy, full suite bảo vệ toàn bộ regressions cũ. Browser acceptance không áp dụng vì không có UI diff. **Chưa bắt đầu:** FC3-3 UI, FC4/FC5, shipment-line editing, external commitment mới, generic product/rename, schema/dependency mới. FC3-2 đã nghiệm thu/merge và CI merge xanh; **FC3-3 NEXT**, sau đó Final Acceptance. FC3-1 và FC3 overall chưa DONE. Deep marker-integrity NOTE vẫn deferred theo closure FC3-1B.
