@@ -32,13 +32,20 @@
 | Phase | Tên giai đoạn | Trạng thái | Quyền hạn của Agent |
 | :--- | :--- | :--- | :--- |
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
-| **FC1** | **Batch Stock Lifecycle** | **IN REVIEW** | Thao tác riêng "Cập nhật cây đủ bán", ready tăng/giảm từng phần, derived status, event history |
-| **FC2** | **Order Lifecycle & Corrections** | **PLANNED** | Chờ FC1 review & merge |
+| **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
+| **FC2** | **Order Lifecycle & Corrections** | **NEXT** | Phase nghiệp vụ tiếp theo; chưa triển khai. C1 R01/R02 thực hiện trước theo thứ tự task đã duyệt |
 | **FC3** | **Reservation Reconciliation** | **PLANNED** | Chờ FC2 hoàn thành và merge |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
 | **STOP**| **FIELD PILOT** | **PLANNED** | Mang app ra vườn sau khi hoàn thành FC6 |
+
+### FC1 closure & next tasks (08/10/2026)
+
+- FC1 đã có trên `main`: [PR #4](https://github.com/17thedevv/VuonUomSo/pull/4), merge `7eb4987fcf3ff949f5874107de67ed2bd89a1e19`, [CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37709990216).
+- [Báo cáo nghiệm thu FC1](../docs/development/FC1-FINAL-ACCEPTANCE.md): transactional validation, Undo guard, 299 tests và core workflow mobile đến xuất đủ đơn; không phát hiện BLOCKER/HIGH ảnh hưởng số lượng trong phạm vi review.
+- Task tiếp theo: C1 UI patch chỉ R01/R02 đã duyệt (nhãn số, hierarchy, preview kiểm kê), giữ nguyên domain/mutation FC0. Sau đó mới triển khai FC2.
+- UI Reference Study v0.1: **RESEARCH APPROVED / IMPLEMENTATION PENDING**. R03 giới hạn; R04 hoãn đến FC2; R05 từng patch nhỏ. Sản phẩm tham khảo không tạo requirement mới.
 
 ---
 
