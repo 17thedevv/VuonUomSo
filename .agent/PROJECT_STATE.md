@@ -35,7 +35,7 @@
 | **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
 | **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
 | **FC3** | **Reservation Reconciliation** | **DONE** | FC3-0/1A/1B/2/3 CLOSED; PR #20 merged `bce3abc`, CI merge xanh; Final Acceptance trên main 08/10/2026 PASS; FC3-1 DONE |
-| **FC4** | **External Supply Truthfulness** | **PLANNED** | FC4-0 REVIEW PENDING: contract docs trên base `86f513c`; FC4 implementation NOT STARTED; chờ review/approval + merge/CI contract và task implementation riêng |
+| **FC4** | **External Supply Truthfulness** | **PLANNED** | FC4-0 CLOSED: PR #22 merged `0507906`, CI merge SUCCESS; FC4-1 NEXT — truthful external commitment implementation; FC4 implementation NOT STARTED |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
 | **STOP**| **FIELD PILOT** | **PLANNED** | Mang app ra vườn sau khi hoàn thành FC6 |
@@ -57,11 +57,11 @@
 - **FC3 FINAL ACCEPTANCE PASS / FC3 DONE / FC3-1 DONE**: [Nghiệm thu trên main](../docs/development/FC3-FINAL-ACCEPTANCE.md), browser A–F 360/390/430/1280px, shortage/transfer backup-restore qua UI + retry idempotent, stale Undo và xuất sau reconciliation PASS. Không phát hiện BLOCKER/HIGH hoặc lifecycle dead-end trong scope đã kiểm. Chưa test IME thiết bị thật/field pilot. Before pilot NOTE: phân biệt ổn định các đơn cùng khách có cùng quantity/date; deep marker integrity NOTE vẫn deferred. FC4/FC5 PLANNED / NOT STARTED; không mở implementation FC4 trong closure.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
-### FC4-0 contract review (08/10/2026)
+### FC4-0 contract closure & next task (08/10/2026)
 
-- **FC4-0 REVIEW PENDING / FC4 implementation NOT STARTED**: [External Supply Truthfulness Contract](../docs/development/FC4-FUNCTIONAL-CONTRACT.md), audit exact base `86f513c7ce8a8f7c95ef85099872b91b2d6cb64d`. Task chỉ đổi contract và PROJECT_STATE, không có `web/` diff; không đóng contract trước approval + merge/CI xanh, không đánh FC4 DONE.
+- **FC4-0 CLOSED / ACCEPTED / MERGED**: [External Supply Truthfulness Contract](../docs/development/FC4-FUNCTIONAL-CONTRACT.md), người dùng duyệt exact-head `69c2aa2a54c5ee991c518b498e8f82071845d7d8`; [PR #22](https://github.com/17thedevv/VuonUomSo/pull/22) merged tại `0507906421df4872d45f07ef4a625a61b7b90e54`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37796903976), typecheck/lint/full tests/build PASS. Contract audit exact base `86f513c7ce8a8f7c95ef85099872b91b2d6cb64d`; PR đúng 2 file docs, không có `web/` diff. Closure này không phải FC4 DONE.
 - Contract khóa bỏ catalog estimate/fallback30k khỏi production workflow, external quantity trống ban đầu và explicit user-confirmed input/acknowledgement, supplier contact không phải inventory, legacy commitments/history/backup được giữ. Required implementation gate: **cả `reserveOwnBatch()` và `reserveExternalSupplier()`** phải dùng canonical current coverage/shortage gồm F của released source, kèm real Dexie regression riêng: requested50k/released Q20k F10k/active Q20k → add30k FAIL, add20k PASS nếu guard nguồn tương ứng đạt. Không over-cover sau xuất/release; không refactor toàn reservation engine.
-- FC0/FC2/FC3 authority, planned allocation, stale Undo và shipment physical stock semantics giữ nguyên. Không cloud/backend/marketplace, external transfer, schema/dependency, FC5 hoặc generic-product refactor; implementation cần task riêng sau contract được duyệt.
+- **FC4-1 NEXT — truthful external commitment implementation / FC4 implementation NOT STARTED**. Correctness gate đầu tiên là sửa released-F coverage cho cả own/external bằng helper canonical hẹp và real Dexie regressions đã khóa trong contract; không refactor toàn reservation engine. FC0/FC2/FC3 authority, planned allocation, stale Undo và shipment physical stock semantics giữ nguyên. Không cloud/backend/marketplace, external transfer, schema/dependency, FC5 hoặc generic-product refactor; chưa viết implementation trong task closure.
 
 ---
 

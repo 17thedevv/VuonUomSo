@@ -8,9 +8,9 @@
 
 **Ngày:** 08/10/2026
 
-**Trạng thái:** **FC4-0 REVIEW PENDING / FC4 implementation NOT STARTED**
+**Trạng thái:** **FC4-0 APPROVED / CLOSED — FC4-1 NEXT / FC4 implementation NOT STARTED**
 
-FC0/FC1/FC2/FC3 đã DONE. Tài liệu này khóa functional contract và scope FC4 để review; không xác nhận implementation đã đáp ứng các điều khoản dưới đây. PR FC4-0 chỉ đổi tài liệu, không đổi `web/`, schema, dependency hoặc semantics FC0/FC2/FC3. Không đóng FC4-0 trước approval, merge và CI merge xanh; không coi closure contract là FC4 DONE. Implementation cần task riêng sau khi contract được duyệt.
+FC0/FC1/FC2/FC3 đã DONE. Tài liệu này khóa functional contract và scope FC4 đã được người dùng duyệt; không xác nhận implementation đã đáp ứng các điều khoản dưới đây. PR FC4-0 chỉ đổi tài liệu, không đổi `web/`, schema, dependency hoặc semantics FC0/FC2/FC3. Contract đã đạt approval, merge và CI merge xanh theo evidence ở §12; closure contract không phải FC4 DONE. FC4-1 là task implementation tiếp theo, chưa bắt đầu trong closure này.
 
 ## 1. Product truth và authority
 
@@ -227,4 +227,6 @@ Không redesign toàn app, không mở FC5 `closed_remaining`, không sửa ship
 
 ## 12. Review và handoff
 
-Output FC4-0 chỉ gồm tài liệu này và `.agent/PROJECT_STATE.md`. Sau PR, trạng thái là **FC4-0 REVIEW PENDING / FC4 implementation NOT STARTED**; FC4 overall vẫn PLANNED. Review cần kiểm quyết định bỏ estimate, explicit confirmed input/acknowledgement, supplier/contact/variety boundary, legacy/backup compatibility và released-F correctness gate. Chỉ sau contract approval + merge + merge CI xanh mới đóng FC4-0 và xác định implementation slice bằng task riêng. Không ghi FC4 DONE chỉ vì docs hoặc CI xanh.
+Output FC4-0 chỉ gồm tài liệu này và `.agent/PROJECT_STATE.md`, không `web/` diff. Người dùng đã duyệt exact-head `69c2aa2a54c5ee991c518b498e8f82071845d7d8`: product truth, scope, released-F amendment cho cả own/external và exact-head CI đều PASS. [PR #22](https://github.com/17thedevv/VuonUomSo/pull/22) đã merge tại `0507906421df4872d45f07ef4a625a61b7b90e54`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37796903976), typecheck/lint/full tests/build PASS.
+
+**FC4-0 CLOSED / FC4-1 NEXT — truthful external commitment implementation**. FC4 overall vẫn PLANNED; **FC4 implementation NOT STARTED**. Correctness gate đầu tiên của FC4-1 là released-F correction và real Dexie regression cho cả `reserveOwnBatch()` và `reserveExternalSupplier()` theo §6/§10, trước khi nghiệm thu luồng confirmed external mới. Không cần refactor toàn reservation engine; các điều khoản nghiệp vụ đã duyệt giữ nguyên. Không ghi FC4 DONE chỉ vì docs hoặc CI xanh.
