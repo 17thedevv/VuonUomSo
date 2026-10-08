@@ -49,11 +49,11 @@ export type OrderReductionProjection = {
 }
 
 const failure = (code: ReconciliationFailure['code'], error: string): ReconciliationFailure => ({ success: false, code, error })
-const nonNegativeInteger = (value: number) => Number.isSafeInteger(value) && value >= 0
+export const nonNegativeInteger = (value: number) => Number.isSafeInteger(value) && value >= 0
 const nonEmptyId = (value: string) => typeof value === 'string' && value.trim().length > 0
 const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id)
 
-function safeSum(values: number[]): number | undefined {
+export function safeSum(values: number[]): number | undefined {
   let total = 0
   for (const value of values) {
     if (!nonNegativeInteger(value) || !Number.isSafeInteger(total + value)) return undefined
@@ -62,12 +62,36 @@ function safeSum(values: number[]): number | undefined {
   return total
 }
 
-function validReservation(r: Reservation): boolean {
+export function validReservation(r: Reservation): boolean {
   const f = r.fulfilledQuantity ?? 0
   return ((r.sourceType === 'own_batch' && !!r.batchId && !r.supplierId) ||
     (r.sourceType === 'external_supplier' && !!r.supplierId && !r.batchId)) &&
     Number.isSafeInteger(r.quantity) && r.quantity > 0 && nonNegativeInteger(f) && f <= r.quantity &&
     (r.status === 'released' || (r.status === 'active' && f < r.quantity) || (r.status === 'fulfilled' && f === r.quantity))
+}
+
+/** Shared Trigger A/B guard; sums every planned allocation without moving shipment lines. */
+export function plannedReservationAllocations(reservations: Reservation[], shipments: Shipment[], orderIds: string[]):
+  { success: true; allocations: Map<string, { quantity: number; shipmentIds: string[] }> } | ReconciliationFailure {
+  const allocations = new Map<string, { quantity: number; shipmentIds: string[] }>()
+  for (const s of shipments.filter(s => s.status === 'planned')) {
+    const unverified = (): ReconciliationFailure => ({ ...failure('UNVERIFIABLE_PLANNED_SHIPMENT',
+      'Chuyến chờ xuất có phân bổ chưa xác minh được. Hãy xem hoặc hủy chuyến trước khi điều chỉnh.'),
+      conflict: { shipmentIds: [s.id] } })
+    if (!orderIds.includes(s.orderId) || !s.lines?.length || !Number.isSafeInteger(s.plannedQuantity) ||
+      s.plannedQuantity <= 0 || s.shippedQuantity !== 0) return unverified()
+    if (safeSum(s.lines.map(l => l.quantity)) !== s.plannedQuantity) return unverified()
+    for (const line of s.lines) {
+      const r = reservations.find(r => r.id === line.reservationId)
+      if (!r || r.orderId !== s.orderId || r.status !== 'active' || !Number.isSafeInteger(line.quantity) || line.quantity <= 0 ||
+        line.sourceType !== r.sourceType || line.batchId !== r.batchId || line.supplierId !== r.supplierId) return unverified()
+      const previous = allocations.get(r.id) ?? { quantity: 0, shipmentIds: [] }
+      const quantity = safeSum([previous.quantity, line.quantity])
+      if (quantity === undefined || quantity > remainingReservationQuantity(r)) return unverified()
+      allocations.set(r.id, { quantity, shipmentIds: [...new Set([...previous.shipmentIds, s.id])] })
+    }
+  }
+  return { success: true, allocations }
 }
 
 export function validateOrderReductionPlan(plan: OrderReductionPlan): ReconciliationFailure | undefined {
@@ -171,24 +195,9 @@ export function projectOrderReduction(
     return failure('INVALID_STATE', 'Tổng nguồn giữ không hợp lệ hoặc vượt số đặt hiện tại.')
   }
 
-  const allocations = new Map<string, { quantity: number; shipmentIds: string[] }>()
-  for (const s of state.shipments.filter(s => s.status === 'planned')) {
-    const unverified = (): ReconciliationFailure => ({ ...failure('UNVERIFIABLE_PLANNED_SHIPMENT',
-      'Chuyến chờ xuất có phân bổ chưa xác minh được. Hãy xem hoặc hủy chuyến trước khi điều chỉnh.'),
-      conflict: { shipmentIds: [s.id] } })
-    if (s.orderId !== order.id || !s.lines?.length || !Number.isSafeInteger(s.plannedQuantity) ||
-      s.plannedQuantity <= 0 || s.shippedQuantity !== 0) return unverified()
-    if (safeSum(s.lines.map(l => l.quantity)) !== s.plannedQuantity) return unverified()
-    for (const line of s.lines) {
-      const r = reservations.find(r => r.id === line.reservationId)
-      if (!r || r.status !== 'active' || !Number.isSafeInteger(line.quantity) || line.quantity <= 0 ||
-        line.sourceType !== r.sourceType || line.batchId !== r.batchId || line.supplierId !== r.supplierId) return unverified()
-      const previous = allocations.get(r.id) ?? { quantity: 0, shipmentIds: [] }
-      const quantity = safeSum([previous.quantity, line.quantity])
-      if (quantity === undefined || quantity > remainingReservationQuantity(r)) return unverified()
-      allocations.set(r.id, { quantity, shipmentIds: [...new Set([...previous.shipmentIds, s.id])] })
-    }
-  }
+  const planned = plannedReservationAllocations(reservations, state.shipments, [order.id])
+  if (!planned.success) return planned
+  const { allocations } = planned
 
   const adjustments: ReservationReduction[] = []
   for (const input of plan.adjustments) {

@@ -76,8 +76,8 @@ export async function reconcileOrderReduction(input: ConfirmOrderReductionInput)
         return { success: false, code: 'INVALID_INPUT', error: 'Cần mã thao tác và xác nhận bản xem trước hợp lệ.' }
       }
       const intentKey = orderReductionIntentKey(plan)
-      const marker = await db.events.where('type').equals('order_reconciled')
-        .filter(e => e.entityType === 'order' && isRecord(e.payload) && e.payload.operationId === operationId).first()
+      const marker = await db.events.where('type').anyOf(['order_reconciled', 'batch_reconciled'])
+        .filter(e => isRecord(e.payload) && e.payload.operationId === operationId).first()
       if (marker) {
         const payload = marker.payload
         if (!isRecord(payload) || payload.intentKey !== intentKey) return {
