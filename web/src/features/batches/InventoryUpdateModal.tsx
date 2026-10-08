@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import type { Batch } from '../../domain/batch'
+import type { Reservation } from '../../domain/reservation'
 import { updateBatchInventory } from '../../services/batchService'
 import { QuantityInput } from '../../shared/components/QuantityInput'
-import { formatQuantity } from '../../domain/quantity'
+import { availableQuantityForBatch, commitmentShortageForBatch, formatQuantity, reservedQuantityForBatch } from '../../domain/quantity'
 import { X, AlertTriangle, Info, ClipboardList } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 
 export interface InventoryUpdateModalProps {
   batch: Batch
+  reservations: Reservation[]
   isOpen: boolean
   onClose: () => void
   onSuccess: (updatedBatch: Batch) => void
@@ -15,6 +17,7 @@ export interface InventoryUpdateModalProps {
 
 export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
   batch,
+  reservations,
   isOpen,
   onClose,
   onSuccess
@@ -33,8 +36,10 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
     if (isOpen) {
       setRawInput(batch.currentQuantity.toString())
       setParsedQuantity(batch.currentQuantity)
+      setUnit('cay')
       setReadyInput('')
       setParsedReadyQuantity(null)
+      setReadyUnit('cay')
       setErrorMessage(null)
       void validationTracker.formStarted('inventory_updated')
     }
@@ -59,6 +64,23 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
   const isNegative = parsedQuantity !== null && parsedQuantity < 0
   const isInvalid =
     parsedQuantity === null || isGreaterThanInitial || isNegative || isReadyInvalid
+
+  const projectedReady = needsReadyAdjustment ? parsedReadyQuantity : batch.readyQuantity
+  const projectedBatch = !isInvalid && parsedQuantity !== null && projectedReady !== null
+    ? {
+        ...batch,
+        currentQuantity: parsedQuantity,
+        readyQuantity: projectedReady
+      }
+    : null
+  const projectedAvailable = projectedBatch ? availableQuantityForBatch(projectedBatch, reservations) : null
+  const projectedShortage = projectedBatch ? commitmentShortageForBatch(projectedBatch, reservations) : null
+  const previewRows = [
+    ['Cây còn sống', batch.currentQuantity, projectedBatch?.currentQuantity ?? null],
+    ['Cây đủ bán', batch.readyQuantity, projectedBatch?.readyQuantity ?? null],
+    ['Cây còn bán', availableQuantityForBatch(batch, reservations), projectedAvailable],
+    ['Thiếu cây đã giữ', commitmentShortageForBatch(batch, reservations), projectedShortage]
+  ] as const
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -124,22 +146,6 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
 
         {/* Modal Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
-          {/* Current Batch Context Baseline */}
-          <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-            <div>
-              <span className="text-slate-500 block">Trước kiểm kê:</span>
-              <strong className="text-slate-800 text-sm">
-                {formatQuantity(batch.currentQuantity)} cây
-              </strong>
-            </div>
-            <div>
-              <span className="text-slate-500 block">Đang đủ bán:</span>
-              <strong className="text-emerald-700 text-sm">
-                {formatQuantity(batch.readyQuantity)} cây
-              </strong>
-            </div>
-          </div>
-
           {/* Quantity Input */}
           <div>
             <QuantityInput
@@ -242,6 +248,40 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
               </div>
             </div>
           )}
+
+          <section aria-label="Preview kiểm kê" aria-live="polite" className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <h3 className="text-base font-bold text-slate-800">Sau khi cập nhật</h3>
+            <p className="text-sm text-slate-600">
+              Đang giữ: {formatQuantity(reservedQuantityForBatch(batch.id, reservations))} cây chưa xuất.
+            </p>
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="text-slate-500">
+                  <th scope="col" className="text-left py-2 font-medium">Số cây</th>
+                  <th scope="col" className="text-right py-2 font-medium">Trước</th>
+                  <th scope="col" className="text-right py-2 font-medium">Sau</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewRows.map(([label, before, after]) => (
+                  <tr key={label} className="border-t border-slate-200">
+                    <th scope="row" className="text-left py-2 pr-2 font-medium text-slate-700">{label}</th>
+                    <td className="text-right py-2 text-slate-600">{formatQuantity(before)} cây</td>
+                    <td className="text-right py-2 pl-2 font-bold text-slate-900">{after === null ? '—' : `${formatQuantity(after)} cây`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!projectedBatch && (
+              <p className="text-sm text-slate-600">Nhập số cây hợp lệ{needsReadyAdjustment ? ' và điều chỉnh cây đủ bán' : ''} để xem kết quả sau kiểm kê.</p>
+            )}
+            {projectedShortage !== null && projectedShortage > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-950">
+                <p className="font-bold">Sau kiểm kê thiếu {formatQuantity(projectedShortage)} cây đã giữ.</p>
+                <p className="mt-1">Bạn vẫn có thể lưu để ghi đúng thực tế ngoài vườn.</p>
+              </div>
+            )}
+          </section>
 
           {/* Optional Note */}
           <div>

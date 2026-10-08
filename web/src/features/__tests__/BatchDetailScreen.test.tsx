@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { BatchDetailScreen } from '../batches/BatchDetailScreen'
@@ -287,6 +287,90 @@ describe('BatchDetailScreen', () => {
     })
 
     expect(screen.getAllByText('Đã hết').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('previews living changes while keeping ready and available stock unchanged before saving', async () => {
+    render(
+      <MemoryRouter initialEntries={['/batches/batch_bv16_12']}>
+        <Routes><Route path="/batches/:id" element={<BatchDetailScreen />} /></Routes>
+      </MemoryRouter>
+    )
+    await screen.findByText('BV16 #12')
+    fireEvent.click(screen.getByRole('button', { name: /KIỂM KÊ/ }))
+    fireEvent.change(screen.getByLabelText(/Hiện còn bao nhiêu cây sống/), { target: { value: '4 vạn' } })
+
+    const preview = within(screen.getByRole('region', { name: 'Preview kiểm kê' }))
+    expect(preview.getByRole('row', { name: 'Cây còn sống 45.200 cây 40.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Cây đủ bán 32.000 cây 32.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Cây còn bán 22.000 cây 22.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Thiếu cây đã giữ 0 cây 0 cây' })).toBeInTheDocument()
+    expect((await db.batches.get('batch_bv16_12'))?.currentQuantity).toBe(45200)
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Đơn vị tính số lượng' }), { target: { value: 'van' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy' }))
+    fireEvent.click(screen.getByRole('button', { name: /KIỂM KÊ/ }))
+    expect(screen.getByRole('combobox', { name: 'Đơn vị tính số lượng' })).toHaveValue('cay')
+    expect(within(screen.getByRole('region', { name: 'Preview kiểm kê' })).getByRole('row', { name: 'Cây còn sống 45.200 cây 45.200 cây' })).toBeInTheDocument()
+  })
+
+  it('previews shortage using unshipped commitments and allows factual inventory to be saved', async () => {
+    const reservation = await db.reservations.where('batchId').equals('batch_bv16_12').first()
+    await db.reservations.update(reservation!.id, { fulfilledQuantity: 4000 })
+    render(
+      <MemoryRouter initialEntries={['/batches/batch_bv16_12']}>
+        <Routes><Route path="/batches/:id" element={<BatchDetailScreen />} /></Routes>
+      </MemoryRouter>
+    )
+    await screen.findByText('BV16 #12')
+    fireEvent.click(screen.getByRole('button', { name: /KIỂM KÊ/ }))
+    fireEvent.change(screen.getByLabelText(/Hiện còn bao nhiêu cây sống/), { target: { value: '5000' } })
+    const preview = within(screen.getByRole('region', { name: 'Preview kiểm kê' }))
+    const submit = screen.getByRole('button', { name: 'CẬP NHẬT' })
+    expect(preview.getByRole('row', { name: 'Cây còn bán 26.000 cây —' })).toBeInTheDocument()
+    expect(submit).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText(/Cây đủ bán hiện tại:/), { target: { value: '4000' } })
+    expect(preview.getByRole('row', { name: 'Cây còn sống 45.200 cây 5.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Cây đủ bán 32.000 cây 4.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Cây còn bán 26.000 cây 0 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Thiếu cây đã giữ 0 cây 2.000 cây' })).toBeInTheDocument()
+    expect(preview.getByText('Sau kiểm kê thiếu 2.000 cây đã giữ.')).toBeInTheDocument()
+    expect(submit).not.toBeDisabled()
+    expect((await db.batches.get('batch_bv16_12'))?.readyQuantity).toBe(32000)
+
+    fireEvent.click(submit)
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const saved = await db.batches.get('batch_bv16_12')
+    expect(saved?.currentQuantity).toBe(5000)
+    expect(saved?.readyQuantity).toBe(4000)
+    expect(screen.getByText('Thiếu 2.000 cây đã giữ cho khách')).toBeInTheDocument()
+  })
+
+  it('clears projected quantities for invalid ready or living input and recalculates when adjustment is no longer needed', async () => {
+    render(
+      <MemoryRouter initialEntries={['/batches/batch_bv16_12']}>
+        <Routes><Route path="/batches/:id" element={<BatchDetailScreen />} /></Routes>
+      </MemoryRouter>
+    )
+    await screen.findByText('BV16 #12')
+    fireEvent.click(screen.getByRole('button', { name: /KIỂM KÊ/ }))
+    const living = screen.getByLabelText(/Hiện còn bao nhiêu cây sống/)
+    fireEvent.change(living, { target: { value: '5000' } })
+    const ready = screen.getByLabelText(/Cây đủ bán hiện tại:/)
+    fireEvent.change(ready, { target: { value: '4000' } })
+    const preview = within(screen.getByRole('region', { name: 'Preview kiểm kê' }))
+    fireEvent.change(ready, { target: { value: '6000' } })
+    expect(screen.getByRole('button', { name: 'CẬP NHẬT' })).toBeDisabled()
+    expect(preview.getByRole('row', { name: 'Cây còn bán 22.000 cây —' })).toBeInTheDocument()
+    expect(preview.queryByText(/Sau kiểm kê thiếu/)).not.toBeInTheDocument()
+
+    fireEvent.change(living, { target: { value: '42000' } })
+    expect(preview.getByRole('row', { name: 'Cây đủ bán 32.000 cây 32.000 cây' })).toBeInTheDocument()
+    expect(preview.getByRole('row', { name: 'Cây còn bán 22.000 cây 22.000 cây' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'CẬP NHẬT' })).not.toBeDisabled()
+    fireEvent.change(living, { target: { value: '' } })
+    expect(preview.getByRole('row', { name: 'Cây còn sống 45.200 cây —' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'CẬP NHẬT' })).toBeDisabled()
   })
 })
 

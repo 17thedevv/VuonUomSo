@@ -165,43 +165,50 @@ export const BatchDetailScreen: React.FC = () => {
           <div className="lg:col-span-7 space-y-5">
             {/* Quantity overview cards */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+          <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+            <span className="text-sm font-bold text-emerald-800">Cây còn bán</span>
+            <div className="flex items-baseline gap-2 mt-1 text-emerald-700">
+              <span className="text-3xl font-black tracking-tight">{formatQuantity(available)}</span>
+              <span className="text-base font-semibold">cây</span>
+            </div>
+            <p className="text-sm text-emerald-800 mt-1">Cây đủ bán trừ số đang giữ chưa xuất.</p>
+          </div>
+
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-              <span className="text-[11px] text-slate-500 font-medium block">Còn sống</span>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <span className="text-xs text-slate-600 font-medium block min-h-8">Cây còn sống</span>
               <span className="text-base font-bold text-slate-800 block mt-0.5">
                 {formatQuantity(batch.currentQuantity)}
               </span>
+              <span className="text-xs text-slate-600">cây</span>
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-              <span className="text-[11px] text-slate-500 font-medium block">Đủ bán</span>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <span className="text-xs text-slate-600 font-medium block min-h-8">Cây đủ bán</span>
               <span className="text-base font-bold text-slate-800 block mt-0.5">
                 {formatQuantity(batch.readyQuantity)}
               </span>
+              <span className="text-xs text-slate-600">cây</span>
             </div>
 
-            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-              <span className="text-[11px] text-slate-500 font-medium block">Đã giữ</span>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <span className="text-xs text-slate-600 font-medium block min-h-8">Đang giữ</span>
               <span className="text-base font-bold text-amber-800 block mt-0.5">
                 {formatQuantity(reserved)}
               </span>
+              <span className="text-xs text-slate-600">cây</span>
             </div>
           </div>
 
-          {/* Prominent CÒN BÁN banner */}
-          <div className="bg-emerald-50/90 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
-                CÂY CÒN BÁN
-              </span>
-              <p className="text-[11px] text-emerald-600 mt-0.5">
-                Sẵn sàng xuất cho khách mới
-              </p>
+          {shortage > 0 && (
+            <div className="bg-amber-50 border border-amber-300 text-amber-950 p-3 rounded-xl flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <div className="font-bold">Thiếu {formatQuantity(shortage)} cây đã giữ cho khách</div>
+                <p className="mt-1">Cây đủ bán thấp hơn số đang giữ chưa xuất.</p>
+              </div>
             </div>
-            <div className="text-2xl font-black text-emerald-700 tracking-tight">
-              {formatQuantity(available)}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Warning if attention (Sắp quá lứa) */}
@@ -212,19 +219,6 @@ export const BatchDetailScreen: React.FC = () => {
               <div className="font-bold">Nên bán trước {formatShortDate(batch.preferredSellBefore)}</div>
               <div className="text-amber-800 mt-0.5 leading-relaxed">
                 Cây đã đạt chuẩn. Để lâu rễ ăn sâu vào đất bãi, nhổ cây dễ vỡ bầu và đứt rễ non.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Warning if commitment shortage exists */}
-        {shortage > 0 && (
-          <div className="bg-amber-50/90 border border-amber-300 text-amber-950 p-3.5 rounded-xl flex items-start gap-3">
-            <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <div className="font-bold">Thiếu {formatQuantity(shortage)} cây đã giữ cho khách</div>
-              <div className="text-amber-800 mt-0.5 leading-relaxed">
-                Số cây đủ bán ({formatQuantity(batch.readyQuantity)}) thấp hơn tổng cam kết giữ ({formatQuantity(reserved)} cây).
               </div>
             </div>
           </div>
@@ -416,6 +410,7 @@ export const BatchDetailScreen: React.FC = () => {
       {/* Inventory Update Modal */}
       <InventoryUpdateModal
         batch={batch}
+        reservations={reservations}
         isOpen={isInventoryModalOpen}
         onClose={() => setIsInventoryModalOpen(false)}
         onSuccess={() => fetchData()}
