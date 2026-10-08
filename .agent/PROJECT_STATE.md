@@ -34,7 +34,7 @@
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
 | **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
 | **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
-| **FC3** | **Reservation Reconciliation** | **NEXT** | FC2 đã đóng; branch kế tiếp `feat/fc3-reservation-reconciliation`, chưa triển khai |
+| **FC3** | **Reservation Reconciliation** | **CONTRACT REVIEW** | FC3-0 docs only; contract chờ duyệt/merge, chưa triển khai service/UI |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
@@ -49,6 +49,7 @@
 - FC2 slice 1: **ACCEPTED / MERGED**, [PR #8](https://github.com/17thedevv/VuonUomSo/pull/8) tại `bf3dee59fc0644663495ddf43d736b5535ff31e2`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37740026948).
 - FC2 slice 2: **ACCEPTED / MERGED**, [PR #9](https://github.com/17thedevv/VuonUomSo/pull/9) tại `034b33058d90b7f0a70854c8e329f5106b42decd`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37748317065).
 - [FC2 Final Acceptance](../docs/development/FC2-FINAL-ACCEPTANCE.md): **PASS / FC2 DONE**. Mobile create → edit → reserve → edit conflict → cancel, reload và kiểm tồn kho/lịch sử đạt. **FC3 NEXT**, chưa triển khai reconciliation hay `closed_remaining` FC5.
+- Task hiện tại: **FC3-0 — Reservation Reconciliation Contract**, branch `feat/fc3-reservation-reconciliation`. [Contract draft](../docs/development/FC3-FUNCTIONAL-CONTRACT.md) chờ review; chỉ viết tài liệu. Không code `reconcileReservation()`/service/UI trước khi FC3-0 được nghiệm thu và merge. Roadmap: FC3-0 → FC3-1 Order Reduction → FC3-2 Batch Shortage → FC3-3 UI/Cross-flow → Final Acceptance; chưa đánh FC3 DONE.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
 ---
