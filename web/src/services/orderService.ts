@@ -10,7 +10,7 @@ import { availableQuantityForBatch, reservedQuantityForBatch, formatQuantity } f
 import { undoService } from './undoService'
 import { db } from '../data/db'
 import { createDomainEvent } from '../analytics/events'
-import { validateOrderChanges, validateOrderCancellation, type OrderChanges, type OrderLifecycleFailure } from '../domain/orderLifecycle'
+import { validateOrderChanges, validateOrderCancellation, orderCancellationFingerprint, type OrderChanges, type OrderLifecycleFailure } from '../domain/orderLifecycle'
 
 export interface CreateOrderInput {
   customerId: string
@@ -200,7 +200,7 @@ export async function updateOrder(input: UpdateOrderInput): Promise<UpdateOrderR
 }
 
 /** Atomic cascade, preserving every order, reservation and shipment record. */
-export async function cancelOrder(input: { orderId: string }): Promise<CancelOrderResult> {
+export async function cancelOrder(input: { orderId: string; expectedImpact?: string }): Promise<CancelOrderResult> {
   try {
     const result = await db.transaction('rw', [db.orders, db.reservations, db.shipments, db.events], async (): Promise<CancelOrderResult> => {
       const previous = await db.orders.get(input.orderId)
@@ -211,6 +211,9 @@ export async function cancelOrder(input: { orderId: string }): Promise<CancelOrd
       if (!validation.success) return validation
       if (previous.status === 'cancelled') {
         return { success: true, order: previous, releasedReservationIds: [], cancelledShipmentIds: [] }
+      }
+      if (input.expectedImpact !== undefined && input.expectedImpact !== orderCancellationFingerprint(previous, reservations, shipments)) {
+        return { success: false, code: 'PREVIEW_CHANGED', error: 'Nguồn giữ hoặc chuyến chờ xuất đã thay đổi. Hãy xem lại tác động trước khi xác nhận hủy.' }
       }
       const released = reservations.filter((r) => r.status === 'active')
       const cancelled = shipments.filter((s) => s.status === 'planned')
