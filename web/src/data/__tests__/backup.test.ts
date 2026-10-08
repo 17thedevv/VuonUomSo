@@ -15,6 +15,7 @@ import type { Order } from '../../domain/order'
 import type { Reservation } from '../../domain/reservation'
 import type { Shipment } from '../../domain/shipment'
 import type { BatchDossier } from '../../domain/dossier'
+import { availableQuantityForBatch, commitmentShortageForBatch } from '../../domain/quantity'
 
 describe('Data: Backup & Restore System', () => {
   beforeEach(async () => {
@@ -27,6 +28,71 @@ describe('Data: Backup & Restore System', () => {
     await db.shipments.clear()
     await db.dossiers.clear()
     await db.events.clear()
+  })
+
+  async function seedShortageWorkspace(outstanding = 18000) {
+    await seedRichWorkspace()
+    await db.batches.update('batch_01', { readyQuantity: 15000 })
+    await db.orders.update('order_01', { requestedQuantity: 40000 })
+    await db.reservations.update('res_own_01', { quantity: 10000 + outstanding })
+    if (outstanding === 17000) {
+      // Simulated partial reconciliation fixture, not a new mutation service.
+      await db.events.put({ id: 'evt_partial', type: 'reservation_reconciled', entityType: 'order',
+        entityId: 'order_01', payload: { reservationId: 'res_own_01', before: { quantity: 28000 },
+          after: { quantity: 27000 }, remainingShortage: 2000 }, createdAt: '2026-10-08' })
+    }
+  }
+
+  it.each([18000, 17000])('FC3-1A: round-trips ready 15k / outstanding %i without repairing shortage', async outstanding => {
+    await seedShortageWorkspace(outstanding)
+    const { backup, jsonString } = await exportWorkspaceBackup()
+    expect(parseAndPreviewBackup(jsonString).success).toBe(true)
+    await db.reservations.clear()
+    await db.events.clear()
+    await db.batches.clear()
+    await restoreWorkspaceBackup(jsonString)
+    // Reopen IndexedDB rather than asserting against in-memory fixture objects.
+    db.close()
+    await db.open()
+    const restored = await exportWorkspaceBackup()
+    expect(restored.backup.data).toEqual(backup.data)
+    expect(restored.backup.recordCounts).toEqual(backup.recordCounts)
+    expect(restored.backup.formatVersion).toBe(backup.formatVersion)
+    const batch = restored.backup.data.batches[0]
+    const reservations = restored.backup.data.reservations
+    expect(batch.currentQuantity).toBe(40000)
+    expect(batch.readyQuantity).toBe(15000)
+    expect(availableQuantityForBatch(batch, reservations)).toBe(0)
+    expect(commitmentShortageForBatch(batch, reservations)).toBe(outstanding - 15000)
+    expect(reservations.find(r => r.id === 'res_own_01')).toMatchObject({
+      quantity: outstanding + 10000, fulfilledQuantity: 10000, status: 'active',
+      orderId: 'order_01', batchId: 'batch_01'
+    })
+  })
+
+  it.each(['Q=0', 'F>Q', 'status', 'order reference', 'batch reference', 'supplier reference',
+    'planned allocation', 'completed fulfillment', 'order coverage'])('FC3-1A: still rejects %s in a shortage backup atomically', async corruption => {
+    await seedShortageWorkspace()
+    const { backup, jsonString } = await exportWorkspaceBackup()
+    const own = backup.data.reservations.find(r => r.id === 'res_own_01')!
+    const external = backup.data.reservations.find(r => r.id === 'res_ext_01')!
+    if (corruption === 'Q=0') own.quantity = 0
+    if (corruption === 'F>Q') own.fulfilledQuantity = own.quantity + 1
+    if (corruption === 'status') (own as { status: string }).status = 'broken'
+    if (corruption === 'order reference') own.orderId = 'missing'
+    if (corruption === 'batch reference') own.batchId = 'missing'
+    if (corruption === 'supplier reference') external.supplierId = 'missing'
+    if (corruption === 'planned allocation') {
+      const planned = backup.data.shipments.find(s => s.status === 'planned')!
+      planned.lines![0].quantity = 19000
+      planned.plannedQuantity = 19000
+    }
+    if (corruption === 'completed fulfillment') own.fulfilledQuantity = 9000
+    if (corruption === 'order coverage') backup.data.orders[0].requestedQuantity = 30000
+    const invalid = JSON.stringify(backup)
+    expect(parseAndPreviewBackup(invalid).success).toBe(false)
+    await expect(restoreWorkspaceBackup(invalid)).rejects.toThrow()
+    expect((await exportWorkspaceBackup()).backup.data).toEqual(JSON.parse(jsonString).data)
   })
 
   // Helper to populate a rich workspace with all P0-P5 entities

@@ -179,6 +179,7 @@ Tests phải dùng domain assertions và real Dexie service integration, không 
 | Slice | Phạm vi | Trạng thái |
 | --- | --- | --- |
 | FC3-0 | Review/khóa contract này | APPROVED / CLOSED, PR #11 merged, CI xanh |
+| FC3-1A | Backup shortage + stale reservation Undo safety trước mutation | REVIEW PENDING; [báo cáo safety slice](./FC3-1A-SAFETY.md); không expose reconciliation |
 | FC3-1 | Order Reduction Reconciliation — domain/service atomic | NEXT; chưa code; backup shortage + stale Undo gates làm sớm |
 | FC3-2 | Batch Shortage Reconciliation + own transfer | Chờ slice trước nghiệm thu; chưa code |
 | FC3-3 | UI + Cross-flow Hardening | Chờ domain/service contract; chưa code |

@@ -2,6 +2,7 @@ import { db } from '../data/db'
 import { createDomainEvent } from '../analytics/events'
 import { releaseReservation } from './reservationService'
 import { deriveBatchStatus } from '../domain/batch'
+import type { Reservation } from '../domain/reservation'
 
 export type ReversibleMutation =
   | {
@@ -39,6 +40,8 @@ export type ReversibleMutation =
       type: 'create_reservation'
       reservationId: string
       orderId: string
+      expectedReservation: Reservation
+      expectedOrderEventIds: string[]
       description: string
     }
 
@@ -62,7 +65,10 @@ class UndoService {
     if (this.timer) {
       clearTimeout(this.timer)
     }
-    this.currentMutation = mutation
+    this.currentMutation = mutation.type === 'create_reservation'
+      ? { ...mutation, expectedReservation: { ...mutation.expectedReservation },
+        expectedOrderEventIds: [...mutation.expectedOrderEventIds] }
+      : mutation
     this.notify()
 
     if (autoExpireMs > 0) {
@@ -279,9 +285,50 @@ class UndoService {
       }
 
       if (mutation.type === 'create_reservation') {
-        await releaseReservation({ reservationId: mutation.reservationId })
+        const released = await db.transaction(
+          'rw', [db.batches, db.orders, db.reservations, db.shipments, db.events, db.contacts], async () => {
+            const current = await db.reservations.get(mutation.reservationId)
+            const expected = mutation.expectedReservation
+            if (!current || !expected || expected.id !== mutation.reservationId ||
+              expected.orderId !== mutation.orderId || expected.status !== 'active' ||
+              (expected.fulfilledQuantity ?? 0) !== 0 ||
+              current.id !== expected.id || current.orderId !== expected.orderId ||
+              current.quantity !== expected.quantity ||
+              (current.fulfilledQuantity ?? 0) !== (expected.fulfilledQuantity ?? 0) ||
+              current.status !== expected.status || current.sourceType !== expected.sourceType ||
+              current.batchId !== expected.batchId || current.supplierId !== expected.supplierId ||
+              current.createdAt !== expected.createdAt) return false
 
+            const order = await db.orders.get(current.orderId)
+            if (!order || order.status === 'cancelled' || order.status === 'shipped') return false
+            if (current.sourceType === 'own_batch') {
+              if (!current.batchId || !await db.batches.get(current.batchId)) return false
+            } else {
+              const supplier = current.supplierId ? await db.contacts.get(current.supplierId) : undefined
+              if (!supplier?.roles.includes('supplier')) return false
+            }
+
+            // Fail closed on any intervening order history, including reconciliation
+            // that restores the original Q/source. IDs avoid timestamp collisions.
+            const eventIds = await db.events.where('entityId').equals(current.orderId)
+              .filter(e => e.entityType === 'order').primaryKeys()
+            const expectedIds = new Set(mutation.expectedOrderEventIds)
+            if (eventIds.length !== expectedIds.size || eventIds.some(id => !expectedIds.has(id))) return false
+            const shipmentHistory = await db.shipments
+              .filter(s => (s.lines ?? []).some(line => line.reservationId === current.id)).first()
+            if (shipmentHistory) return false
+
+            // Nested Dexie transaction joins this transaction: no gap between
+            // guard reads and the existing release/order/event writes.
+            await releaseReservation({ reservationId: current.id })
+            return true
+          }
+        )
         this.clearLastMutation()
+        if (!released) return {
+          success: false,
+          message: 'Không thể hoàn tác vì nguồn giữ đã thay đổi sau thao tác này.'
+        }
         return {
           success: true,
           message: 'Đã hoàn tác: Đã bỏ giữ cây.',

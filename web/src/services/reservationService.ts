@@ -310,7 +310,10 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
     return {
       success: true,
       reservation,
-      batchCode: batch.code
+      batchCode: batch.code,
+      // Capture the history boundary in the same transaction as creation.
+      orderEventIds: await db.events.where('entityId').equals(orderId)
+        .filter(e => e.entityType === 'order').primaryKeys()
     }
   })
 
@@ -319,6 +322,8 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
     type: 'create_reservation',
     reservationId: result.reservation.id,
     orderId,
+    expectedReservation: { ...result.reservation },
+    expectedOrderEventIds: result.orderEventIds,
     description: `Đã giữ ${formatQuantity(quantity)} cây từ ${result.batchCode}.`
   })
 
@@ -425,7 +430,9 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
     return {
       success: true,
       reservation,
-      supplierName: supplier.name
+      supplierName: supplier.name,
+      orderEventIds: await db.events.where('entityId').equals(orderId)
+        .filter(e => e.entityType === 'order').primaryKeys()
     }
   })
 
@@ -434,6 +441,8 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
     type: 'create_reservation',
     reservationId: result.reservation.id,
     orderId,
+    expectedReservation: { ...result.reservation },
+    expectedOrderEventIds: result.orderEventIds,
     description: `Đã giữ ${formatQuantity(quantity)} cây từ ${result.supplierName}.`
   })
 

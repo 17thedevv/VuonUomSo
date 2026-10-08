@@ -61,7 +61,7 @@ const KNOWN_ORG_CAPABILITIES = new Set([
  * 4. Structural mandatory field verification on all entities.
  * 5. Quantity invariants on Batches, Orders, Reservations, and Shipments.
  * 6. Referential integrity between related entities.
- * 7. Cross-entity domain invariants (outstanding reservation <= readyQuantity,
+ * 7. Cross-entity domain invariants (commitment shortage is valid,
  *    order reservation coverage <= requestedQuantity, one planned shipment per order,
  *    planned line allocation <= reservation remaining, shipment fulfillment reconciliation).
  */
@@ -580,19 +580,8 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
-  // 12. Batch outstanding reservation vs readyQuantity
-  for (const b of batches) {
-    if (!isRecord(b)) continue
-    const activeOutstanding = reservations
-      .filter((r) => r.sourceType === 'own_batch' && r.batchId === b.id && r.status === 'active')
-      .reduce((sum, r) => sum + (r.quantity - (r.fulfilledQuantity ?? 0)), 0)
-
-    if (activeOutstanding > b.readyQuantity) {
-      errors.push(
-        `Lô "${b.code || b.id}": Tổng số cây đang giữ chưa xuất (${activeOutstanding}) vượt quá số cây đủ chuẩn (${b.readyQuantity}).`
-      )
-    }
-  }
+  // FC0/FC3: outstanding > readyQuantity is legitimate commitment shortage.
+  // Preserve it unchanged; reservation, stock and shipment integrity remain validated.
 
   // 13. Order total completed shipped <= requestedQuantity
   for (const o of orders) {
