@@ -223,18 +223,18 @@ export const TodayScreen: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            {/* Đủ bán -> tap navigates to /batches?filter=ready */}
+            {/* Available stock -> tap navigates to /batches?filter=ready */}
             <div
               onClick={() => navigate('/batches?filter=ready')}
               role="button"
               tabIndex={0}
               className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs active:bg-emerald-50 transition-colors cursor-pointer"
             >
-              <span className="text-xs text-slate-500 font-medium block">Đủ bán</span>
+              <span className="text-xs text-slate-500 font-medium block">Cây còn bán</span>
               <span className="text-lg font-black text-emerald-700 tracking-tight block mt-0.5">
                 {formatQuantity(totalAvailable)}
               </span>
-              <span className="text-[10px] text-slate-400">cây sẵn sàng</span>
+              <span className="text-[10px] text-slate-400">cây</span>
             </div>
 
             {/* Đã giữ */}
