@@ -1,9 +1,11 @@
 # FC3-1A — Backup Shortage + Stale Reservation Undo Safety
 
-Status: **REVIEW PENDING**. FC3-0 CLOSED; FC3-1 và FC3 overall chưa DONE.
+Status: **CLOSED / ACCEPTED / MERGED**. FC3-0 CLOSED; FC3-1 và FC3 overall chưa DONE; **FC3-1B NEXT**.
+
+Người dùng nghiệm thu exact-head `ad4010fcc3dda64f3c451aa204d5852488a7bff3`: PASS / MERGE READY. [PR #14](https://github.com/17thedevv/VuonUomSo/pull/14) merged tại `261f7ddddbefb92c07173f813950bf2ec2b54614`; [CI trên merge commit SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37760585326).
 
 Base: `main` tại `6f1f403a05e8a37299b49b00955eae796d0f1baf`.
-Branch: `feat/fc3-reservation-reconciliation`. PR riêng phải được nghiệm thu trước merge.
+Branch implementation: `feat/fc3-reservation-reconciliation`. Safety slice đã được nghiệm thu và merge trước khi triển khai reconciliation service.
 
 ## Backup compatibility
 
@@ -48,4 +50,4 @@ Regression được chạy trên code cũ để xác nhận failure trước pat
 
 Không có reconciliation mutation/UI, order reduction/transfer/batch reconciliation, FC4/FC5, generic inventory, đổi tên hay dependency/schema mới. Không cần browser acceptance cho slice không đổi UI.
 
-**Required next gate:** khi FC3-1 reconciliation service tồn tại, thêm real-service regression capture Undo → reconciliation commit → old Undo fail, bảo toàn nguồn/coverage/history/stock. Fixture hiện tại không thay thế acceptance đó. Chỉ bắt đầu service slice sau safety PR được nghiệm thu/merge.
+**Required next gate — FC3-1B Atomic Order Reduction Reconciliation domain/service:** khi reconciliation service tồn tại, thêm real-service regression capture Undo → reconciliation commit → old Undo fail, bảo toàn nguồn/coverage/history/stock. Fixture hiện tại không thay thế acceptance đó. FC3-1B chưa bắt đầu; mutation/UI vẫn chưa expose.
