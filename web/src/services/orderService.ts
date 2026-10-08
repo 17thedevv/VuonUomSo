@@ -8,6 +8,9 @@ import {
 } from '../data/repositories'
 import { availableQuantityForBatch, reservedQuantityForBatch, formatQuantity } from '../domain/quantity'
 import { undoService } from './undoService'
+import { db } from '../data/db'
+import { createDomainEvent } from '../analytics/events'
+import { validateOrderChanges, validateOrderCancellation, type OrderChanges, type OrderLifecycleFailure } from '../domain/orderLifecycle'
 
 export interface CreateOrderInput {
   customerId: string
@@ -156,5 +159,94 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       success: false,
       error: 'Chưa lưu được đơn hàng trên thiết bị. Dữ liệu bạn vừa nhập vẫn còn trên màn hình.'
     }
+  }
+}
+
+export type UpdateOrderInput = OrderChanges & { orderId: string }
+export type UpdateOrderResult = { success: true; order: Order; changed: boolean } | OrderLifecycleFailure
+export type CancelOrderResult = {
+  success: true; order: Order; releasedReservationIds: string[]; cancelledShipmentIds: string[]
+} | OrderLifecycleFailure
+
+/** Commit-time checks and audit record share the same transaction. Never alters supply. */
+export async function updateOrder(input: UpdateOrderInput): Promise<UpdateOrderResult> {
+  try {
+    const result = await db.transaction('rw', [db.orders, db.reservations, db.shipments, db.events], async (): Promise<UpdateOrderResult> => {
+      const previous = await db.orders.get(input.orderId)
+      if (!previous) return { success: false, code: 'NOT_FOUND', error: 'Đơn hàng không tồn tại.' }
+      const reservations = await db.reservations.where('orderId').equals(previous.id).toArray()
+      const shipments = await db.shipments.where('orderId').equals(previous.id).toArray()
+      const validation = validateOrderChanges(previous, input, reservations, shipments)
+      if (!validation.success) return validation
+      const order = validation.order
+      const fieldLabels = { requestedQuantity: 'số lượng', requestedDate: 'hẹn lấy', unitPrice: 'giá mỗi cây', note: 'ghi chú', variety: 'giống cây', status: 'trạng thái' }
+      const changedFields = (['requestedQuantity', 'requestedDate', 'unitPrice', 'note', 'variety', 'status'] as const)
+        .filter((key) => previous[key] !== order[key])
+      if (changedFields.length === 0) return { success: true, order: previous, changed: false }
+      await db.orders.put(order)
+      await db.events.put(createDomainEvent('order_updated', 'order', order.id, {
+        before: previous, after: order, changedFields,
+        message: `Đã sửa đơn (${changedFields.map((key) => fieldLabels[key]).join(', ')}): ${formatQuantity(previous.requestedQuantity)} → ${formatQuantity(order.requestedQuantity)} cây.`
+      }))
+      return { success: true, order, changed: true }
+    })
+    // No rollback semantics for corrections yet; discard any stale Undo banner.
+    if (result.success && result.changed) undoService.clearLastMutation()
+    return result
+  } catch (err) {
+    console.error('Failed to update order:', err)
+    return { success: false, code: 'STORAGE_ERROR', error: 'Chưa lưu được thay đổi đơn hàng. Dữ liệu cũ được giữ nguyên.' }
+  }
+}
+
+/** Atomic cascade, preserving every order, reservation and shipment record. */
+export async function cancelOrder(input: { orderId: string }): Promise<CancelOrderResult> {
+  try {
+    const result = await db.transaction('rw', [db.orders, db.reservations, db.shipments, db.events], async (): Promise<CancelOrderResult> => {
+      const previous = await db.orders.get(input.orderId)
+      if (!previous) return { success: false, code: 'NOT_FOUND', error: 'Đơn hàng không tồn tại.' }
+      const reservations = await db.reservations.where('orderId').equals(previous.id).toArray()
+      const shipments = await db.shipments.where('orderId').equals(previous.id).toArray()
+      const validation = validateOrderCancellation(previous, reservations, shipments)
+      if (!validation.success) return validation
+      if (previous.status === 'cancelled') {
+        return { success: true, order: previous, releasedReservationIds: [], cancelledShipmentIds: [] }
+      }
+      const released = reservations.filter((r) => r.status === 'active')
+      const cancelled = shipments.filter((s) => s.status === 'planned')
+      const order: Order = { ...previous, status: 'cancelled' }
+      for (const reservation of released) {
+        await db.reservations.put({ ...reservation, status: 'released' })
+        const payload = {
+          orderId: order.id, reservationId: reservation.id, sourceType: reservation.sourceType,
+          batchId: reservation.batchId, supplierId: reservation.supplierId, quantity: reservation.quantity,
+          reason: 'order_cancelled', message: `Đã nhả ${formatQuantity(reservation.quantity)} cây do hủy đơn.`
+        }
+        await db.events.put(createDomainEvent('reservation_released', 'order', order.id, payload))
+        if (reservation.sourceType === 'own_batch' && reservation.batchId) {
+          await db.events.put(createDomainEvent('reservation_released', 'batch', reservation.batchId, payload))
+        }
+      }
+      for (const shipment of cancelled) {
+        await db.shipments.put({ ...shipment, status: 'cancelled' })
+        await db.events.put(createDomainEvent('shipment_cancelled', 'order', order.id, {
+          shipmentId: shipment.id, plannedQuantity: shipment.plannedQuantity, reason: 'order_cancelled',
+          message: `Đã hủy chuyến chờ xuất ${formatQuantity(shipment.plannedQuantity)} cây do hủy đơn.`
+        }))
+      }
+      await db.orders.put(order)
+      const releasedReservationIds = released.map((r) => r.id)
+      const cancelledShipmentIds = cancelled.map((s) => s.id)
+      await db.events.put(createDomainEvent('order_cancelled', 'order', order.id, {
+        before: previous, after: order, releasedReservationIds, cancelledShipmentIds,
+        message: `Đã hủy đơn, nhả ${released.length} nguồn giữ và hủy ${cancelled.length} chuyến chờ xuất.`
+      }))
+      return { success: true, order, releasedReservationIds, cancelledShipmentIds }
+    })
+    if (result.success) undoService.clearLastMutation()
+    return result
+  } catch (err) {
+    console.error('Failed to cancel order:', err)
+    return { success: false, code: 'STORAGE_ERROR', error: 'Chưa hủy được đơn hàng. Đơn, nguồn giữ và chuyến xe được giữ nguyên.' }
   }
 }
