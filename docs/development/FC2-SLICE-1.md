@@ -1,6 +1,6 @@
 # FC2 — Order Lifecycle & Corrections: slice 1
 
-Status: ACCEPTED / MERGED via [PR #8](https://github.com/17thedevv/VuonUomSo/pull/8) at `bf3dee59fc0644663495ddf43d736b5535ff31e2`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37740026948). FC2 overall: IN PROGRESS; [slice 2](FC2-SLICE-2.md) is awaiting review.
+Status: ACCEPTED / MERGED via [PR #8](https://github.com/17thedevv/VuonUomSo/pull/8) at `bf3dee59fc0644663495ddf43d736b5535ff31e2`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37740026948). [Slice 2](FC2-SLICE-2.md) has also been accepted and merged; FC2 overall: DONE after [final acceptance](FC2-FINAL-ACCEPTANCE.md).
 
 Base: PR #7 merged at `54a9fa3`, merge CI SUCCESS. Branch: `feat/fc2-order-lifecycle`.
 
@@ -23,4 +23,4 @@ Tests cover quantity boundaries, own/external coverage, optional metadata, varie
 
 Local verification (08/10/2026): typecheck PASS, lint PASS, full suite **41 files / 355 tests PASS**, build PASS (PWA 14 entries). Related suite: 95 tests PASS. Three stale Undo regressions failed against the old Undo implementation and pass with the guard. Exact-head CI is reported in the PR.
 
-This slice has no UI, schema migration or new dependency. Order Detail actions and confirmation of cancellation effects remain the next FC2 slice. FC2 is not DONE until its UI and full workflow have been accepted. FC3 reconciliation, FC5 `closed_remaining` and UI-R03/R04/R05 remain outside this slice.
+This slice has no UI, schema migration or new dependency. Order Detail actions and confirmation of cancellation effects were completed in slice 2 and passed final acceptance. FC3 reconciliation, FC5 `closed_remaining` and UI-R03/R04/R05 remain outside this slice.

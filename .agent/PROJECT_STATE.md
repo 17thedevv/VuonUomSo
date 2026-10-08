@@ -33,8 +33,8 @@
 | :--- | :--- | :--- | :--- |
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
 | **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
-| **FC2** | **Order Lifecycle & Corrections** | **IN PROGRESS** | Slice 1 đã nghiệm thu/merge; slice 2 UI sửa/hủy đã triển khai, chờ review và merge |
-| **FC3** | **Reservation Reconciliation** | **PLANNED** | Chờ FC2 hoàn thành và merge |
+| **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
+| **FC3** | **Reservation Reconciliation** | **NEXT** | FC2 đã đóng; branch kế tiếp `feat/fc3-reservation-reconciliation`, chưa triển khai |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
@@ -47,7 +47,8 @@
 - C1 R01/R02: **ACCEPTED / MERGED**, [PR #6](https://github.com/17thedevv/VuonUomSo/pull/6) tại `ae43aa258b1f84e3ab25ca601a688fc041f25dad`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37734851505). Domain/mutation FC0 giữ nguyên.
 - Bugfix helper `ReserveQuantityModal`: **ACCEPTED / MERGED**, [PR #7](https://github.com/17thedevv/VuonUomSo/pull/7) tại `54a9fa3c7897c21a95391c15b371b02e19a57e7f`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37738141617).
 - FC2 slice 1: **ACCEPTED / MERGED**, [PR #8](https://github.com/17thedevv/VuonUomSo/pull/8) tại `bf3dee59fc0644663495ddf43d736b5535ff31e2`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37740026948).
-- Task hiện tại: `feat/fc2-order-ui`, [FC2 slice 2 UI sửa/hủy](../docs/development/FC2-SLICE-2.md). FC2 chưa DONE; không triển khai reconciliation FC3 hay `closed_remaining` FC5.
+- FC2 slice 2: **ACCEPTED / MERGED**, [PR #9](https://github.com/17thedevv/VuonUomSo/pull/9) tại `034b33058d90b7f0a70854c8e329f5106b42decd`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37748317065).
+- [FC2 Final Acceptance](../docs/development/FC2-FINAL-ACCEPTANCE.md): **PASS / FC2 DONE**. Mobile create → edit → reserve → edit conflict → cancel, reload và kiểm tồn kho/lịch sử đạt. **FC3 NEXT**, chưa triển khai reconciliation hay `closed_remaining` FC5.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
 ---
