@@ -14,6 +14,7 @@
 - **Production Architecture / Cloud Backend**: `NOT AUTHORIZED` (Chưa được phép triển khai)
 - **Product expansion thesis**: [docs/product/PRODUCT-EXPANSION-THESIS.md](../docs/product/PRODUCT-EXPANSION-THESIS.md) — giả thuyết dài hạn về “sổ hàng có cam kết”, không phải roadmap hiện tại.
 - **Naming decision**: Giữ `Vườn Ươm` trong giai đoạn validation cây giống; **không rename app/repo/domain và không generalize model** chỉ vì thesis mở rộng. Naming review chỉ mở sau field pilot + discovery đa vertical và quyết định trực tiếp của user.
+- **Rename-friendly guardrail**: Có thể tập trung brand/app-title/manifest strings để rename sau này rẻ; **không dùng lý do rename-friendly để generalize entity/schema/domain**. Brand không được trở thành business invariant hay dữ liệu authority.
 
 ---
 
