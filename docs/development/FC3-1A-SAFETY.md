@@ -1,6 +1,6 @@
 # FC3-1A — Backup Shortage + Stale Reservation Undo Safety
 
-Status: **CLOSED / ACCEPTED / MERGED**. FC3-0 CLOSED; FC3-1 và FC3 overall chưa DONE; **FC3-1B NEXT**.
+Status: **CLOSED / ACCEPTED / MERGED**. FC3-0/FC3-1B CLOSED; FC3-1 và FC3 overall chưa DONE; **FC3-2 NEXT**.
 
 Người dùng nghiệm thu exact-head `ad4010fcc3dda64f3c451aa204d5852488a7bff3`: PASS / MERGE READY. [PR #14](https://github.com/17thedevv/VuonUomSo/pull/14) merged tại `261f7ddddbefb92c07173f813950bf2ec2b54614`; [CI trên merge commit SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37760585326).
 
@@ -50,4 +50,4 @@ Regression được chạy trên code cũ để xác nhận failure trước pat
 
 Không có reconciliation mutation/UI, order reduction/transfer/batch reconciliation, FC4/FC5, generic inventory, đổi tên hay dependency/schema mới. Không cần browser acceptance cho slice không đổi UI.
 
-**Required next gate — FC3-1B Atomic Order Reduction Reconciliation domain/service:** [implementation hiện REVIEW PENDING](FC3-1B-ORDER-REDUCTION.md) đã có regression capture Undo → reconciliation service thật commit → old Undo fail, bảo toàn nguồn/coverage/history/stock. Fixture 1A không thay thế acceptance đó. FC3-1B chưa nghiệm thu/merge; UI chưa expose.
+**Required real-service gate — PASS trong FC3-1B:** [implementation ACCEPTED / MERGED](FC3-1B-ORDER-REDUCTION.md), PR #16 và CI merge xanh. Regression capture Undo → reconciliation service thật commit → old Undo fail bảo toàn nguồn/coverage/history/stock, gồm partial reduction, nguồn không đổi nhưng requested giảm và full release. Fixture 1A không thay thế acceptance này. UI chưa expose; FC3-2 NEXT.

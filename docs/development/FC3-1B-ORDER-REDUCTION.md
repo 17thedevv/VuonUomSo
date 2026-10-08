@@ -1,6 +1,8 @@
 # FC3-1B — Atomic Order Reduction Reconciliation Domain/Service
 
-Status: **REVIEW PENDING**. FC3-0/FC3-1A CLOSED; FC3-1 và FC3 overall **chưa DONE**.
+Status: **CLOSED / ACCEPTED / MERGED**. FC3-0/FC3-1A CLOSED; FC3-1 và FC3 overall **chưa DONE**. **FC3-2 NEXT**.
+
+Người dùng nghiệm thu exact-head `0a5385c5b89f6b4a087c8142188786fc1c9567fa`: PASS / MERGE READY. [PR #16](https://github.com/17thedevv/VuonUomSo/pull/16) merged tại `10b9ae9cd00dcf123366eb47be554816edf82660`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37768645265): typecheck, lint, full tests và build PASS. Exact-head gate: lint0/0 (143 files), 45 files / 493 tests PASS, PWA14 entries.
 
 Base: latest `main = 88bf5ada6281edd861bca95dedc5b0c6b87b127e` trước code. Branch: `feat/fc3-reservation-reconciliation`.
 Authority: [FC3 contract](FC3-FUNCTIONAL-CONTRACT.md), [FC3-1A safety](FC3-1A-SAFETY.md), task FC3-1B của người dùng.
@@ -89,4 +91,8 @@ Real Dexie races cả hai thứ tự reconciliation↔confirm và reconciliation
 
 Local full quality gate: **typecheck PASS, lint0/0, 45 files / 493 tests PASS, build PASS, PWA14 entries**. Có 87 regression mới: 20 domain, 64 reconciliation service và 3 old-Undo real-service cases. Related suites (reconciliation/Undo/FC2/backup): 5 files / 172 tests PASS. Exact-head SHA/CI được ghi trong PR/handoff. Browser acceptance không áp dụng vì không sửa UI.
 
-**Chưa bắt đầu:** UI, FC3-2 Trigger B/own transfer, FC4/FC5, shipment-line editing, generic product/rename, schema/dependency mới. Không đóng FC3-1 hoặc FC3; chờ nghiệm thu và merge FC3-1B trước slice tiếp theo.
+**Chưa bắt đầu:** UI, FC3-2 Trigger B/own transfer, FC4/FC5, shipment-line editing, generic product/rename, schema/dependency mới. Không đóng FC3-1 hoặc FC3. Bước tiếp theo: **FC3-2 — Batch Shortage Reconciliation + own-batch transfer**, domain/service trước UI; sau đó FC3-3 và Final Acceptance.
+
+## Deferred NOTE — idempotent marker integrity
+
+Người dùng chấp nhận NOTE không chặn merge: validation projection trong marker hiện ở mức structural tối thiểu. Nếu một `order_reconciled` event bị corruption thủ công nhưng vẫn giữ field bắt buộc, retry có thể trả projection lịch sử sai thay vì `INVALID_STATE`. Retry này không ghi lại, không thay current state hoặc stock; normal transactional path không tạo marker như vậy. Harden cùng backup/event-integrity hoặc FC3-3, không mở safety patch riêng cho FC3-1B. Guard marker lỗi/incomplete hiện có vẫn giữ nguyên.
