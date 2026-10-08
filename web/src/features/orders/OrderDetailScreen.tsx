@@ -20,7 +20,8 @@ import {
   contactRepository,
   reservationRepository,
   batchRepository,
-  shipmentRepository
+  shipmentRepository,
+  eventRepository
 } from '../../data/repositories'
 import type { Order } from '../../domain/order'
 import type { Contact } from '../../domain/contact'
@@ -45,8 +46,12 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { EmptyState } from '../../shared/components/EmptyState'
 import { undoService } from '../../services/undoService'
-import { getOrderReservationHistory, type ResolvedReservation } from '../../services/reservationService'
+import { type ResolvedReservation } from '../../services/reservationService'
 import { ReleaseConfirmModal } from './ReleaseConfirmModal'
+import { hasOrderShipmentHistory } from '../../domain/orderLifecycle'
+import { OrderEditModal } from './OrderEditModal'
+import { OrderCancelModal } from './OrderCancelModal'
+import { orderHistoryMessage } from './orderHistory'
 
 interface ReservationSourceDetail {
   reservation: Reservation
@@ -68,6 +73,8 @@ export const OrderDetailScreen: React.FC = () => {
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [action, setAction] = useState<'edit' | 'cancel' | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!id) return
@@ -79,7 +86,7 @@ export const OrderDetailScreen: React.FC = () => {
           contactRepository.getAll(),
           batchRepository.getAll(),
           shipmentRepository.getByOrderId(id),
-          getOrderReservationHistory(id)
+          eventRepository.getByEntityId(id)
         ])
 
       if (o) {
@@ -120,7 +127,7 @@ export const OrderDetailScreen: React.FC = () => {
           })
 
         setSourceDetails(resolvedSources)
-        setHistoryEvents(events)
+        setHistoryEvents(events.filter((e) => e.entityType === 'order'))
         setError(null)
       } else {
         setOrder(null)
@@ -219,6 +226,13 @@ export const OrderDetailScreen: React.FC = () => {
     remainingToShip > 0 &&
     !plannedShipment &&
     hasRemainingReservedSupply
+  const hasShipmentHistory = hasOrderShipmentHistory(order, reservations, shipments)
+  const canCorrect = order.status !== 'cancelled' && !hasShipmentHistory
+  const actionSuccess = async (message: string) => {
+    setNotice(message)
+    setAction(null)
+    await fetchData()
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
@@ -230,6 +244,7 @@ export const OrderDetailScreen: React.FC = () => {
       />
 
       <div className="max-w-6xl mx-auto w-full p-4 sm:p-6 pb-16">
+        {notice && <p role="status" className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-base text-emerald-950 mb-4">{notice}</p>}
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start space-y-4 lg:space-y-0">
           {/* Left Column: Customer info, Shipments, Notes */}
           <div className="lg:col-span-7 space-y-4">
@@ -289,6 +304,12 @@ export const OrderDetailScreen: React.FC = () => {
               </div>
             )}
           </div>
+          {order.unitPrice !== undefined && <p className="text-base text-slate-700">Giá mỗi cây: <strong>{formatQuantity(order.unitPrice)} đồng</strong></p>}
+          {canCorrect && <div className="grid grid-cols-2 gap-2 pt-2">
+            <SecondaryButton fullWidth onClick={() => setAction('edit')}>SỬA ĐƠN</SecondaryButton>
+            <button type="button" onClick={() => setAction('cancel')} className="min-h-12 px-3 py-3 rounded-xl border border-rose-300 text-rose-800 font-bold text-base">HỦY ĐƠN</button>
+          </div>}
+          {hasShipmentHistory && order.status !== 'cancelled' && <p className="text-base text-slate-600">Đơn đã xuất cây; không thể sửa hoặc hủy toàn bộ.</p>}
         </div>
 
         {/* TIẾN ĐỘ XUẤT GIAO HÀNG (Shipment Progress) */}
@@ -414,7 +435,7 @@ export const OrderDetailScreen: React.FC = () => {
             />
           </div>
 
-          {shortage > 0 ? (
+          {order.status === 'cancelled' ? <p className="text-base text-slate-700">Đơn đã hủy. Nguồn giữ đã được nhả; lịch sử được giữ lại.</p> : shortage > 0 ? (
             <div className="bg-amber-50/80 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
               <span>
@@ -551,15 +572,12 @@ export const OrderDetailScreen: React.FC = () => {
           <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
             <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <History className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Lịch sử giữ cây</span>
+              <span>Lịch sử đơn hàng</span>
             </h4>
 
             <div className="space-y-2.5 pl-2 border-l-2 border-emerald-200 ml-1">
               {historyEvents.map((evt) => {
-                const payloadMsg =
-                  evt.payload && typeof evt.payload === 'object' && 'message' in evt.payload
-                    ? (evt.payload as { message: string }).message
-                    : evt.type
+                const payloadMsg = orderHistoryMessage(evt)
 
                 return (
                   <div key={evt.id} className="relative pl-3 text-xs">
@@ -581,6 +599,10 @@ export const OrderDetailScreen: React.FC = () => {
       </div>
 
       {/* Release Confirmation Modal */}
+      {action === 'edit' && <OrderEditModal order={order} reservations={reservations} shipments={shipments} onClose={() => setAction(null)} onRefresh={fetchData} onSuccess={actionSuccess} />}
+      {action === 'cancel' && <OrderCancelModal order={order} reservations={reservations} shipments={shipments}
+        sourceLabels={new Map(sourceDetails.map((source) => [source.reservation.id, source.sourceLabel]))}
+        onClose={() => setAction(null)} onRefresh={fetchData} onSuccess={actionSuccess} />}
       <ReleaseConfirmModal
         isOpen={isReleaseModalOpen}
         reservation={reservationToRelease}

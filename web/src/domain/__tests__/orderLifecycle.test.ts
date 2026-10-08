@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { Order } from '../order'
 import type { Reservation } from '../reservation'
 import type { Shipment } from '../shipment'
-import { validateOrderChanges, validateOrderCancellation } from '../orderLifecycle'
+import { validateOrderChanges, validateOrderCancellation, orderCancellationFingerprint } from '../orderLifecycle'
 
 const order: Order = { id: 'o1', customerId: 'c1', variety: 'BV16', requestedQuantity: 50000, status: 'partially_reserved' }
 const reservation: Reservation = { id: 'r1', orderId: 'o1', sourceType: 'own_batch', batchId: 'b1', quantity: 32000, status: 'active', createdAt: '2026-10-08' }
@@ -78,5 +78,19 @@ describe('FC2 order correction rules', () => {
     expect(validateOrderChanges({ ...order, status: 'cancelled' }, { note: 'changed' }, [], []))
       .toMatchObject({ success: false, code: 'ORDER_CANCELLED' })
     expect(validateOrderCancellation(order, [reservation], [])).toEqual({ success: true })
+  })
+
+  it('compares cancellation effects independent of read order and ignores released/unrelated records', () => {
+    const external: Reservation = { ...reservation, id: 'r2', sourceType: 'external_supplier', supplierId: 's1', quantity: 10000 }
+    const fingerprint = orderCancellationFingerprint(order, [reservation, external], [])
+    expect(orderCancellationFingerprint(order, [external, reservation, { ...reservation, id: 'old', status: 'released' }, { ...reservation, id: 'other', orderId: 'other' }], [])).toBe(fingerprint)
+    expect(orderCancellationFingerprint(order, [reservation, { ...external, quantity: 12000 }], [])).not.toBe(fingerprint)
+  })
+
+  it('detects planned shipment changes before approving cancellation', () => {
+    const plan: Shipment = { id: 's1', orderId: order.id, plannedQuantity: 10000, shippedQuantity: 0, status: 'planned', plannedDate: '2026-10-20' }
+    const fingerprint = orderCancellationFingerprint(order, [reservation], [plan])
+    expect(orderCancellationFingerprint(order, [reservation], [{ ...plan, plannedQuantity: 12000 }])).not.toBe(fingerprint)
+    expect(orderCancellationFingerprint(order, [reservation], [{ ...plan, plannedDate: '2026-10-21' }])).not.toBe(fingerprint)
   })
 })

@@ -13,7 +13,7 @@ export type OrderChanges = {
 export type OrderLifecycleFailure = {
   success: false
   code: 'NOT_FOUND' | 'INVALID_INPUT' | 'ORDER_CANCELLED' | 'ALREADY_SHIPPED' |
-    'VARIETY_LOCKED' | 'RECONCILIATION_REQUIRED' | 'STORAGE_ERROR'
+    'VARIETY_LOCKED' | 'RECONCILIATION_REQUIRED' | 'PREVIEW_CHANGED' | 'STORAGE_ERROR'
   error: string
   conflict?: { coveredQuantity: number; requestedQuantity: number; excessQuantity: number }
 }
@@ -91,4 +91,17 @@ export function validateOrderCancellation(
     return { success: false, code: 'ALREADY_SHIPPED', error: 'Đơn đã xuất cây không thể hủy toàn bộ. Dừng phần còn lại thuộc FC5.' }
   }
   return { success: true }
+}
+
+/** Captures the effects shown to the user; a stale preview cannot approve a different cascade. */
+export function orderCancellationFingerprint(order: Order, reservations: Reservation[], shipments: Shipment[]): string {
+  return JSON.stringify({
+    requestedQuantity: order.requestedQuantity, variety: order.variety,
+    reservations: reservations.filter((r) => r.orderId === order.id && r.status === 'active')
+      .map((r) => [r.id, r.quantity, r.fulfilledQuantity ?? 0, r.sourceType, r.batchId ?? '', r.supplierId ?? ''])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    shipments: shipments.filter((s) => s.orderId === order.id && s.status === 'planned')
+      .map((s) => [s.id, s.plannedQuantity, s.plannedDate ?? ''])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+  })
 }
