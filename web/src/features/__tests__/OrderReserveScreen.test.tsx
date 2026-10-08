@@ -72,6 +72,7 @@ describe('OrderReserveScreen (Phase P3)', () => {
     })
 
     // Default quantity is min(available: 22k, shortage: 18k) = 18.000
+    expect(screen.getByText('= 18.000 cây')).toBeInTheDocument()
     // Click submit button
     const submitButton = screen.getByRole('button', { name: /GIỮ 18.000 CÂY/i })
     fireEvent.click(submitButton)
@@ -87,6 +88,9 @@ describe('OrderReserveScreen (Phase P3)', () => {
     const activeRes = reservations.filter((r) => r.status === 'active')
     const total = activeRes.reduce((sum, r) => sum + r.quantity, 0)
     expect(total).toBe(50000)
+    const batch = await db.batches.get('batch_bv16_12')
+    expect(batch?.currentQuantity).toBe(45200)
+    expect(batch?.readyQuantity).toBe(32000)
   })
 
   it('allows reserving from external supplier', async () => {
@@ -112,6 +116,7 @@ describe('OrderReserveScreen (Phase P3)', () => {
     })
 
     // Default quantity is min(35k, 18k) = 18k
+    expect(screen.getByText('= 18.000 cây')).toBeInTheDocument()
     const submitButton = screen.getByRole('button', { name: /GIỮ 18.000 CÂY/i })
     fireEvent.click(submitButton)
 

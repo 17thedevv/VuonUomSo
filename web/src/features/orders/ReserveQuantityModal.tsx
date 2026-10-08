@@ -39,6 +39,7 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
 }) => {
   const [quantity, setQuantity] = useState<number | null>(null)
   const [rawInput, setRawInput] = useState('')
+  const [unit, setUnit] = useState<'cay' | 'van'>('cay')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -65,6 +66,7 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
       setQuantity(null)
       setRawInput('')
     }
+    setUnit('cay')
     setError(null)
   }, [isOpen, source, orderShortage])
 
@@ -91,6 +93,7 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
     if (isOwnBatch) {
       setQuantity(source.batch.availableQuantity)
       setRawInput(source.batch.availableQuantity.toString())
+      setUnit('cay')
       setError(null)
     }
   }
@@ -98,6 +101,7 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
   const handleSetMaxOrder = () => {
     setQuantity(orderShortage)
     setRawInput(orderShortage.toString())
+    setUnit('cay')
     setError(null)
   }
 
@@ -220,7 +224,8 @@ export const ReserveQuantityModal: React.FC<ReserveQuantityModalProps> = ({
               setQuantity(num)
               setError(null)
             }}
-            unit="van"
+            unit={unit}
+            onUnitChange={setUnit}
             required
             autoFocus
           />
