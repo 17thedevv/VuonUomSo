@@ -43,6 +43,7 @@ import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { InventoryUpdateModal } from './InventoryUpdateModal'
 import { ReadyQuantityUpdateModal } from './ReadyQuantityUpdateModal'
 import { undoService } from '../../services/undoService'
+import { BatchReconciliationModal } from './BatchReconciliationModal'
 
 export const BatchDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -53,6 +54,8 @@ export const BatchDetailScreen: React.FC = () => {
   const [events, setEvents] = useState<DomainEvent[]>([])
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false)
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false)
+  const [reconcileOpen, setReconcileOpen] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -160,6 +163,7 @@ export const BatchDetailScreen: React.FC = () => {
       />
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full pb-16">
+        {notice && <p role="status" className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl mb-4 text-base">{notice}</p>}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 space-y-5 lg:space-y-0">
           {/* Left Column: Metrics, Attention, Actions, Batch Info */}
           <div className="lg:col-span-7 space-y-5">
@@ -206,6 +210,7 @@ export const BatchDetailScreen: React.FC = () => {
               <div className="text-sm">
                 <div className="font-bold">Thiếu {formatQuantity(shortage)} cây đã giữ cho khách</div>
                 <p className="mt-1">Cây đủ bán thấp hơn số đang giữ chưa xuất.</p>
+                <SecondaryButton fullWidth className="mt-3" onClick={() => setReconcileOpen(true)}>ĐIỀU CHỈNH NGUỒN GIỮ</SecondaryButton>
               </div>
             </div>
           )}
@@ -408,6 +413,13 @@ export const BatchDetailScreen: React.FC = () => {
   </div>
 
       {/* Inventory Update Modal */}
+      {reconcileOpen && <BatchReconciliationModal batch={batch} onClose={() => setReconcileOpen(false)} onSuccess={async (projection, transferMessage) => {
+        await fetchData()
+        setNotice((projection.source.shortageAfter > 0
+          ? `Đã điều chỉnh nguồn giữ. Lô còn thiếu ${formatQuantity(projection.source.shortageAfter)} cây đã giữ.`
+          : 'Đã điều chỉnh nguồn giữ. Lô không còn thiếu cây đã giữ.') + (transferMessage ? ` ${transferMessage}` : ''))
+        setReconcileOpen(false)
+      }} />}
       <InventoryUpdateModal
         batch={batch}
         reservations={reservations}

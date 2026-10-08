@@ -9,12 +9,14 @@ import { updateOrder } from '../../services/orderService'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { OrderActionDialog } from './OrderActionDialog'
+import { OrderReconciliationModal } from './OrderReconciliationModal'
+import { orderRepository } from '../../data/repositories'
 
 export function OrderEditModal({ order, reservations, shipments, onClose, onRefresh, onSuccess }: {
   order: Order; reservations: Reservation[]; shipments: Shipment[];
   onClose: () => void; onRefresh: () => Promise<void>; onSuccess: (message: string) => Promise<void>
 }) {
-  const [initial] = useState(order)
+  const [initial, setInitial] = useState(order)
   const [raw, setRaw] = useState(String(order.requestedQuantity))
   const [quantity, setQuantity] = useState<number | null>(order.requestedQuantity)
   const [unit, setUnit] = useState<'cay' | 'van'>('cay')
@@ -24,6 +26,9 @@ export function OrderEditModal({ order, reservations, shipments, onClose, onRefr
   const [note, setNote] = useState(order.note ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reconcile, setReconcile] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [reloadRequired, setReloadRequired] = useState(false)
   const submitting = useRef(false)
   // Submit only intentional changes; untouched fields belong to the latest stored order.
   const changes: OrderChanges = {}
@@ -36,9 +41,28 @@ export function OrderEditModal({ order, reservations, shipments, onClose, onRefr
   const coverage = reservedQuantityForOrder(order.id, reservations)
   const conflict = !validation.success ? validation.conflict : undefined
   const fieldClass = 'w-full min-h-12 border border-slate-300 rounded-xl px-3 py-2 text-base bg-white'
+  const reloadCurrent = async () => {
+    const current = await orderRepository.getById(order.id)
+    if (!current) throw new Error('Không tìm thấy đơn sau điều chỉnh')
+    if (!('requestedDate' in changes)) setDate(current.requestedDate?.slice(0, 10) ?? '')
+    if (!('unitPrice' in changes)) setPrice(current.unitPrice === undefined ? '' : String(current.unitPrice))
+    if (!('note' in changes)) setNote(current.note ?? '')
+    if (!('variety' in changes)) setVariety(current.variety)
+    setInitial(current); setQuantity(current.requestedQuantity); setRaw(String(current.requestedQuantity)); setUnit('cay')
+    setReloadRequired(false); setError(null); await onRefresh()
+  }
+  if (reconcile && quantity !== null) return <OrderReconciliationModal orderId={order.id} desiredRequestedQuantity={quantity}
+    metadataPending={Object.keys(changes).some(key => key !== 'requestedQuantity')} onClose={() => setReconcile(false)}
+    onSuccess={async projection => {
+      // Preserve only intentionally edited metadata; untouched fields reload current authority.
+      setNotice(`Đã giảm đơn ${formatQuantity(projection.orderBefore.requestedQuantity)} → ${formatQuantity(projection.orderAfter.requestedQuantity)} cây. Nguồn giữ ${formatQuantity(projection.coverageBefore)} → ${formatQuantity(projection.coverageAfter)} cây.${projection.shortageAfter > 0 ? ` Đơn còn thiếu ${formatQuantity(projection.shortageAfter)} cây nguồn.` : ''} Thông tin ngày, giá và ghi chú chưa được lưu; hãy xác nhận CẬP NHẬT ĐƠN nếu muốn lưu.`)
+      try { await reloadCurrent() }
+      catch { setReloadRequired(true); setError('Đã điều chỉnh nguồn nhưng chưa tải lại được đơn. Thông tin bạn nhập vẫn được giữ; hãy tải lại trước khi lưu thông tin khác.') }
+      setReconcile(false)
+    }} />
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (submitting.current || !validation.success) return
+    if (submitting.current || !validation.success || reloadRequired) return
     submitting.current = true
     setBusy(true); setError(null)
     try {
@@ -53,9 +77,11 @@ export function OrderEditModal({ order, reservations, shipments, onClose, onRefr
   }
   return (
     <OrderActionDialog title="Sửa đơn" busy={busy} onClose={onClose} footer={
-      <PrimaryButton type="submit" form="edit-order-form" disabled={busy || !validation.success}>{busy ? 'Đang cập nhật...' : 'CẬP NHẬT ĐƠN'}</PrimaryButton>
+      <PrimaryButton type="submit" form="edit-order-form" disabled={busy || !validation.success || reloadRequired}>{busy ? 'Đang cập nhật...' : 'CẬP NHẬT ĐƠN'}</PrimaryButton>
     }>
       <form id="edit-order-form" onSubmit={submit} className="space-y-4">
+        {notice && <p role="status" className="bg-emerald-50 p-3 rounded-xl">{notice}</p>}
+        {reloadRequired && <button type="button" className="min-h-12 underline" onClick={() => reloadCurrent().catch(() => setError('Chưa tải được đơn. Thông tin bạn nhập vẫn được giữ.'))}>TẢI LẠI ĐƠN</button>}
         <fieldset disabled={busy} className="space-y-4">
           {reservations.length === 0 ? <label className="block font-semibold">Giống cây
             <input className={fieldClass} value={variety} onChange={(e) => { setVariety(e.target.value); setError(null) }} />
@@ -73,7 +99,8 @@ export function OrderEditModal({ order, reservations, shipments, onClose, onRefr
           </div>
           {conflict ? <div role="alert" className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-amber-950 space-y-1">
             <p className="font-bold">Đang giữ dư {formatQuantity(conflict.excessQuantity)} cây so với số đặt mới.</p>
-            <p>Chưa thể giảm đơn xuống {formatQuantity(conflict.requestedQuantity)} cây. Nguồn giữ vẫn được giữ nguyên; hãy xem lại nguồn đã giữ trước khi giảm đơn.</p>
+            <p>Chọn rõ nguồn giảm để lưu số đặt mới và nguồn giữ cùng nhau.</p>
+            <button type="button" className="min-h-12 w-full px-3 border border-amber-400 rounded-xl font-bold" onClick={() => setReconcile(true)}>ĐIỀU CHỈNH NGUỒN GIỮ</button>
           </div> : !validation.success && <div role="alert" className="text-rose-800 space-y-2"><p>{validation.error}</p>
             {validation.code === 'VARIETY_LOCKED' && <button type="button" className="min-h-12 px-3 border border-slate-300 rounded-xl font-semibold"
               onClick={() => { setVariety(order.variety); setError(null) }}>Giữ giống cây hiện tại</button>}
