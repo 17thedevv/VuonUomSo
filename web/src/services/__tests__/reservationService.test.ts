@@ -409,17 +409,17 @@ describe('Service: reservationService (Phase P3)', () => {
     expect(orderShortage(order, currentRes)).toBe(78000)
 
     // 2. Reserve 35.000 from Vườn Thảo
-    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier1.id, quantity: 35000 })
+    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier1.id, quantity: 35000, confirmation: { acknowledged: true, supplierId: supplier1.id, variety: order.variety, quantity: 35000 } })
     currentRes = await db.reservations.toArray()
     expect(orderShortage(order, currentRes)).toBe(43000)
 
     // 3. Reserve 22.000 from Vườn Hồng
-    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier2.id, quantity: 22000 })
+    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier2.id, quantity: 22000, confirmation: { acknowledged: true, supplierId: supplier2.id, variety: order.variety, quantity: 22000 } })
     currentRes = await db.reservations.toArray()
     expect(orderShortage(order, currentRes)).toBe(21000)
 
     // 4. Reserve 21.000 from Vườn An
-    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier3.id, quantity: 21000 })
+    await reserveExternalSupplier({ orderId: order.id, supplierId: supplier3.id, quantity: 21000, confirmation: { acknowledged: true, supplierId: supplier3.id, variety: order.variety, quantity: 21000 } })
     currentRes = await db.reservations.toArray()
     expect(orderShortage(order, currentRes)).toBe(0)
     expect(reservedQuantityForOrder(order.id, currentRes)).toBe(100000)
@@ -448,7 +448,8 @@ describe('Service: reservationService (Phase P3)', () => {
       reserveExternalSupplier({
         orderId: order.id,
         supplierId: nonSupplierContact.id,
-        quantity: 5000
+        quantity: 5000,
+        confirmation: { acknowledged: true, supplierId: nonSupplierContact.id, variety: order.variety, quantity: 5000 }
       })
     ).rejects.toThrow(/Liên hệ này không phải nguồn cung cây/)
   })

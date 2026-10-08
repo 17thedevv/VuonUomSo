@@ -1,5 +1,5 @@
 import { db } from '../data/db'
-import type { Reservation, ReservationSourceType, ReservationStatus } from '../domain/reservation'
+import type { Reservation, ReservationSourceType, ReservationStatus, ExternalReservationConfirmation } from '../domain/reservation'
 import type { Order } from '../domain/order'
 import type { Contact } from '../domain/contact'
 import type { BatchWithAvailability } from '../domain/batch'
@@ -23,7 +23,6 @@ import {
   validateOrderShortage,
   type ExternalSupplierCandidate
 } from '../domain/reservation'
-import { DEFAULT_SUPPLIER_CATALOG } from '../data/demo/supplierCatalog'
 import { undoService } from './undoService'
 
 export interface ReserveOwnBatchParams {
@@ -36,6 +35,7 @@ export interface ReserveExternalSupplierParams {
   orderId: string
   supplierId: string
   quantity: number
+  confirmation: ExternalReservationConfirmation
 }
 
 export interface ReleaseReservationParams {
@@ -110,22 +110,10 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
   // External suppliers: contacts with role 'supplier'
   const supplierContacts = allContacts.filter((c) => c.roles.includes('supplier'))
   const externalSuppliers: ExternalSupplierCandidate[] = supplierContacts.map((c) => {
-    // Check if supplier has known mock catalog for this variety
-    const catalogMatch = DEFAULT_SUPPLIER_CATALOG.find(
-      (entry) =>
-        entry.supplierName.trim().toLowerCase() === c.name.trim().toLowerCase() &&
-        entry.variety.trim().toLowerCase() === order.variety.trim().toLowerCase()
-    )
-
-    const estimatedQuantity = catalogMatch ? catalogMatch.estimatedQuantity : 30000
-
     return {
       supplierId: c.id,
       name: c.name,
-      phone: c.phone,
-      variety: order.variety,
-      estimatedQuantity,
-      note: 'Số lượng tham khảo từ nhà vườn liên kết'
+      phone: c.phone
     }
   })
 
@@ -233,10 +221,8 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
 
     // 6. Re-calculate live shortage of order at commit time
     const orderReservations = await db.reservations.where('orderId').equals(orderId).toArray()
-    const activeOrderReserved = orderReservations
-      .filter((r) => r.status === 'active' || r.status === 'fulfilled')
-      .reduce((sum, r) => sum + r.quantity, 0)
-    const currentShortage = Math.max(order.requestedQuantity - activeOrderReserved, 0)
+    const currentCoverage = reservedQuantityForOrder(orderId, orderReservations)
+    const currentShortage = orderShortage(order, orderReservations)
 
     // 7. Invariant: Cannot over-reserve order
     const shortageCheck = validateOrderShortage(quantity, currentShortage)
@@ -259,7 +245,7 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
 
     // 9. Update order status if not partially shipped
     if (order.status !== 'partially_shipped') {
-      const newTotalReserved = activeOrderReserved + quantity
+      const newTotalReserved = currentCoverage + quantity
       if (newTotalReserved >= order.requestedQuantity) {
         order.status = 'reserved'
       } else {
@@ -345,7 +331,7 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
   success: boolean
   reservation: Reservation
 }> {
-  const { orderId, supplierId, quantity } = params
+  const { orderId, supplierId, quantity, confirmation } = params
 
   const result = await db.transaction('rw', [db.orders, db.reservations, db.events, db.contacts], async () => {
     // 1. Re-read order at commit time
@@ -372,12 +358,17 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
       throw new Error(qtyCheck.error)
     }
 
+    if (confirmation?.acknowledged !== true) {
+      throw new Error('Vui lòng xác nhận đã gọi/nhắn với nhà vườn về số cây giữ cho đơn này.')
+    }
+    if (confirmation.supplierId !== supplierId || confirmation.quantity !== quantity || confirmation.variety !== order.variety) {
+      throw new Error('Nhà vườn, giống hoặc số cây đã thay đổi. Hãy xem lại và xác nhận với nhà vườn trước khi giữ nguồn.')
+    }
+
     // 4. Re-calculate live shortage of order at commit time
     const orderReservations = await db.reservations.where('orderId').equals(orderId).toArray()
-    const activeOrderReserved = orderReservations
-      .filter((r) => r.status === 'active' || r.status === 'fulfilled')
-      .reduce((sum, r) => sum + r.quantity, 0)
-    const currentShortage = Math.max(order.requestedQuantity - activeOrderReserved, 0)
+    const currentCoverage = reservedQuantityForOrder(orderId, orderReservations)
+    const currentShortage = orderShortage(order, orderReservations)
 
     // 5. Invariant: Cannot over-reserve order
     const shortageCheck = validateOrderShortage(quantity, currentShortage)
@@ -400,7 +391,7 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
 
     // 7. Update order status if not partially shipped
     if (order.status !== 'partially_shipped') {
-      const newTotalReserved = activeOrderReserved + quantity
+      const newTotalReserved = currentCoverage + quantity
       if (newTotalReserved >= order.requestedQuantity) {
         order.status = 'reserved'
       } else {
@@ -422,7 +413,8 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
         supplierId,
         supplierName: supplier.name,
         quantity,
-        message: `Đã giữ ${formatQuantity(quantity)} cây từ ${supplier.name}`
+        variety: order.variety,
+        message: `Đã ghi nhận giữ ${formatQuantity(quantity)} cây từ ${supplier.name}`
       },
       createdAt: reservation.createdAt
     })
@@ -443,7 +435,7 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
     orderId,
     expectedReservation: { ...result.reservation },
     expectedOrderEventIds: result.orderEventIds,
-    description: `Đã giữ ${formatQuantity(quantity)} cây từ ${result.supplierName}.`
+    description: `Đã ghi nhận giữ ${formatQuantity(quantity)} cây từ ${result.supplierName}.`
   })
 
   return {
