@@ -49,6 +49,12 @@ Nhả phần chưa xuất không được giả thành đã xuất: không đặ
 
 Ngoại lệ full release giữ Q dương để tương thích model/release hiện có và `backup.validate.ts`, vốn yêu cầu Q > 0 với mọi reservation. Không lưu Q = 0, không thay backup/schema chỉ để diễn đạt “còn giữ 0”. Events before/after ghi cả Q/F/status và O trước/sau; original creation history không bị sửa. Đây là quyết định contract, chưa là code đã triển khai.
 
+### Backup compatibility — yêu cầu bắt buộc khi implementation
+
+Backup validation **MUST allow `activeOutstanding > readyQuantity`**. Đây là trạng thái thiếu cây đã giữ hợp lệ theo FC0 và FC3, kể cả shortage còn lại sau partial reconciliation, **không phải corruption**. `backup.validate.ts` trên base `0283ea49` hiện từ chối trạng thái này; implementation FC3 **MUST loại bỏ invariant backup cũ `activeOutstanding <= readyQuantity` mâu thuẫn với FC0** trước khi nghiệm thu backup/restore. Không coi validator hiện tại đã đáp ứng acceptance này.
+
+Validator **MUST giữ** `Q > 0`, `0 <= F <= Q`, status semantics, referential integrity, planned-shipment allocation integrity và các invariant hợp lệ khác (gồm `ready <= living <= initial`, coverage đơn <= requested, completed shipment/fulfillment integrity). Cho phép shortage khi restore không cấp quyền tạo thêm cam kết vượt available; guard giữ/chuyển nguồn tại commit vẫn giữ nguyên. FC3 không đổi schema/format chỉ để biểu diễn shortage, không tự nâng ready hoặc giảm/nhả reservation khi restore. Backup/restore phải bảo toàn state, shortage và history đúng như đã lưu.
+
 ## 3. Ranh giới đơn đã xuất và giảm đơn atomic
 
 **Giảm requestedQuantity chỉ trước khi xuất**, giữ FC0 điều 6 và guard FC2: completed shipment, fulfilled history hoặc stored shipped/partially_shipped đều khóa sửa số đặt; không dùng FC3 để né guard. Khi đơn đã xuất một phần, Trigger B có thể giảm/chuyển O chưa xuất của active reservation, giữ requested và lịch sử xuất nguyên vẹn. Không tự đánh cancelled/closed_remaining; dừng phần còn lại thuộc FC5.
@@ -118,6 +124,8 @@ Copy dùng O: “Đã điều chỉnh nguồn giữ BV16 #12: còn giữ 15.000 
 
 Không thêm Undo reconciliation ở FC3 đầu tiên. Sau thành công, stale Undo không được xóa/phục hồi record đã reconciliation; các guards create-order/create-reservation cũ phải nhận biết history và current state mới trước implementation handoff. Không thay rollback an toàn bằng Undo sau commit.
 
+**Required implementation task:** harden `create_reservation` Undo, hiện còn gọi release trực tiếp trên base, để từ chối Undo cũ khi record đã reconciliation; không được nhả lại cam kết sau điều chỉnh/chuyển. Bắt buộc regression real service kiểm tra Undo cũ không đổi nguồn, coverage, history hoặc stock sau reconciliation. Đây là gate implementation, không phải một Undo reconciliation mới.
+
 ## 8. Transaction, stale intent và idempotency
 
 Read orders bị ảnh hưởng → reservations của orders và source/target batches → source/target batch facts → planned/completed shipments → validate current state và intent → mutate → append events, **trong một Dexie rw transaction** bao phủ orders/reservations/batches/shipments/events (contacts chỉ khi cần snapshot nhãn). UI preview ngoài transaction không cấp quyền mutate. Living/ready của mọi batch giữ nguyên; không ghi snapshot batch cũ ngược lên.
@@ -158,6 +166,8 @@ Duplicate submit/retry cùng operationId không được giảm lần hai hoặc
 | Trigger B trên active O của đơn đã xuất một phần | Chỉ O thay, requested/F/completed không đổi; không closed_remaining |
 | Stale facts theo mục8, confirm shipment/cancel order/reconciliation interleaving | Re-read tại commit; không mất dữ liệu hay bán khống |
 | Failure event/write + duplicate submit/retry | Rollback hoặc idempotent; không duplicate target/history |
+| Backup/restore shortage hợp lệ: ready15k, O18k; partial reconciliation còn O17k | Cả state thiếu3k trước và thiếu2k sau đều validate/round-trip được, Q/F/status/stock/history giữ nguyên |
+| Backup thiếu nguồn nhưng kèm Q0/F>Q/status sai/reference hỏng/planned allocation>O | Vẫn reject corruption; cho phép shortage không bỏ các integrity guards khác |
 | Backup/restore + reload + stale Undo sau reconciliation | Bảo toàn status/Q/F/coverage/history, không xóa phần đã xuất |
 
 Tests phải dùng domain assertions và real Dexie service integration, không chỉ mock UI message. FC3 final acceptance chạy cross-flow mobile 360–430px và kiểm stock/history trước/sau; chưa chạy hay viết tests reconciliation ở task docs này.
