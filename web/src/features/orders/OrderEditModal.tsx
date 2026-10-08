@@ -25,12 +25,14 @@ export function OrderEditModal({ order, reservations, shipments, onClose, onRefr
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const submitting = useRef(false)
-  const changes: OrderChanges = { requestedQuantity: quantity ?? NaN }
+  // Submit only intentional changes; untouched fields belong to the latest stored order.
+  const changes: OrderChanges = {}
+  if (quantity !== null && quantity !== initial.requestedQuantity) changes.requestedQuantity = quantity
   if (variety !== initial.variety) changes.variety = variety
   if (date !== (initial.requestedDate?.slice(0, 10) ?? '')) changes.requestedDate = date || null
   if (price !== (initial.unitPrice === undefined ? '' : String(initial.unitPrice))) changes.unitPrice = price.trim() ? Number(price) : null
   if (note !== (initial.note ?? '')) changes.note = note || null
-  const validation = validateOrderChanges(order, changes, reservations, shipments)
+  const validation = validateOrderChanges(order, { ...changes, requestedQuantity: quantity ?? NaN }, reservations, shipments)
   const coverage = reservedQuantityForOrder(order.id, reservations)
   const conflict = !validation.success ? validation.conflict : undefined
   const fieldClass = 'w-full min-h-12 border border-slate-300 rounded-xl px-3 py-2 text-base bg-white'

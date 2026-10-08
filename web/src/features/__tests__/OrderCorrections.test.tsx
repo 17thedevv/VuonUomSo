@@ -1,11 +1,12 @@
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { OrderDetailScreen } from '../orders/OrderDetailScreen'
 import { clearAllData, resetDemoData } from '../../data/seed'
 import { db } from '../../data/db'
 import { undoService } from '../../services/undoService'
 import { createShipment, confirmShipment } from '../../services/shipmentService'
+import { updateOrder } from '../../services/orderService'
 import { availableQuantityForBatch } from '../../domain/quantity'
 
 function renderOrder(id = 'order_hung_01') {
@@ -81,6 +82,44 @@ describe('FC2 Order Edit/Cancel UI', () => {
     expect(screen.getByText('Đã sửa ngày hẹn lấy · Đã sửa giá mỗi cây · Đã sửa ghi chú')).toBeInTheDocument()
     expect(screen.queryByText(/50\.000 → 50\.000/)).not.toBeInTheDocument()
     expect(screen.getByText(/Giá mỗi cây:/)).toHaveTextContent('0 đồng')
+  })
+
+  it('preserves intervening order edits when the stale form submits only a new note', async () => {
+    renderOrder(); const dialog = await openEdit()
+    await act(async () => {
+      expect(await updateOrder({ orderId: 'order_hung_01', requestedQuantity: 60000,
+        requestedDate: '2026-11-02', unitPrice: 1500 })).toMatchObject({ success: true })
+    })
+    const before = await baseline()
+    expect(within(dialog).getByLabelText(/Số lượng đặt/)).toHaveValue('50000')
+    fireEvent.change(within(dialog).getByLabelText('Ghi chú'), { target: { value: 'Giao buổi sáng' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'CẬP NHẬT ĐƠN' }))
+    await screen.findByRole('status')
+    expect(await db.orders.get('order_hung_01')).toMatchObject({ requestedQuantity: 60000,
+      requestedDate: '2026-11-02', unitPrice: 1500, note: 'Giao buổi sáng' })
+    expect(await db.reservations.toArray()).toEqual(before.reservations)
+    expect(await db.batches.toArray()).toEqual(before.batches)
+    const correction = (await db.events.toArray()).find((event) => !before.events.some((old) => old.id === event.id))
+    expect(correction).toMatchObject({ type: 'order_updated', payload: { changedFields: ['note'],
+      before: { requestedQuantity: 60000 }, after: { requestedQuantity: 60000 } } })
+    expect(screen.queryByText('Số đặt: 60.000 → 50.000 cây')).not.toBeInTheDocument()
+  })
+
+  it('lets the last intentional quantity edit win, validated against current supply at commit time', async () => {
+    renderOrder(); const dialog = await openEdit()
+    await act(async () => {
+      expect(await updateOrder({ orderId: 'order_hung_01', requestedQuantity: 60000 })).toMatchObject({ success: true })
+    })
+    const before = await baseline()
+    fireEvent.change(within(dialog).getByLabelText(/Số lượng đặt/), { target: { value: '55000' } })
+    expect(within(dialog).getByText(/Số đặt sau sửa/)).toHaveTextContent('55.000 cây')
+    expect(within(dialog).getByText(/Thiếu nguồn sau sửa/)).toHaveTextContent('25.000 cây')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'CẬP NHẬT ĐƠN' }))
+    await screen.findByRole('status')
+    expect(await db.orders.get('order_hung_01')).toMatchObject({ requestedQuantity: 55000 })
+    expect(await db.reservations.toArray()).toEqual(before.reservations)
+    expect(await db.batches.toArray()).toEqual(before.batches)
+    expect(screen.getByText('Số đặt: 60.000 → 55.000 cây')).toBeInTheDocument()
   })
 
   it('exposes variety only with no reservation history and permits changing it', async () => {
