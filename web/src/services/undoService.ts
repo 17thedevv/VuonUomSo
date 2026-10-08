@@ -250,7 +250,8 @@ class UndoService {
           const reservations = await db.reservations.where('orderId').equals(order.id).count()
           const shipments = await db.shipments.where('orderId').equals(order.id).count()
           const corrected = await db.events.where('entityId').equals(order.id)
-            .filter((e) => e.entityType === 'order' && (e.type === 'order_updated' || e.type === 'order_cancelled')).count()
+            .filter((e) => e.entityType === 'order' &&
+              (e.type === 'order_updated' || e.type === 'order_cancelled' || e.type === 'order_reconciled')).count()
           if (order.status !== 'open' || reservations > 0 || shipments > 0 || corrected > 0) {
             return { status: 'changed' as const }
           }

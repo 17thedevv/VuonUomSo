@@ -7,6 +7,7 @@ import { availableQuantityForBatch } from '../../domain/quantity'
 import { reserveOwnBatch, reserveExternalSupplier } from '../reservationService'
 import { createShipment, confirmShipment, cancelShipment } from '../shipmentService'
 import { undoService } from '../undoService'
+import { previewOrderReduction, reconcileOrderReduction } from '../reconciliationService'
 
 describe('FC3-1A: reservation Undo commit safety (real Dexie)', () => {
   beforeEach(async () => {
@@ -77,6 +78,27 @@ describe('FC3-1A: reservation Undo commit safety (real Dexie)', () => {
     await db.reservations.update(reservation.id, { quantity: 7000 })
     await expectStaleUnchanged()
     expect((await db.reservations.get(reservation.id))?.quantity).toBe(7000)
+  })
+
+  it.each([7000, 10000, 0])('FC3-1B required gate: old Undo fails after REAL 10k→%i reconciliation, retaining all post-state', async newOutstanding => {
+    const { reservation, mutation } = await reserve()
+    const stockBefore = await db.batches.toArray()
+    const requestedQuantity = Math.max(newOutstanding, 7000)
+    const plan = { orderId: 'order', desiredRequestedQuantity: requestedQuantity,
+      adjustments: [{ reservationId: reservation.id, newOutstanding }] }
+    const preview = await previewOrderReduction(plan)
+    expect(preview.success).toBe(true)
+    if (!preview.success) throw new Error(preview.error)
+    expect(await reconcileOrderReduction({ ...plan, operationId: 'real-reduction', expectedFingerprint: preview.fingerprint }))
+      .toMatchObject({ success: true, projection: { coverageAfter: newOutstanding,
+        orderAfter: { requestedQuantity, status: newOutstanding === 0 ? 'open' : 'reserved' } } })
+    undoService.recordMutation(mutation, 0)
+    await expectStaleUnchanged()
+    expect(await db.reservations.get(reservation.id)).toMatchObject({ quantity: newOutstanding || 10000,
+      fulfilledQuantity: 0, status: newOutstanding === 0 ? 'released' : 'active' })
+    expect(await db.batches.toArray()).toEqual(stockBefore)
+    expect(await db.events.where('type').equals('order_reconciled').count()).toBe(1)
+    expect(await db.events.where('type').equals('reservation_released').count()).toBe(0)
   })
 
   it('rejects after real partial shipment, preserving F, shipment, stock and events', async () => {
