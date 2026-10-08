@@ -23,8 +23,9 @@ docs/
   - Khi có Native mobile app: Thêm Capacitor shell trong `web/` (`web/android`, `web/ios`).
 
 ## 2. `product/`
-- Định vị: **Sổ cây giống trên điện thoại** cho hệ sinh thái lâm nghiệp (Hữu Lũng, Lạng Sơn và mở rộng).
-- Bất biến cốt lõi: Quản lý lô, khả năng đáp ứng (Availability), giữ cây (Reservation), xuất xe (Shipment).
+- Định vị hiện tại: **Vườn Ươm — Sổ cây giống trên điện thoại** cho hệ sinh thái cây giống.
+- Bất biến cốt lõi hiện tại: quản lý lô, khả năng đáp ứng (Availability), giữ cây (Reservation), điều phối nguồn và xuất cây (Shipment).
+- [Product Expansion Thesis](product/PRODUCT-EXPANSION-THESIS.md): giả thuyết dài hạn về “sổ hàng có cam kết”; **không đổi scope FC3–FC6 và chưa đổi tên Vườn Ươm**.
 
 ## 3. `ux/`
 - Nguyên lý Zalo: Giao diện một tay, font chữ rõ ràng, nút bấm lớn $\ge 44\text{px}$.
