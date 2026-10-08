@@ -60,7 +60,7 @@
 ### FC4-0 contract review (08/10/2026)
 
 - **FC4-0 REVIEW PENDING / FC4 implementation NOT STARTED**: [External Supply Truthfulness Contract](../docs/development/FC4-FUNCTIONAL-CONTRACT.md), audit exact base `86f513c7ce8a8f7c95ef85099872b91b2d6cb64d`. Task chỉ đổi contract và PROJECT_STATE, không có `web/` diff; không đóng contract trước approval + merge/CI xanh, không đánh FC4 DONE.
-- Contract khóa bỏ catalog estimate/fallback30k khỏi production workflow, external quantity trống ban đầu và explicit user-confirmed input/acknowledgement, supplier contact không phải inventory, legacy commitments/history/backup được giữ. Required implementation gate: current external shortage phải tính cả F của released source theo coverage helpers hiện có, không over-cover sau xuất/release.
+- Contract khóa bỏ catalog estimate/fallback30k khỏi production workflow, external quantity trống ban đầu và explicit user-confirmed input/acknowledgement, supplier contact không phải inventory, legacy commitments/history/backup được giữ. Required implementation gate: **cả `reserveOwnBatch()` và `reserveExternalSupplier()`** phải dùng canonical current coverage/shortage gồm F của released source, kèm real Dexie regression riêng: requested50k/released Q20k F10k/active Q20k → add30k FAIL, add20k PASS nếu guard nguồn tương ứng đạt. Không over-cover sau xuất/release; không refactor toàn reservation engine.
 - FC0/FC2/FC3 authority, planned allocation, stale Undo và shipment physical stock semantics giữ nguyên. Không cloud/backend/marketplace, external transfer, schema/dependency, FC5 hoặc generic-product refactor; implementation cần task riêng sau contract được duyệt.
 
 ---

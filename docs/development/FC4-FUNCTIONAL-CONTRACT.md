@@ -36,7 +36,8 @@ Các anchor dưới đây thuộc exact base nêu trên. Đây là audit source,
 | `web/src/features/orders/ReserveQuantityModal.tsx:55–59,83–89,204–207` | External default = min(estimate, shortage); estimate là “Tham khảo nguồn”. `isOverBatch` chỉ áp dụng own batch | External mở trống; không estimate reference. **Base không hard-cap external theo estimate**; không mô tả nhầm rằng service hiện có cap này |
 | `web/src/features/orders/ReserveQuantityModal.tsx:100–105,138–142,240` | “Giữ đủ đơn” lấy shortage điền form; submit external chỉ truyền order/supplier/quantity, không có acknowledgement riêng | Shortage là nhu cầu của đơn, không phải số supplier đã xác nhận; không tự dùng nó làm confirmed value. Thêm acknowledgement chủ động theo §4 |
 | `web/src/services/reservationService.ts:344–446` — `reserveExternalSupplier()` | Transaction re-read order/supplier/role/quantity/shortage rồi write reservation/order/event, capture Undo snapshot; không đọc catalog để kiểm stock | Giữ atomicity, role/status và Undo guards; thêm confirmation intent; dùng coverage chuẩn, không thêm supplier stock check |
-| `web/src/services/reservationService.ts:374–379` so với `web/src/domain/order.ts:60–77` | Mutation chỉ cộng Q active/fulfilled, bỏ F của released; domain helper/backup vẫn tính released coverage = F | **Required correctness gate:** current shortage khi tạo external MUST tính cả released F bằng authority hiện có; không over-cover sau xuất một phần + release |
+| `web/src/services/reservationService.ts:235–239,262` — `reserveOwnBatch()` so với `web/src/domain/order.ts:60–77` | Own creation chỉ cộng Q active/fulfilled, bỏ F của released khi tính current coverage/shortage và status recompute; có thể over-cover dù batch availability đủ | **Required correctness gate:** own creation MUST dùng canonical coverage, gồm released F; giữ batch availability/variety guards và regression riêng |
+| `web/src/services/reservationService.ts:376–380,403` — `reserveExternalSupplier()` so với `web/src/domain/order.ts:60–77` | External creation có cùng lỗi bỏ released F; domain helper/backup vẫn tính released coverage = F | **Required correctness gate:** external creation MUST dùng cùng canonical coverage; giữ supplier/confirmation guards và regression riêng |
 | `web/src/services/contactService.ts` và `web/src/features/orders/ContactQuickCreateModal.tsx:36–40` | Service nhận roles, default customer; modal hiện tại dùng customer flow, không truyền supplier role | Thêm/chọn nhà vườn thật với role supplier; không tái sử dụng default customer như supplier hợp lệ |
 | `web/src/services/shipmentService.ts` — `confirmShipment()` | Own lines giảm living/ready; external lines tăng F, không write own stock | Giữ nguyên; external completion không phải nhập kho mình |
 | `web/src/data/backup/backup.validate.ts:292–370` | Kiểm Q/F/status, supplier reference/role và coverage; released F vẫn được tính | Giữ integrity/compatibility; không thêm supplier inventory hay historical acknowledgement requirement |
@@ -120,17 +121,22 @@ Implementation MUST giữ luồng local-first; xác nhận xảy ra ngoài app, 
 
 MUST fail trước write khi thiếu order/supplier, contact không có supplier role, order cancelled/shipped, confirmation thiếu hoặc context sai, quantity không phải số nguyên dương hữu hạn, quantity vượt **current** shortage, hay intervening update làm over-cover. Không fail vì “supplier estimated stock insufficient”. Failure không được ghi một phần reservation/order/history hoặc tạo success giả. Event-write failure MUST rollback toàn mutation, không tạo Undo của một write chưa commit.
 
-Current shortage và status recompute MUST dùng coverage chuẩn ở §3, gồm F của released reservations. **Required implementation gate**, không được quên vì UI đã bỏ estimate:
+**Mọi reservation creation path tính current order coverage/shortage và status recompute MUST dùng canonical coverage semantics ở §3**, gồm F của released reservations. **Required implementation gate cho cả `reserveOwnBatch()` và `reserveExternalSupplier()`**, không được quên vì UI đã bỏ estimate:
 
 ```text
 requested = 50.000
 released source: Q = 20.000, F = 10.000, O = 0
 active other source: Q = 20.000, F = 0
 coverage = 30.000 → shortage = 20.000
-new external 30.000 MUST fail; 20.000 được phép nếu confirmed
+add 30.000 own → FAIL, dù batch còn bán đủ
+add 30.000 external → FAIL, dù user đã confirmed
+add 20.000 own → PASS nếu batch availability/variety và các guard hiện có đạt
+add 20.000 external → PASS nếu supplier/confirmation và các guard hiện có đạt
 ```
 
-Base external service tính thiếu 30.000 trong case này vì bỏ released F; sửa bằng authority domain hiện có ở external creation path, không tự tạo công thức UI hoặc refactor toàn reservation engine. Backup guard coverage <= requested MUST tiếp tục bắt corruption.
+Base **cả hai creation services** đều tính thiếu 30.000 trong case này vì bỏ released F. Implementation MUST sửa cả `reserveOwnBatch()` và `reserveExternalSupplier()` bằng authority domain hiện có: reuse `reservedQuantityForOrder` / `orderShortage`, hoặc extract helper hẹp cộng `coveredQuantityForReservation` rồi tính max(requested − currentCoverage, 0). Read/validate/write vẫn nằm trong transaction của từng path; không tự tạo công thức UI hoặc refactor toàn reservation engine. Đây là bảo vệ invariant FC0/FC3 `coverage <= requested`, không mở rộng nghiệp vụ FC4. Backup guard coverage <= requested MUST tiếp tục bắt corruption.
+
+Bắt buộc **real Dexie regression cho cả hai creation paths** với fixture trên, gồm 30k rejection không ghi reservation/order/event và 20k success theo guard nguồn tương ứng. Các success cases dùng fixtures độc lập: coverage sau write đúng 50k, không cộng hai lần vào cùng một shortage. Không chấp nhận chỉ sửa/test external rồi để own path giữ cùng lỗi.
 
 UI phải refresh facts sau success, không lấy `orderShortage` snapshot cũ trừ quantity rồi báo “đã đủ” nếu current authority khác. Stale state gây rejection cần giải thích, refresh current shortage/context và để user quyết định lại; không tự clamp/commit phần còn lại. Đổi context xác nhận thì phải xác nhận lại.
 
@@ -192,7 +198,10 @@ Các gate dưới đây **chưa được chạy như FC4 acceptance**. Implement
 | Supplier/order missing, role bị bỏ, cancelled/shipped, 0/âm/lẻ/NaN | Fail, không ghi một phần; lỗi không viện dẫn fake supplier availability |
 | Current order variety khác context đã confirm | Fail/refresh/reconfirm; không ghi commitment cho giống user chưa xác nhận |
 | Intervening reservation / quantity giảm làm qty > current shortage | Commit-time rejection, reload; không over-cover, auto-clamp hoặc auto-confirm |
-| Requested50k, released Q20k/F10k, active Q20k | Shortage20k; external30k bị chặn, external20k confirmed hợp lệ; status/backup coverage đúng |
+| Requested50k, released Q20k/F10k, active Q20k → add own30k; batch đủ availability/cùng variety | FAIL vì current shortage20k; không ghi reservation/order/event, stock nguyên vẹn |
+| Cùng fixture → add external30k; supplier hợp lệ/đã confirmed | FAIL vì current shortage20k; không ghi reservation/order/event, stock nguyên vẹn |
+| Cùng fixture độc lập → add own20k; guard batch availability/variety và các guard hiện có đạt | PASS; coverage50k, shortage0, status giữ authority hiện có, không giảm physical stock; backup hợp lệ |
+| Cùng fixture độc lập → add external20k; guard supplier/confirmation và các guard hiện có đạt | PASS; coverage50k, shortage0, status giữ authority hiện có, own availability/physical stock không đổi; backup hợp lệ |
 | Hai submit cùng action; hai action cạnh tranh shortage cuối | Một ghi cho double-click; concurrent actions không over-cover; history đúng |
 | Event-write failure | Reservation/order/event rollback; không success/Undo giả, user có thể retry |
 | Một supplier nhiều đơn, xuất một phần | Aggregate có nhãn cam kết/O/F đúng; không suy luận stock remaining |
