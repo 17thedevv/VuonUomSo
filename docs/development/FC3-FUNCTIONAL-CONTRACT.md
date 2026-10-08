@@ -180,11 +180,11 @@ Tests phải dùng domain assertions và real Dexie service integration, không 
 | --- | --- | --- |
 | FC3-0 | Review/khóa contract này | APPROVED / CLOSED, PR #11 merged, CI xanh |
 | FC3-1A | Backup shortage + stale reservation Undo safety trước mutation | CLOSED / ACCEPTED / MERGED, PR #14, CI merge xanh; [báo cáo safety slice](./FC3-1A-SAFETY.md) |
-| FC3-1 | Order Reduction Reconciliation — domain/service atomic | NOT DONE; safety1A và service1B CLOSED; chờ UI/final acceptance |
+| FC3-1 | Order Reduction Reconciliation — domain/service atomic | DONE; safety1A/service1B/UI đã merge; [Final Acceptance trên main PASS](FC3-FINAL-ACCEPTANCE.md) |
 | FC3-1B | Atomic Order Reduction Reconciliation domain/service | CLOSED / ACCEPTED / MERGED, PR #16, CI merge xanh; [báo cáo implementation](FC3-1B-ORDER-REDUCTION.md); real-service stale Undo gate PASS |
 | FC3-2 | Batch Shortage Reconciliation + own-batch transfer | CLOSED / ACCEPTED / MERGED, PR #18, CI merge xanh; [báo cáo implementation](FC3-2-BATCH-RECONCILIATION.md) |
-| FC3-3 | UI + Cross-flow Hardening | NEXT; FC3-1B/FC3-2 domain/service đã nghiệm thu/merge; chưa code |
-| FC3 Final Acceptance | Full gates, mobile, stock/history/planned/export safety | Chưa bắt đầu; đạt mới FC3 DONE |
+| FC3-3 | UI + Cross-flow Hardening | CLOSED / ACCEPTED / MERGED, PR #20 tại `bce3abc`, CI merge xanh; [báo cáo](FC3-3-UI-HARDENING.md) |
+| FC3 Final Acceptance | Full gates, mobile, stock/history/planned/export safety | PASS trên main `bce3abc`; [báo cáo nghiệm thu](FC3-FINAL-ACCEPTANCE.md); FC3 DONE |
 
 FC3-0 gate đã đạt: người dùng duyệt các quyết định full-release/partial/after-shipment/stale intent, backup amendment và acceptance matrix; docs PR đã merge, merge CI xanh. Việc đóng contract không đồng nghĩa implementation hoặc FC3 overall đã hoàn thành. FC3-1 phải chứng minh hai safety gates bằng real Dexie regression trước khi expose reconciliation mutation.
 

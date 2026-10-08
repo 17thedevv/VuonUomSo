@@ -1,6 +1,6 @@
 # FC3-3 — Reconciliation UI + Cross-flow Hardening
 
-Status: **REVIEW PENDING**. FC3 overall remains **IN PROGRESS**; FC3-1 is not DONE. Merge and FC3 Final Acceptance on main are still required.
+Status: **CLOSED / ACCEPTED / MERGED**. Người dùng duyệt PR #20 tại `f9881a792011d3961c3a2d11d57c997f6f5539e9`; merge main `bce3abcd69c08e32b13cb341c071c8327e720199`, [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37779744535). [FC3 Final Acceptance](FC3-FINAL-ACCEPTANCE.md) trên main PASS; **FC3-1 DONE / FC3 DONE**. Nội dung implementation/browser bên dưới ghi lại evidence của slice trước merge.
 
 Repository: `17thedevv/VuonUomSo` · Branch: `feat/fc3-reservation-reconciliation`
 
@@ -37,7 +37,7 @@ Planned allocation failures show the exact planned and requested outstanding qua
 - Existing real reconciliation/Undo/backup/race/rollback service suites remain intact.
 - Full local suite: **48 files / 652 tests PASS**. Typecheck PASS; lint **0 warnings / 0 errors**; build PASS; PWA **14 precache entries**.
 - Build retains Vite's bundle-size advisory; no dependency or code-splitting change is included. Existing jsdom navigation notices remain non-failing.
-- Exact-head GitHub Actions result and SHA are recorded in the PR handoff; REVIEW PENDING is not a merge approval.
+- [Exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37777591743) tại `f9881a792011d3961c3a2d11d57c997f6f5539e9`; review người dùng PASS / MERGE READY, PR #20 đã merge.
 
 ## Browser evidence — isolated Chromium / IndexedDB
 
@@ -66,4 +66,4 @@ Changed files: seven UI/helper production files, one UI test file, this report a
 
 No domain/service semantics, schema, dependencies, FC4, FC5 `closed_remaining`, shipment-line editing, new external commitment capability, generic-product abstraction or whole-app redesign. Deep validation of manually corrupted idempotency-marker projections remains deferred exactly as accepted in FC3-1B/FC3-2.
 
-Next after review and merge: merge CI and **FC3 Final Acceptance on main**. Only then consider FC3 DONE / later roadmap work.
+Merge CI và **FC3 Final Acceptance on main** đã PASS. FC3 DONE; FC4/FC5 chưa bắt đầu. NOTE phân biệt ổn định các đơn của cùng khách có cùng quantity/date được ghi trong Final Acceptance cho trước field pilot, không vá UI/schema trong closure.
