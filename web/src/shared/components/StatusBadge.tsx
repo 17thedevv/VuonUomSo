@@ -31,7 +31,7 @@ const statusMap: Record<BadgeKind, StatusConfig> = {
     classes: 'bg-sky-50 text-sky-800 border-sky-300'
   },
   depleted: {
-    label: 'Đã xuất hết',
+    label: 'Đã hết',
     icon: Archive,
     classes: 'bg-slate-100 text-slate-700 border-slate-300'
   },

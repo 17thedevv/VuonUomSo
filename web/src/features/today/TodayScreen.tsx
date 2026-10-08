@@ -20,7 +20,7 @@ import {
   reservedQuantityForBatch,
   formatQuantity
 } from '../../domain/quantity'
-import { isBatchAttention } from '../../domain/batch'
+import { isBatchAttention, deriveBatchStatus } from '../../domain/batch'
 import {
   reservedQuantityForOrder,
   orderShortage,
@@ -125,7 +125,7 @@ export const TodayScreen: React.FC = () => {
 
   // Derived aggregates for CÂY HÔM NAY
   const totalAvailable = batches
-    .filter((b) => b.status === 'ready')
+    .filter((b) => deriveBatchStatus(b) === 'ready')
     .reduce((sum, b) => sum + b.availableQuantity, 0)
 
   const totalReserved = batches.reduce((sum, b) => sum + b.reservedQuantity, 0)

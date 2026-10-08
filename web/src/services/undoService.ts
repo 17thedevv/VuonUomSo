@@ -1,5 +1,7 @@
-import { batchRepository, orderRepository, eventRepository } from '../data/repositories'
+import { db } from '../data/db'
+import { createDomainEvent } from '../analytics/events'
 import { releaseReservation } from './reservationService'
+import { deriveBatchStatus } from '../domain/batch'
 
 export type ReversibleMutation =
   | {
@@ -13,6 +15,18 @@ export type ReversibleMutation =
       batchId: string
       batchCode: string
       previousQuantity: number
+      previousReadyQuantity?: number
+      expectedCurrentQuantity?: number
+      expectedReadyQuantity?: number
+      description: string
+    }
+  | {
+      type: 'update_ready_quantity'
+      batchId: string
+      batchCode: string
+      previousReadyQuantity: number
+      expectedReadyQuantity?: number
+      expectedCurrentQuantity?: number
       description: string
     }
   | {
@@ -79,25 +93,26 @@ class UndoService {
 
     try {
       if (mutation.type === 'create_batch') {
-        const batch = await batchRepository.getById(mutation.batchId)
-        if (!batch) {
+        const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+          const batch = await db.batches.get(mutation.batchId)
+          if (!batch) {
+            return { status: 'not_found' as const }
+          }
+
+          await db.batches.delete(mutation.batchId)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
+            action: 'delete_batch',
+            batchCode: mutation.batchCode
+          })
+          await db.events.put(undoEvent)
+
+          return { status: 'success' as const }
+        })
+
+        if (txResult.status === 'not_found') {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
         }
-
-        // Delete newly created batch
-        await batchRepository.delete(mutation.batchId)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'batch',
-          entityId: mutation.batchId,
-          payload: {
-            action: 'delete_batch',
-            batchCode: mutation.batchCode
-          }
-        })
 
         this.clearLastMutation()
         return {
@@ -108,34 +123,56 @@ class UndoService {
       }
 
       if (mutation.type === 'update_inventory') {
-        const batch = await batchRepository.getById(mutation.batchId)
-        if (!batch) {
+        const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+          const batch = await db.batches.get(mutation.batchId)
+          if (!batch) {
+            return { status: 'not_found' as const }
+          }
+
+          // Guard against intervening mutations INSIDE the transaction
+          if (
+            (mutation.expectedCurrentQuantity !== undefined && batch.currentQuantity !== mutation.expectedCurrentQuantity) ||
+            (mutation.expectedReadyQuantity !== undefined && batch.readyQuantity !== mutation.expectedReadyQuantity)
+          ) {
+            return { status: 'conflict' as const }
+          }
+
+          const oldCurrent = batch.currentQuantity
+          const oldReady = batch.readyQuantity
+          batch.currentQuantity = mutation.previousQuantity
+
+          if (mutation.previousReadyQuantity !== undefined) {
+            batch.readyQuantity = mutation.previousReadyQuantity
+          }
+
+          batch.status = deriveBatchStatus(batch)
+
+          await db.batches.put(batch)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
+            action: 'restore_inventory',
+            batchCode: mutation.batchCode,
+            fromQuantity: oldCurrent,
+            restoredQuantity: mutation.previousQuantity,
+            fromReadyQuantity: mutation.previousReadyQuantity !== undefined ? oldReady : undefined,
+            restoredReadyQuantity: mutation.previousReadyQuantity
+          })
+          await db.events.put(undoEvent)
+
+          return { status: 'success' as const }
+        })
+
+        if (txResult.status === 'not_found') {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
         }
 
-        const oldCurrent = batch.currentQuantity
-        batch.currentQuantity = mutation.previousQuantity
-
-        // If batch was marked depleted but now has stock, adjust status appropriately
-        if (batch.status === 'depleted' && mutation.previousQuantity > 0) {
-          batch.status = batch.readyQuantity > 0 ? 'ready' : 'propagating'
-        }
-
-        await batchRepository.save(batch)
-
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'batch',
-          entityId: mutation.batchId,
-          payload: {
-            action: 'restore_inventory',
-            batchCode: mutation.batchCode,
-            fromQuantity: oldCurrent,
-            restoredQuantity: mutation.previousQuantity
+        if (txResult.status === 'conflict') {
+          this.clearLastMutation()
+          return {
+            success: false,
+            message: 'Không thể hoàn tác vì lô đã thay đổi sau thao tác này.'
           }
-        })
+        }
 
         this.clearLastMutation()
         return {
@@ -145,27 +182,80 @@ class UndoService {
         }
       }
 
-      if (mutation.type === 'create_order') {
-        const order = await orderRepository.getById(mutation.orderId)
-        if (!order) {
+      if (mutation.type === 'update_ready_quantity') {
+        const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+          const batch = await db.batches.get(mutation.batchId)
+          if (!batch) {
+            return { status: 'not_found' as const }
+          }
+
+          // Guard against intervening mutations INSIDE the transaction
+          if (
+            (mutation.expectedReadyQuantity !== undefined && batch.readyQuantity !== mutation.expectedReadyQuantity) ||
+            (mutation.expectedCurrentQuantity !== undefined && batch.currentQuantity !== mutation.expectedCurrentQuantity)
+          ) {
+            return { status: 'conflict' as const }
+          }
+
+          const oldReady = batch.readyQuantity
+          batch.readyQuantity = mutation.previousReadyQuantity
+          batch.status = deriveBatchStatus(batch)
+
+          await db.batches.put(batch)
+          const undoEvent = createDomainEvent('mutation_undone', 'batch', mutation.batchId, {
+            action: 'restore_ready_quantity',
+            batchCode: mutation.batchCode,
+            fromReadyQuantity: oldReady,
+            restoredReadyQuantity: mutation.previousReadyQuantity
+          })
+          await db.events.put(undoEvent)
+
+          return { status: 'success' as const }
+        })
+
+        if (txResult.status === 'not_found') {
           this.clearLastMutation()
-          return { success: false, message: 'Đơn hàng không còn tồn tại.' }
+          return { success: false, message: 'Lô cây không còn tồn tại.' }
         }
 
-        // Delete newly created order
-        await orderRepository.delete(mutation.orderId)
+        if (txResult.status === 'conflict') {
+          this.clearLastMutation()
+          return {
+            success: false,
+            message: 'Không thể hoàn tác vì lô đã thay đổi sau thao tác này.'
+          }
+        }
 
-        // Record undo event
-        await eventRepository.record({
-          type: 'mutation_undone',
-          entityType: 'order',
-          entityId: mutation.orderId,
-          payload: {
+        this.clearLastMutation()
+        return {
+          success: true,
+          message: `Đã hoàn tác cập nhật cây đủ bán lô ${mutation.batchCode}: Khôi phục về ${mutation.previousReadyQuantity.toLocaleString('vi-VN')} cây.`,
+          revertedType: 'update_ready_quantity'
+        }
+      }
+
+      if (mutation.type === 'create_order') {
+        const txResult = await db.transaction('rw', [db.orders, db.events], async () => {
+          const order = await db.orders.get(mutation.orderId)
+          if (!order) {
+            return { status: 'not_found' as const }
+          }
+
+          await db.orders.delete(mutation.orderId)
+          const undoEvent = createDomainEvent('mutation_undone', 'order', mutation.orderId, {
             action: 'delete_order',
             orderId: mutation.orderId,
             customerName: mutation.customerName
-          }
+          })
+          await db.events.put(undoEvent)
+
+          return { status: 'success' as const }
         })
+
+        if (txResult.status === 'not_found') {
+          this.clearLastMutation()
+          return { success: false, message: 'Đơn hàng không còn tồn tại.' }
+        }
 
         this.clearLastMutation()
         return {

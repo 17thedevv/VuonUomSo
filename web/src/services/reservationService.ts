@@ -195,9 +195,6 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
     if (!batch) {
       throw new Error('Lô cây không tồn tại.')
     }
-    if (batch.status !== 'ready') {
-      throw new Error(`Lô ${batch.code} hiện không ở trạng thái đủ bán.`)
-    }
 
     // 2. Re-read order at commit time
     const order = await db.orders.get(orderId)

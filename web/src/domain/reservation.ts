@@ -71,8 +71,7 @@ export type ExternalSupplierCandidate = {
 /**
  * Filters own batches that can be reserved for an order:
  * 1. Must match order variety (case-insensitive)
- * 2. Status must be 'ready'
- * 3. Available quantity must be > 0
+ * 2. Available quantity must be > 0 (authority invariant: Batch.status does not decide sellability)
  */
 export function filterBatchCandidatesForOrder(
   batches: BatchWithAvailability[],
@@ -82,7 +81,6 @@ export function filterBatchCandidatesForOrder(
   return batches.filter(
     (b) =>
       b.variety.trim().toLowerCase() === targetVariety &&
-      b.status === 'ready' &&
       b.availableQuantity > 0
   )
 }

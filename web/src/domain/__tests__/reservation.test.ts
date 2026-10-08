@@ -26,19 +26,19 @@ describe('Domain: Reservation logic & helpers', () => {
   })
 
   describe('filterBatchCandidatesForOrder', () => {
-    it('filters batches to only matching variety, status=ready, and available > 0', () => {
+    it('filters batches to matching variety and available > 0 regardless of stored batch.status', () => {
       const batches: BatchWithAvailability[] = [
         createMockBatch({ id: '1', variety: 'Keo lai BV16', status: 'ready', availableQuantity: 10000 }),
         createMockBatch({ id: '2', variety: 'keo lai bv16', status: 'ready', availableQuantity: 5000 }), // case-insensitive
         createMockBatch({ id: '3', variety: 'Keo lai AH1', status: 'ready', availableQuantity: 20000 }), // wrong variety
-        createMockBatch({ id: '4', variety: 'Keo lai BV16', status: 'nearly_ready', availableQuantity: 15000 }), // not ready
-        createMockBatch({ id: '5', variety: 'Keo lai BV16', status: 'ready', availableQuantity: 0 }), // 0 available
-        createMockBatch({ id: '6', variety: 'Keo lai BV16', status: 'depleted', availableQuantity: 0 }) // depleted
+        createMockBatch({ id: '4', variety: 'Keo lai BV16', status: 'propagating', availableQuantity: 15000 }), // propagating but has available stock -> included!
+        createMockBatch({ id: '5', variety: 'Keo lai BV16', status: 'ready', availableQuantity: 0 }), // 0 available -> excluded
+        createMockBatch({ id: '6', variety: 'Keo lai BV16', status: 'depleted', availableQuantity: 0 }) // depleted & 0 available -> excluded
       ]
 
       const candidates = filterBatchCandidatesForOrder(batches, 'Keo lai BV16')
-      expect(candidates).toHaveLength(2)
-      expect(candidates.map((c) => c.id)).toEqual(['1', '2'])
+      expect(candidates).toHaveLength(3)
+      expect(candidates.map((c) => c.id)).toEqual(['1', '2', '4'])
     })
   })
 

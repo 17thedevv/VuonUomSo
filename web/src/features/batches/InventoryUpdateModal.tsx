@@ -22,29 +22,43 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
   const [rawInput, setRawInput] = useState(batch.currentQuantity.toString())
   const [parsedQuantity, setParsedQuantity] = useState<number | null>(batch.currentQuantity)
   const [unit, setUnit] = useState<'cay' | 'van'>('cay')
+  const [readyInput, setReadyInput] = useState('')
+  const [parsedReadyQuantity, setParsedReadyQuantity] = useState<number | null>(null)
+  const [readyUnit, setReadyUnit] = useState<'cay' | 'van'>('cay')
   const [note, setNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
+      setRawInput(batch.currentQuantity.toString())
+      setParsedQuantity(batch.currentQuantity)
+      setReadyInput('')
+      setParsedReadyQuantity(null)
+      setErrorMessage(null)
       void validationTracker.formStarted('inventory_updated')
     }
-  }, [isOpen])
+  }, [isOpen, batch.currentQuantity])
 
   if (!isOpen) return null
 
   const difference =
     parsedQuantity !== null ? parsedQuantity - batch.currentQuantity : null
 
-  // Validate invariants
-  const isLessThanReady =
+  // Invariant conditions
+  const needsReadyAdjustment =
     parsedQuantity !== null && parsedQuantity < batch.readyQuantity
+  const isReadyInvalid =
+    needsReadyAdjustment &&
+    (parsedReadyQuantity === null ||
+      parsedReadyQuantity < 0 ||
+      parsedReadyQuantity > parsedQuantity)
+
   const isGreaterThanInitial =
     parsedQuantity !== null && parsedQuantity > batch.initialQuantity
   const isNegative = parsedQuantity !== null && parsedQuantity < 0
   const isInvalid =
-    parsedQuantity === null || isLessThanReady || isGreaterThanInitial || isNegative
+    parsedQuantity === null || isGreaterThanInitial || isNegative || isReadyInvalid
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,6 +75,7 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
     const result = await updateBatchInventory({
       batchId: batch.id,
       newQuantity: parsedQuantity,
+      newReadyQuantity: needsReadyAdjustment && parsedReadyQuantity !== null ? parsedReadyQuantity : undefined,
       note: note.trim() || undefined
     })
 
@@ -175,17 +190,44 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
             </div>
           )}
 
-          {/* Invariant Violations */}
-          {isLessThanReady && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl text-xs flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-bold">Không thể lưu số lượng này</strong>
-                <p className="mt-0.5 leading-relaxed">
-                  Số cây còn sống không thể thấp hơn số cây đang được tính là đủ bán.
-                  Hiện đang có <strong>{formatQuantity(batch.readyQuantity)} cây</strong> đủ bán. Hãy kiểm tra lại số lượng.
-                </p>
+          {/* Dynamic Atomic Adjustment Prompt when Living < Ready */}
+          {needsReadyAdjustment && (
+            <div className="p-3.5 bg-amber-50/90 border border-amber-300 text-amber-950 rounded-xl space-y-3 text-xs">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-bold">
+                    Bạn vừa kiểm kê còn {formatQuantity(parsedQuantity)} cây sống.
+                  </div>
+                  <div className="text-amber-800 leading-relaxed">
+                    Hiện lô đang ghi <strong>{formatQuantity(batch.readyQuantity)} cây</strong> đủ bán, nên số này cần được điều chỉnh.
+                  </div>
+                </div>
               </div>
+
+              <div>
+                <QuantityInput
+                  id="adjusted-ready-quantity"
+                  label="Cây đủ bán hiện tại:"
+                  required
+                  value={readyInput}
+                  unit={readyUnit}
+                  onUnitChange={setReadyUnit}
+                  onChange={(raw, parsed) => {
+                    setReadyInput(raw)
+                    setParsedReadyQuantity(parsed)
+                    setErrorMessage(null)
+                  }}
+                  placeholder={`Tối đa ${formatQuantity(parsedQuantity)} cây`}
+                  showQuickChips={false}
+                />
+              </div>
+
+              {parsedReadyQuantity !== null && parsedReadyQuantity > parsedQuantity && (
+                <div className="text-rose-700 font-bold text-[11px]">
+                  Số cây đủ bán ({formatQuantity(parsedReadyQuantity)}) không thể lớn hơn số cây sống ({formatQuantity(parsedQuantity)} cây).
+                </div>
+              )}
             </div>
           )}
 

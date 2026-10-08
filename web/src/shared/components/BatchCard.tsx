@@ -1,6 +1,6 @@
 import React from 'react'
-import { ChevronRight, AlertTriangle, CheckCircle2, Clock, Sprout } from 'lucide-react'
-import type { BatchWithAvailability } from '../../domain/batch'
+import { ChevronRight, AlertTriangle, CheckCircle2, Sprout, Archive } from 'lucide-react'
+import { type BatchWithAvailability, deriveBatchStatus } from '../../domain/batch'
 import { formatQuantity } from '../../domain/quantity'
 import { formatShortDate } from '../../domain/date'
 
@@ -10,8 +10,9 @@ export interface BatchCardProps {
 }
 
 export const BatchCard: React.FC<BatchCardProps> = ({ batch, onClick }) => {
-  const isReady = batch.status === 'ready'
-  const isNearlyReady = batch.status === 'nearly_ready'
+  const derivedStatus = deriveBatchStatus(batch)
+  const isReady = derivedStatus === 'ready'
+  const isDepleted = derivedStatus === 'depleted'
 
   return (
     <div
@@ -37,10 +38,10 @@ export const BatchCard: React.FC<BatchCardProps> = ({ batch, onClick }) => {
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                 <span>Đang bán</span>
               </span>
-            ) : isNearlyReady ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                <Clock className="w-3 h-3 text-amber-600" />
-                <span>Sắp bán được</span>
+            ) : isDepleted ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                <Archive className="w-3 h-3 text-slate-500" />
+                <span>Đã hết</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-sky-50 text-sky-800 border border-sky-200">
@@ -90,6 +91,11 @@ export const BatchCard: React.FC<BatchCardProps> = ({ batch, onClick }) => {
               {formatQuantity(batch.availableQuantity)}
             </span>
           </div>
+        </div>
+      ) : isDepleted ? (
+        <div className="pt-1 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">
+          <span>Ươm cắm: {formatQuantity(batch.initialQuantity)} cây</span>
+          <span className="font-semibold text-slate-600">Đã hết</span>
         </div>
       ) : (
         <div className="pt-1 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">

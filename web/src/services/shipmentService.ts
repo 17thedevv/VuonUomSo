@@ -2,7 +2,7 @@ import { db } from '../data/db'
 import type { Shipment, ShipmentLine } from '../domain/shipment'
 import type { Order } from '../domain/order'
 import type { Contact } from '../domain/contact'
-import type { Batch } from '../domain/batch'
+import { type Batch, deriveBatchStatus } from '../domain/batch'
 import type { Reservation } from '../domain/reservation'
 import {
   shippedQuantityForOrder,
@@ -390,6 +390,7 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
           // Atomically decrement physical stock
           batch.currentQuantity -= line.quantity
           batch.readyQuantity -= line.quantity
+          batch.status = deriveBatchStatus(batch)
           await db.batches.put(batch)
 
           // Record batch domain event

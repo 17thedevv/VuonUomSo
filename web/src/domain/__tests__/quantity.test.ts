@@ -3,6 +3,7 @@ import {
   parseQuantity,
   reservedQuantityForBatch,
   availableQuantityForBatch,
+  commitmentShortageForBatch,
   survivalRate,
   formatQuantity,
   formatSurvivalRate
@@ -114,6 +115,25 @@ describe('Derived Quantity Domain Functions', () => {
     }
     const available = availableQuantityForBatch(overReservedBatch, dummyReservations)
     expect(available).toBe(0)
+  })
+
+  it('calculates commitmentShortageForBatch correctly', () => {
+    // When readyQuantity (32000) >= reserved (10000) => shortage = 0
+    expect(commitmentShortageForBatch(dummyBatch, dummyReservations)).toBe(0)
+
+    // When readyQuantity (8000) < reserved (10000) => shortage = 2000
+    const overReservedBatch: Batch = {
+      ...dummyBatch,
+      readyQuantity: 8000
+    }
+    expect(commitmentShortageForBatch(overReservedBatch, dummyReservations)).toBe(2000)
+
+    // When readyQuantity is 0 and reserved is 10000 => shortage = 10000
+    const zeroReadyBatch: Batch = {
+      ...dummyBatch,
+      readyQuantity: 0
+    }
+    expect(commitmentShortageForBatch(zeroReadyBatch, dummyReservations)).toBe(10000)
   })
 
   it('calculates survival rate correctly', () => {

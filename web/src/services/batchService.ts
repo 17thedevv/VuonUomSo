@@ -1,5 +1,7 @@
-import type { Batch } from '../domain/batch'
-import { batchRepository, eventRepository } from '../data/repositories'
+import { type Batch, deriveBatchStatus } from '../domain/batch'
+import { batchRepository } from '../data/repositories'
+import { db } from '../data/db'
+import { createDomainEvent } from '../analytics/events'
 import { undoService } from './undoService'
 import { formatQuantity } from '../domain/quantity'
 
@@ -21,6 +23,7 @@ export interface CreateBatchResult {
 export interface UpdateInventoryInput {
   batchId: string
   newQuantity: number
+  newReadyQuantity?: number
   note?: string
 }
 
@@ -28,6 +31,22 @@ export interface UpdateInventoryResult {
   success: boolean
   batch?: Batch
   previousQuantity?: number
+  previousReadyQuantity?: number
+  difference?: number
+  error?: string
+}
+
+export interface UpdateReadyQuantityInput {
+  batchId: string
+  newReadyQuantity: number
+  note?: string
+}
+
+export interface UpdateReadyQuantityResult {
+  success: boolean
+  batch?: Batch
+  previousReadyQuantity?: number
+  newReadyQuantity?: number
   difference?: number
   error?: string
 }
@@ -99,7 +118,7 @@ export async function createBatch(input: CreateBatchInput): Promise<CreateBatchR
     return { success: false, error: 'Vui lòng chọn hoặc nhập tên giống cây.' }
   }
 
-  if (!input.initialQuantity || input.initialQuantity <= 0) {
+  if (!Number.isSafeInteger(input.initialQuantity) || input.initialQuantity <= 0) {
     return { success: false, error: 'Số lượng cây ban đầu phải lớn hơn 0.' }
   }
 
@@ -119,32 +138,32 @@ export async function createBatch(input: CreateBatchInput): Promise<CreateBatchR
     id,
     code,
     variety,
-    initialQuantity: Math.round(input.initialQuantity),
-    currentQuantity: Math.round(input.initialQuantity),
+    initialQuantity: input.initialQuantity,
+    currentQuantity: input.initialQuantity,
     readyQuantity: 0,
-    status: 'propagating',
+    status: deriveBatchStatus({
+      currentQuantity: input.initialQuantity,
+      readyQuantity: 0
+    }),
     createdAt,
     preferredSellBefore: input.preferredSellBefore || undefined,
     sourceNote: input.sourceNote?.trim() || undefined
   }
 
   try {
-    await batchRepository.save(newBatch)
+    await db.transaction('rw', [db.batches, db.events], async () => {
+      await db.batches.put(newBatch)
 
-    // Record creation event
-    await eventRepository.record({
-      type: 'batch_created',
-      entityType: 'batch',
-      entityId: newBatch.id,
-      payload: {
+      const createEvent = createDomainEvent('batch_created', 'batch', newBatch.id, {
         message: `Tạo lô ${newBatch.code} (${formatQuantity(newBatch.initialQuantity)} cây ban đầu)`,
         code: newBatch.code,
         variety: newBatch.variety,
         initialQuantity: newBatch.initialQuantity
-      }
+      })
+      await db.events.put(createEvent)
     })
 
-    // Register reversible mutation for Undo
+    // Register reversible mutation for Undo after transaction commit
     undoService.recordMutation({
       type: 'create_batch',
       batchId: newBatch.id,
@@ -167,88 +186,224 @@ export async function createBatch(input: CreateBatchInput): Promise<CreateBatchR
  * Enforces:
  * - newQuantity >= 0
  * - newQuantity <= initialQuantity
- * - newQuantity >= readyQuantity
+ * - If newQuantity < readyQuantity and newReadyQuantity is not provided, requires user confirmation.
+ * - When newReadyQuantity is provided, validates 0 <= newReadyQuantity <= newQuantity and commits atomically.
+ * - Derived status recomputed via deriveBatchStatus(batch)
  */
 export async function updateBatchInventory(
   input: UpdateInventoryInput
 ): Promise<UpdateInventoryResult> {
-  const batch = await batchRepository.getById(input.batchId)
-  if (!batch) {
-    return { success: false, error: 'Lô cây không tồn tại.' }
+  if (!Number.isSafeInteger(input.newQuantity) || input.newQuantity < 0) {
+    return { success: false, error: 'Số lượng cây sống không thể âm hoặc không hợp lệ.' }
   }
 
-  const newQuantity = Math.round(input.newQuantity)
-
-  if (newQuantity < 0) {
-    return { success: false, error: 'Số lượng cây sống không thể âm.' }
-  }
-
-  if (newQuantity > batch.initialQuantity) {
-    return {
-      success: false,
-      error: `Số cây còn sống (${formatQuantity(newQuantity)} cây) không thể lớn hơn số lượng cắm hom ban đầu (${formatQuantity(batch.initialQuantity)} cây).`
+  if (input.newReadyQuantity !== undefined) {
+    if (!Number.isSafeInteger(input.newReadyQuantity) || input.newReadyQuantity < 0) {
+      return { success: false, error: 'Số cây đủ bán không thể âm hoặc không hợp lệ.' }
     }
-  }
-
-  if (newQuantity < batch.readyQuantity) {
-    return {
-      success: false,
-      error: `Số cây còn sống (${formatQuantity(newQuantity)}) không thể thấp hơn số cây đang được tính là đủ bán (${formatQuantity(batch.readyQuantity)} cây). Hãy kiểm tra lại số lượng.`
-    }
-  }
-
-  const previousQuantity = batch.currentQuantity
-  const difference = newQuantity - previousQuantity
-
-  batch.currentQuantity = newQuantity
-
-  if (newQuantity === 0) {
-    batch.status = 'depleted'
   }
 
   try {
-    await batchRepository.save(batch)
+    const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+      const batch = await db.batches.get(input.batchId)
+      if (!batch) {
+        throw new Error('Lô cây không tồn tại.')
+      }
 
-    const diffText =
-      difference < 0
-        ? `Hao hụt ${formatQuantity(Math.abs(difference))} cây`
-        : difference > 0
-        ? `Tăng ${formatQuantity(difference)} cây`
-        : 'Số lượng không đổi'
+      const newQuantity = input.newQuantity
 
-    await eventRepository.record({
-      type: 'batch_inventory_updated',
-      entityType: 'batch',
-      entityId: batch.id,
-      payload: {
-        message: `Kiểm kê còn ${formatQuantity(newQuantity)} cây (${diffText})`,
+      if (newQuantity > batch.initialQuantity) {
+        throw new Error(
+          `Số cây còn sống (${formatQuantity(newQuantity)} cây) không thể lớn hơn số lượng cắm hom ban đầu (${formatQuantity(batch.initialQuantity)} cây).`
+        )
+      }
+
+      // If living stock drops below ready stock, require explicit adjusted ready quantity
+      let targetReadyQuantity = batch.readyQuantity
+      if (input.newReadyQuantity !== undefined) {
+        const parsedReady = input.newReadyQuantity
+        if (parsedReady > newQuantity) {
+          throw new Error(
+            `Số cây đủ bán (${formatQuantity(parsedReady)} cây) không thể lớn hơn số cây còn sống (${formatQuantity(newQuantity)} cây).`
+          )
+        }
+        targetReadyQuantity = parsedReady
+      } else if (newQuantity < batch.readyQuantity) {
+        throw new Error(
+          `Số cây còn sống (${formatQuantity(newQuantity)}) không thể thấp hơn số cây đang được tính là đủ bán (${formatQuantity(batch.readyQuantity)} cây). Vui lòng xác nhận lại số cây đủ bán tương ứng.`
+        )
+      }
+
+      const previousQuantity = batch.currentQuantity
+      const previousReadyQuantity = batch.readyQuantity
+      const difference = newQuantity - previousQuantity
+      const readyDifference = targetReadyQuantity - previousReadyQuantity
+
+      batch.currentQuantity = newQuantity
+      batch.readyQuantity = targetReadyQuantity
+      batch.status = deriveBatchStatus(batch)
+
+      const diffText =
+        difference < 0
+          ? `Hao hụt ${formatQuantity(Math.abs(difference))} cây`
+          : difference > 0
+          ? `Tăng ${formatQuantity(difference)} cây`
+          : 'Số lượng không đổi'
+
+      const readyText =
+        readyDifference !== 0
+          ? `, cây đủ bán ${readyDifference > 0 ? `tăng ${formatQuantity(readyDifference)}` : `giảm ${formatQuantity(Math.abs(readyDifference))}`}`
+          : ''
+
+      await db.batches.put(batch)
+
+      const invEvent = createDomainEvent('batch_inventory_updated', 'batch', batch.id, {
+        message: `Kiểm kê còn ${formatQuantity(newQuantity)} cây (${diffText}${readyText})`,
         previousQuantity,
         newQuantity,
         difference,
+        previousReadyQuantity: readyDifference !== 0 ? previousReadyQuantity : undefined,
+        newReadyQuantity: readyDifference !== 0 ? targetReadyQuantity : undefined,
+        readyDifference: readyDifference !== 0 ? readyDifference : undefined,
         note: input.note?.trim() || undefined
+      })
+      await db.events.put(invEvent)
+
+      if (readyDifference !== 0) {
+        const readyEvent = createDomainEvent('batch_ready_stock_updated', 'batch', batch.id, {
+          message: `Điều chỉnh cây đủ bán theo kiểm kê: ${formatQuantity(targetReadyQuantity)} cây (${readyDifference < 0 ? `Giảm ${formatQuantity(Math.abs(readyDifference))}` : `Tăng ${formatQuantity(readyDifference)}`})`,
+          previousReadyQuantity,
+          newReadyQuantity: targetReadyQuantity,
+          difference: readyDifference,
+          note: input.note?.trim() || undefined
+        })
+        await db.events.put(readyEvent)
+      }
+
+      return {
+        batch,
+        previousQuantity,
+        previousReadyQuantity: readyDifference !== 0 ? previousReadyQuantity : undefined,
+        difference,
+        readyDifference
       }
     })
 
-    // Register reversible mutation for Undo
+    // Register reversible mutation for Undo after transaction commit
     undoService.recordMutation({
       type: 'update_inventory',
-      batchId: batch.id,
-      batchCode: batch.code,
-      previousQuantity,
-      description: `Đã cập nhật kiểm kê lô ${batch.code}`
+      batchId: txResult.batch.id,
+      batchCode: txResult.batch.code,
+      previousQuantity: txResult.previousQuantity,
+      previousReadyQuantity: txResult.readyDifference !== 0 ? txResult.previousReadyQuantity : undefined,
+      expectedCurrentQuantity: txResult.batch.currentQuantity,
+      expectedReadyQuantity: txResult.batch.readyQuantity,
+      description: `Đã cập nhật kiểm kê lô ${txResult.batch.code}`
     })
 
     return {
       success: true,
-      batch,
-      previousQuantity,
-      difference
+      batch: txResult.batch,
+      previousQuantity: txResult.previousQuantity,
+      previousReadyQuantity: txResult.previousReadyQuantity,
+      difference: txResult.difference
     }
-  } catch (err) {
-    console.error('Failed to update batch inventory:', err)
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Chưa cập nhật được số lượng kiểm kê. Vui lòng thử lại.'
     return {
       success: false,
-      error: 'Chưa cập nhật được số lượng kiểm kê. Vui lòng thử lại.'
+      error: errorMsg
+    }
+  }
+}
+
+/**
+ * Updates ready quantity (cây đủ bán) of a batch.
+ * Input uses absolute quantity.
+ * Invariants:
+ * - 0 <= newReadyQuantity <= batch.currentQuantity
+ * - DOES NOT block if newReadyQuantity < reservedQuantity (commitment shortage surfaces honestly for FC3)
+ * - Derives batch.status via deriveBatchStatus(batch)
+ * - Emits 'batch_ready_stock_updated' event with previousReadyQuantity, newReadyQuantity, difference, note
+ * - Records mutation for Undo
+ */
+export async function updateBatchReadyQuantity(
+  input: UpdateReadyQuantityInput
+): Promise<UpdateReadyQuantityResult> {
+  if (!Number.isSafeInteger(input.newReadyQuantity) || input.newReadyQuantity < 0) {
+    return { success: false, error: 'Số cây đủ bán không thể âm hoặc không hợp lệ.' }
+  }
+
+  try {
+    const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+      const batch = await db.batches.get(input.batchId)
+      if (!batch) {
+        throw new Error('Lô cây không tồn tại.')
+      }
+
+      const newReadyQuantity = input.newReadyQuantity
+
+      if (newReadyQuantity > batch.currentQuantity) {
+        throw new Error(
+          `Số cây đủ bán (${formatQuantity(newReadyQuantity)} cây) không thể lớn hơn số cây còn sống (${formatQuantity(batch.currentQuantity)} cây).`
+        )
+      }
+
+      const previousReadyQuantity = batch.readyQuantity
+      const difference = newReadyQuantity - previousReadyQuantity
+
+      batch.readyQuantity = newReadyQuantity
+      batch.status = deriveBatchStatus(batch)
+
+      const diffText =
+        difference < 0
+          ? `Giảm ${formatQuantity(Math.abs(difference))} cây`
+          : difference > 0
+          ? `Tăng ${formatQuantity(difference)} cây`
+          : 'Số lượng không đổi'
+
+      await db.batches.put(batch)
+
+      const readyEvent = createDomainEvent('batch_ready_stock_updated', 'batch', batch.id, {
+        message: `Cập nhật cây đủ bán: ${formatQuantity(newReadyQuantity)} cây (${diffText})`,
+        previousReadyQuantity,
+        newReadyQuantity,
+        difference,
+        note: input.note?.trim() || undefined
+      })
+      await db.events.put(readyEvent)
+
+      return {
+        batch,
+        previousReadyQuantity,
+        newReadyQuantity,
+        difference
+      }
+    })
+
+    // Register reversible mutation for Undo after transaction commit
+    undoService.recordMutation({
+      type: 'update_ready_quantity',
+      batchId: txResult.batch.id,
+      batchCode: txResult.batch.code,
+      previousReadyQuantity: txResult.previousReadyQuantity,
+      expectedReadyQuantity: txResult.newReadyQuantity,
+      expectedCurrentQuantity: txResult.batch.currentQuantity,
+      description: `Đã cập nhật cây đủ bán lô ${txResult.batch.code}`
+    })
+
+    return {
+      success: true,
+      batch: txResult.batch,
+      previousReadyQuantity: txResult.previousReadyQuantity,
+      newReadyQuantity: txResult.newReadyQuantity,
+      difference: txResult.difference
+    }
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : 'Chưa cập nhật được số lượng cây đủ bán. Vui lòng thử lại.'
+    return {
+      success: false,
+      error: errorMsg
     }
   }
 }
