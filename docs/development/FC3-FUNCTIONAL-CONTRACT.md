@@ -1,10 +1,12 @@
 # FC3-0 — Reservation Reconciliation Contract
 
-Ngày: 08/10/2026. **DRAFT / REVIEW PENDING — DOCUMENTATION ONLY.**
+Ngày: 08/10/2026. **APPROVED / FC3-0 CLOSED — DOCUMENTATION ONLY.**
+
+Người dùng đã nghiệm thu exact head `aeee90c2f10eb1969df1f7b32ec8ea4b6ec41726`. [PR #11](https://github.com/17thedevv/VuonUomSo/pull/11) merged tại `d1ecddfdb9538f96c03ef2e2ae6b706f371e44c5`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37754300293).
 
 Base: `main = 0283ea49e3e5453ca9f64bbb9f61ae3ebeac2dc7`; FC2 DONE. Branch: `feat/fc3-reservation-reconciliation`.
 
-Tài liệu cụ thể hóa đề xuất FC3 của người dùng và đối chiếu [FC0](../architecture/fc0-functional-contract.md), [FC2 Final Acceptance](FC2-FINAL-ACCEPTANCE.md) cùng model hiện tại. Chưa cho phép viết service/UI reconciliation. FC3-0 chỉ CLOSED sau khi contract được nghiệm thu và merge; FC3 overall chưa DONE.
+Tài liệu cụ thể hóa đề xuất FC3 của người dùng và đối chiếu [FC0](../architecture/fc0-functional-contract.md), [FC2 Final Acceptance](FC2-FINAL-ACCEPTANCE.md) cùng model hiện tại. FC3-0 đã CLOSED sau nghiệm thu, merge và CI xanh; **FC3-1 NEXT**, chưa bắt đầu service/UI reconciliation. FC3 overall chưa DONE. Backup shortage amendment và stale create_reservation Undo guard là required implementation gates trước khi expose mutation.
 
 ## 1. Mục tiêu và hai trigger
 
@@ -36,7 +38,7 @@ UI hỏi **“Sau điều chỉnh còn giữ bao nhiêu cây?”**, dùng số t
 
 Chỉ điều chỉnh reservation active có O > 0. `0 <= newOutstanding <= currentOutstanding`; Q sau điều chỉnh không bao giờ nhỏ hơn F. Không tăng một record cũ bằng thao tác giảm. Record released/fulfilled không được tái kích hoạt hoặc sửa lại phần đã xuất.
 
-### Quyết định biểu diễn cần duyệt ở FC3-0
+### Quyết định biểu diễn đã duyệt ở FC3-0
 
 | Kết quả | Quantity lưu | Status | Phần đã xuất / coverage |
 | --- | --- | --- | --- |
@@ -176,13 +178,13 @@ Tests phải dùng domain assertions và real Dexie service integration, không 
 
 | Slice | Phạm vi | Trạng thái |
 | --- | --- | --- |
-| FC3-0 | Review/khóa contract này | REVIEW PENDING, chưa CLOSED |
-| FC3-1 | Order Reduction Reconciliation — domain/service atomic | Chờ FC3-0 đóng; chưa code |
+| FC3-0 | Review/khóa contract này | APPROVED / CLOSED, PR #11 merged, CI xanh |
+| FC3-1 | Order Reduction Reconciliation — domain/service atomic | NEXT; chưa code; backup shortage + stale Undo gates làm sớm |
 | FC3-2 | Batch Shortage Reconciliation + own transfer | Chờ slice trước nghiệm thu; chưa code |
 | FC3-3 | UI + Cross-flow Hardening | Chờ domain/service contract; chưa code |
 | FC3 Final Acceptance | Full gates, mobile, stock/history/planned/export safety | Chưa bắt đầu; đạt mới FC3 DONE |
 
-FC3-0 gate: người dùng duyệt các quyết định full-release/partial/after-shipment/stale intent và acceptance matrix; docs PR merged, PROJECT_STATE giữ phạm vi đúng. Không đánh CLOSED hoặc bắt đầu `reconcileReservation()` chỉ vì CI docs xanh.
+FC3-0 gate đã đạt: người dùng duyệt các quyết định full-release/partial/after-shipment/stale intent, backup amendment và acceptance matrix; docs PR đã merge, merge CI xanh. Việc đóng contract không đồng nghĩa implementation hoặc FC3 overall đã hoàn thành. FC3-1 phải chứng minh hai safety gates bằng real Dexie regression trước khi expose reconciliation mutation.
 
 Không bao gồm external supplier truth/new external commitment (FC4), closed_remaining (FC5), receipt/payment, shipment-line editing, cloud sync, CRM/accounting, redesign UI-R03/R04/R05. Không đổi FC0 authority hoặc shipment physical stock semantics.
 
