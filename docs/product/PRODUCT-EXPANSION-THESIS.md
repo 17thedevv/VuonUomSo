@@ -159,6 +159,22 @@ Lý do:
 
 Cụm **“sổ hàng trên điện thoại cho người bán nhỏ có hàng phải giữ trước, gom nguồn và xuất sau”** hiện là **category/product thesis nội bộ**, không phải tên brand.
 
+### Rename-friendly, không generic-first
+
+Giữ tên hiện tại không có nghĩa là khóa kỹ thuật vào brand. Trong quá trình tiếp tục FC3–FC6, implementation **MAY** giữ cho việc đổi tên sau này rẻ bằng các nguyên tắc hẹp sau:
+
+- Tập trung app name, descriptor, document title, PWA manifest name và các brand strings ở cấu hình/constant hợp lý thay vì nhân bản tùy tiện.
+- Không dùng `VuonUom` / “Vườn Ươm” như business invariant, entity type, database key, record ID prefix bắt buộc hoặc logic quyết định nghiệp vụ.
+- URL/domain marketing tương lai không được coi là identity của dữ liệu nghiệp vụ.
+- Rename brand sau này phải có thể thực hiện chủ yếu ở lớp presentation/configuration; migration dữ liệu chỉ được thêm nếu có nhu cầu thật.
+- **Không** vì mục tiêu rename-friendly mà đổi `Batch`, `Reservation`, `Shipment`, quantity semantics hoặc schema thành abstraction đa ngành trước validation.
+
+Nguyên tắc cần giữ:
+
+> **Rename-friendly, không generic-first.**
+
+Chi phí đổi brand muộn là chấp nhận được; chi phí generalize sai domain sớm có thể làm sai FC3–FC5 và khó hoàn tác hơn nhiều.
+
 ### Khi nào mới mở naming review
 
 Chỉ mở lại quyết định đặt tên sau khi:
