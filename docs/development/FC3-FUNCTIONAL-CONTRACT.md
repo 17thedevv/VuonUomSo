@@ -6,7 +6,7 @@ Người dùng đã nghiệm thu exact head `aeee90c2f10eb1969df1f7b32ec8ea4b6ec
 
 Base: `main = 0283ea49e3e5453ca9f64bbb9f61ae3ebeac2dc7`; FC2 DONE. Branch: `feat/fc3-reservation-reconciliation`.
 
-Tài liệu cụ thể hóa đề xuất FC3 của người dùng và đối chiếu [FC0](../architecture/fc0-functional-contract.md), [FC2 Final Acceptance](FC2-FINAL-ACCEPTANCE.md) cùng model hiện tại. FC3-0 đã CLOSED sau nghiệm thu, merge và CI xanh; **FC3-1 NEXT**, chưa bắt đầu service/UI reconciliation. FC3 overall chưa DONE. Backup shortage amendment và stale create_reservation Undo guard là required implementation gates trước khi expose mutation.
+Tài liệu cụ thể hóa đề xuất FC3 của người dùng và đối chiếu [FC0](../architecture/fc0-functional-contract.md), [FC2 Final Acceptance](FC2-FINAL-ACCEPTANCE.md) cùng model hiện tại. FC3-0/FC3-1A/FC3-1B đã CLOSED sau nghiệm thu, merge và CI xanh; **FC3-2 NEXT**, UI chưa bắt đầu. FC3-1 và FC3 overall chưa DONE. Backup shortage amendment và stale create_reservation Undo guard đã đạt required implementation gates, gồm regression qua reconciliation service thật.
 
 ## 1. Mục tiêu và hai trigger
 
@@ -180,9 +180,9 @@ Tests phải dùng domain assertions và real Dexie service integration, không 
 | --- | --- | --- |
 | FC3-0 | Review/khóa contract này | APPROVED / CLOSED, PR #11 merged, CI xanh |
 | FC3-1A | Backup shortage + stale reservation Undo safety trước mutation | CLOSED / ACCEPTED / MERGED, PR #14, CI merge xanh; [báo cáo safety slice](./FC3-1A-SAFETY.md) |
-| FC3-1 | Order Reduction Reconciliation — domain/service atomic | NOT DONE; safety1A CLOSED, service1B REVIEW PENDING |
-| FC3-1B | Atomic Order Reduction Reconciliation domain/service | REVIEW PENDING; [báo cáo implementation](FC3-1B-ORDER-REDUCTION.md); real-service stale Undo regression đã có, chưa nghiệm thu/merge |
-| FC3-2 | Batch Shortage Reconciliation + own transfer | Chờ slice trước nghiệm thu; chưa code |
+| FC3-1 | Order Reduction Reconciliation — domain/service atomic | NOT DONE; safety1A và service1B CLOSED; chờ UI/final acceptance |
+| FC3-1B | Atomic Order Reduction Reconciliation domain/service | CLOSED / ACCEPTED / MERGED, PR #16, CI merge xanh; [báo cáo implementation](FC3-1B-ORDER-REDUCTION.md); real-service stale Undo gate PASS |
+| FC3-2 | Batch Shortage Reconciliation + own-batch transfer | NEXT; chưa code, domain/service trước UI |
 | FC3-3 | UI + Cross-flow Hardening | Chờ domain/service contract; chưa code |
 | FC3 Final Acceptance | Full gates, mobile, stock/history/planned/export safety | Chưa bắt đầu; đạt mới FC3 DONE |
 
