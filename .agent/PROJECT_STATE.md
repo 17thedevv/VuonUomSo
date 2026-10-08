@@ -34,7 +34,7 @@
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
 | **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
 | **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
-| **FC3** | **Reservation Reconciliation** | **IN PROGRESS** | FC3-0/FC3-1A CLOSED; FC3-1B NEXT — Atomic Order Reduction Reconciliation domain/service; reconciliation mutation/UI chưa triển khai |
+| **FC3** | **Reservation Reconciliation** | **IN PROGRESS** | FC3-0/FC3-1A CLOSED; FC3-1B REVIEW PENDING — Trigger A domain/service; UI/FC3-2 chưa triển khai |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
@@ -51,7 +51,7 @@
 - [FC2 Final Acceptance](../docs/development/FC2-FINAL-ACCEPTANCE.md): **PASS / FC2 DONE**. Mobile create → edit → reserve → edit conflict → cancel, reload và kiểm tồn kho/lịch sử đạt. **FC3 NEXT**, chưa triển khai reconciliation hay `closed_remaining` FC5.
 - **FC3-0 CLOSED**: [Contract approved](../docs/development/FC3-FUNCTIONAL-CONTRACT.md), [PR #11](https://github.com/17thedevv/VuonUomSo/pull/11) merged tại `d1ecddfdb9538f96c03ef2e2ae6b706f371e44c5`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37754300293).
 - **FC3-1A CLOSED / ACCEPTED / MERGED — Backup Shortage + Stale Reservation Undo Safety**: [PR #14](https://github.com/17thedevv/VuonUomSo/pull/14) merged tại `261f7ddddbefb92c07173f813950bf2ec2b54614`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37760585326). Người dùng duyệt exact-head `ad4010fcc3dda64f3c451aa204d5852488a7bff3`; 43 files / 406 tests PASS, lint0/0, typecheck/build PASS. [Báo cáo slice](../docs/development/FC3-1A-SAFETY.md): backup shortage + transactional stale Undo guards đạt. Reconciliation mutation/UI chưa expose; FC3-1 chưa DONE.
-- **FC3-1B NEXT — Atomic Order Reduction Reconciliation domain/service**, chưa bắt đầu. Branch implementation: `feat/fc3-reservation-reconciliation`, sync từ main sau closure. Bắt buộc thêm regression capture old Undo → real reconciliation commit → old Undo rejected; các fixture thay Q/history ở 1A không thay thế gate này. Roadmap: FC3-1B → FC3-2 Batch Shortage → FC3-3 UI/Cross-flow → Final Acceptance; FC3 overall chưa DONE.
+- **FC3-1B REVIEW PENDING — Atomic Order Reduction Reconciliation domain/service**: [báo cáo slice](../docs/development/FC3-1B-ORDER-REDUCTION.md). Branch `feat/fc3-reservation-reconciliation`, base latest main `88bf5ad`. Trigger A preview/atomic commit, strict fingerprint, operationId marker, planned/fulfillment guards và real-service stale Undo regression đã triển khai; chờ nghiệm thu PR trước merge. Không UI/Trigger B/transfer/FC4/FC5; FC3-1 và FC3 chưa DONE. Roadmap sau nghiệm thu/merge: FC3-2 → FC3-3 → Final Acceptance.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
 ---

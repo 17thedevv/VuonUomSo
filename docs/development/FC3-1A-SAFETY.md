@@ -50,4 +50,4 @@ Regression được chạy trên code cũ để xác nhận failure trước pat
 
 Không có reconciliation mutation/UI, order reduction/transfer/batch reconciliation, FC4/FC5, generic inventory, đổi tên hay dependency/schema mới. Không cần browser acceptance cho slice không đổi UI.
 
-**Required next gate — FC3-1B Atomic Order Reduction Reconciliation domain/service:** khi reconciliation service tồn tại, thêm real-service regression capture Undo → reconciliation commit → old Undo fail, bảo toàn nguồn/coverage/history/stock. Fixture hiện tại không thay thế acceptance đó. FC3-1B chưa bắt đầu; mutation/UI vẫn chưa expose.
+**Required next gate — FC3-1B Atomic Order Reduction Reconciliation domain/service:** [implementation hiện REVIEW PENDING](FC3-1B-ORDER-REDUCTION.md) đã có regression capture Undo → reconciliation service thật commit → old Undo fail, bảo toàn nguồn/coverage/history/stock. Fixture 1A không thay thế acceptance đó. FC3-1B chưa nghiệm thu/merge; UI chưa expose.
