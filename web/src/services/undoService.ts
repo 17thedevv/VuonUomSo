@@ -235,10 +235,18 @@ class UndoService {
       }
 
       if (mutation.type === 'create_order') {
-        const txResult = await db.transaction('rw', [db.orders, db.events], async () => {
+        const txResult = await db.transaction('rw', [db.orders, db.reservations, db.shipments, db.events], async () => {
           const order = await db.orders.get(mutation.orderId)
           if (!order) {
             return { status: 'not_found' as const }
+          }
+
+          const reservations = await db.reservations.where('orderId').equals(order.id).count()
+          const shipments = await db.shipments.where('orderId').equals(order.id).count()
+          const corrected = await db.events.where('entityId').equals(order.id)
+            .filter((e) => e.entityType === 'order' && (e.type === 'order_updated' || e.type === 'order_cancelled')).count()
+          if (order.status !== 'open' || reservations > 0 || shipments > 0 || corrected > 0) {
+            return { status: 'changed' as const }
           }
 
           await db.orders.delete(mutation.orderId)
@@ -255,6 +263,11 @@ class UndoService {
         if (txResult.status === 'not_found') {
           this.clearLastMutation()
           return { success: false, message: 'Đơn hàng không còn tồn tại.' }
+        }
+
+        if (txResult.status === 'changed') {
+          this.clearLastMutation()
+          return { success: false, message: 'Không thể xóa đơn bằng hoàn tác vì đơn đã có thay đổi hoặc lịch sử giữ/xuất cây.' }
         }
 
         this.clearLastMutation()
