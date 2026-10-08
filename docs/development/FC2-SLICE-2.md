@@ -1,6 +1,6 @@
 # FC2 slice 2 — Order Edit/Cancel UI
 
-Status: IMPLEMENTED / REVIEW PENDING. FC2 overall remains IN PROGRESS until review and merge.
+Status: ACCEPTED / MERGED via [PR #9](https://github.com/17thedevv/VuonUomSo/pull/9) at `034b33058d90b7f0a70854c8e329f5106b42decd`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37748317065). FC2 overall: DONE after [final acceptance](FC2-FINAL-ACCEPTANCE.md).
 
 Base: `main = bf3dee5` (PR #8 accepted, merged, CI green). Branch: `feat/fc2-order-ui`.
 
@@ -25,4 +25,4 @@ Base: `main = bf3dee5` (PR #8 accepted, merged, CI green). Branch: `feat/fc2-ord
 
 ## Boundaries
 
-No schema/dependency change, new Undo action, FC3 reconciliation, FC5 closed_remaining, or UI-R03/R04/R05 styling sweep. FC2 overall is not marked DONE by implementation alone.
+No schema/dependency change, new Undo action, FC3 reconciliation, FC5 closed_remaining, or UI-R03/R04/R05 styling sweep. FC2 closure includes human review, merge CI and the subsequent mobile final acceptance.
