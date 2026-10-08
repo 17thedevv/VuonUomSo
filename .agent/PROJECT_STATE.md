@@ -33,7 +33,7 @@
 | :--- | :--- | :--- | :--- |
 | **FC0** | **Functional Contract** | **DONE / CLOSED** | Khóa toàn bộ 12 semantics, 6 đại lượng, chuyển trạng thái và từ điển tiếng Việt |
 | **FC1** | **Batch Stock Lifecycle** | **DONE** | Nghiệm thu 08/10/2026; PR #4 merged vào main tại `7eb4987`; CI merge xanh; xem báo cáo nghiệm thu |
-| **FC2** | **Order Lifecycle & Corrections** | **NEXT** | Chưa triển khai. C1 R01/R02 đã merge; chờ nghiệm thu bugfix riêng đơn vị giữ cây trước khi mở FC2 |
+| **FC2** | **Order Lifecycle & Corrections** | **IN PROGRESS** | Slice 1 domain/service: sửa đơn trước xuất, hủy atomic; UI và nghiệm thu toàn FC2 chưa hoàn tất |
 | **FC3** | **Reservation Reconciliation** | **PLANNED** | Chờ FC2 hoàn thành và merge |
 | **FC4** | **External Supply Truthfulness** | **PLANNED** | Chờ FC3 hoàn thành và merge (tùy chọn theo pilot segment) |
 | **FC5** | **Fulfillment & Completion Semantics** | **PLANNED** | Chờ FC3/FC4 hoàn thành và merge |
@@ -45,7 +45,8 @@
 - FC1 đã có trên `main`: [PR #4](https://github.com/17thedevv/VuonUomSo/pull/4), merge `7eb4987fcf3ff949f5874107de67ed2bd89a1e19`, [CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37709990216).
 - [Báo cáo nghiệm thu FC1](../docs/development/FC1-FINAL-ACCEPTANCE.md): transactional validation, Undo guard, 299 tests và core workflow mobile đến xuất đủ đơn; không phát hiện BLOCKER/HIGH ảnh hưởng số lượng trong phạm vi review.
 - C1 R01/R02: **ACCEPTED / MERGED**, [PR #6](https://github.com/17thedevv/VuonUomSo/pull/6) tại `ae43aa258b1f84e3ab25ca601a688fc041f25dad`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37734851505). Domain/mutation FC0 giữ nguyên.
-- Task hiện tại: bugfix riêng helper số lượng `ReserveQuantityModal`, branch `fix/reservation-quantity-unit`; hoàn tất nghiệm thu trước khi mở `feat/fc2-order-lifecycle`.
+- Bugfix helper `ReserveQuantityModal`: **ACCEPTED / MERGED**, [PR #7](https://github.com/17thedevv/VuonUomSo/pull/7) tại `54a9fa3c7897c21a95391c15b371b02e19a57e7f`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37738141617).
+- Task hiện tại: `feat/fc2-order-lifecycle`, [FC2 slice 1 domain/service](../docs/development/FC2-SLICE-1.md). Chưa triển khai UI sửa/hủy; không triển khai reconciliation FC3 hay `closed_remaining` FC5.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
 ---
