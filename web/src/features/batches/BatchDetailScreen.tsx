@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   AlertTriangle,
   ClipboardList,
@@ -44,10 +44,13 @@ import { InventoryUpdateModal } from './InventoryUpdateModal'
 import { ReadyQuantityUpdateModal } from './ReadyQuantityUpdateModal'
 import { undoService } from '../../services/undoService'
 import { BatchReconciliationModal } from './BatchReconciliationModal'
+import { gardenReturnPath } from '../garden/gardenNavigation'
 
 export const BatchDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const backTo = gardenReturnPath(location.state?.gardenReturnTo) ?? '/batches'
   const [batch, setBatch] = useState<Batch | null>(null)
   const [dossier, setDossier] = useState<BatchDossier | null>(null)
   const [reservations, setReservations] = useState<Reservation[]>([])
@@ -112,7 +115,7 @@ export const BatchDetailScreen: React.FC = () => {
   if (error) {
     return (
       <div className="flex-1 flex flex-col bg-slate-50">
-        <PageHeader title="Chi tiết lô cây" showBack backTo="/batches" />
+        <PageHeader title="Chi tiết lô cây" showBack backTo={backTo} />
         <div className="p-8 text-center space-y-3 flex-1 flex flex-col items-center justify-center">
           <AlertTriangle className="w-8 h-8 text-amber-600" />
           <p className="text-sm text-slate-700 font-semibold">{error}</p>
@@ -131,13 +134,13 @@ export const BatchDetailScreen: React.FC = () => {
   if (!batch) {
     return (
       <div className="flex-1 flex flex-col bg-slate-50">
-        <PageHeader title="Chi tiết lô cây" showBack backTo="/batches" />
+        <PageHeader title="Chi tiết lô cây" showBack backTo={backTo} />
         <div className="p-6 my-auto">
           <EmptyState
             title="Không tìm thấy lô cây này"
             description="Lô cây có thể đã bị xóa hoặc đường dẫn không chính xác."
-            actionText="Quay lại danh sách lô"
-            onAction={() => navigate('/batches')}
+            actionText={backTo === '/batches' ? 'Quay lại danh sách lô' : 'Quay lại Vườn'}
+            onAction={() => navigate(backTo)}
             icon={Trees}
           />
         </div>
@@ -158,7 +161,7 @@ export const BatchDetailScreen: React.FC = () => {
         title={`${batch.code}`}
         subtitle={batch.variety}
         showBack
-        backTo="/batches"
+        backTo={backTo}
         rightAction={<StatusBadge status={deriveBatchStatus(batch)} />}
       />
 

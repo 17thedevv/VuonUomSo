@@ -25,6 +25,7 @@ import { MoreScreen } from '../features/more/MoreScreen'
 import { ValidationReportScreen } from '../features/validation/ValidationReportScreen'
 import { PilotToolsScreen } from '../features/validation/PilotToolsScreen'
 import { ValidationRouteTracker } from '../validation/ValidationRouteTracker'
+import { GardenAvailabilityScreen } from '../features/garden/GardenAvailabilityScreen'
 
 const RootLayout: React.FC = () => {
   return (
@@ -131,6 +132,10 @@ const router = createBrowserRouter([
           {
             path: '/today',
             element: <TodayScreen />
+          },
+          {
+            path: '/garden',
+            element: <GardenAvailabilityScreen />
           },
           {
             path: '/batches',
