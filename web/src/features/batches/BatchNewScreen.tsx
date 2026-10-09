@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { createBatch } from '../../services/batchService'
 import { Sprout, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
+import { gardenReturnPath } from '../garden/gardenNavigation'
 
 const COMMON_VARIETIES = [
   'Keo lai BV16',
@@ -16,6 +17,8 @@ const COMMON_VARIETIES = [
 
 export const BatchNewScreen: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const gardenReturnTo = gardenReturnPath(location.state?.gardenReturnTo)
 
   // Form states
   const [selectedVariety, setSelectedVariety] = useState<string>(COMMON_VARIETIES[0])
@@ -73,7 +76,7 @@ export const BatchNewScreen: React.FC = () => {
 
     if (result.success && result.batch) {
       void validationTracker.actionCompleted('batch_created')
-      navigate(`/batches/${result.batch.id}`, { replace: true })
+      navigate(`/batches/${result.batch.id}`, { replace: true, state: gardenReturnTo ? { gardenReturnTo } : undefined })
     } else {
       void validationTracker.actionFailed('batch_created', 'storage')
       setFormError(result.error || 'Chưa lưu được lô cây. Dữ liệu bạn vừa nhập vẫn còn trên màn hình.')
@@ -82,7 +85,7 @@ export const BatchNewScreen: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
-      <PageHeader title="Tạo lô mới" subtitle="Nhập đợt ươm giống vào vườn" showBack backTo="/batches" />
+      <PageHeader title="Tạo lô mới" subtitle="Nhập đợt ươm giống vào vườn" showBack backTo={gardenReturnTo ?? '/batches'} />
 
       <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

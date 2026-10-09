@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, RotateCcw, Trees } from 'lucide-react'
-import { getGardenAvailability, type GardenAvailabilityView } from '../../services/gardenQueryService'
+import { getGardenAvailability, type GardenAvailabilityView, type GardenBatchAvailability } from '../../services/gardenQueryService'
 import { undoService } from '../../services/undoService'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { EmptyState } from '../../shared/components/EmptyState'
 import { AvailabilitySummary } from './AvailabilitySummary'
 import { VarietyAvailabilityCard } from './VarietyAvailabilityCard'
 import { GardenFilters } from './GardenFilters'
+import { QuickUpdateChooser } from './QuickUpdateChooser'
 
 type LoadState =
   | { key: string; status: 'loading' }
@@ -16,6 +17,7 @@ type LoadState =
 
 export function GardenAvailabilityScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [params, setParams] = useSearchParams()
   const search = params.get('q') ?? ''
   const rawView = params.get('view')
@@ -24,6 +26,20 @@ export function GardenAvailabilityScreen() {
   const key = JSON.stringify([search, view])
   const [loadState, setLoadState] = useState<LoadState>({ key, status: 'loading' })
   const sequence = useRef(0)
+  const [chooser, setChooser] = useState<{ batch?: GardenBatchAvailability } | null>(null)
+  const updateButton = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const focusId = location.state?.focusGardenUpdate
+    if (typeof focusId !== 'string' || loadState.key !== key || loadState.status === 'loading') return
+    const leaf = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-update-batch-id]'))
+      .find((button) => button.dataset.updateBatchId === focusId)
+    const target = leaf ?? updateButton.current
+    target?.focus()
+    const state = { ...location.state }
+    delete state.focusGardenUpdate
+    navigate(location.pathname + location.search, { replace: true, state })
+  }, [loadState, key, location, navigate])
 
   const load = useCallback(async () => {
     const ticket = ++sequence.current
@@ -86,6 +102,7 @@ export function GardenAvailabilityScreen() {
       } />
       <div className="p-4 sm:p-6 w-full max-w-5xl mx-auto space-y-5">
         <p className="text-slate-600">Số cây theo dữ liệu đang lưu trên thiết bị</p>
+        <button ref={updateButton} type="button" onClick={() => setChooser({})} className="min-h-12 px-5 rounded-xl bg-emerald-700 text-white font-bold">Cập nhật</button>
         <GardenFilters search={search} view={view} onSearch={(value) => update('q', value)} onView={(value) => update('view', value)} />
         {current.status === 'loading' ? (
           <p role="status" className="py-10 text-center text-slate-600">Đang đọc dữ liệu vườn...</p>
@@ -108,7 +125,7 @@ export function GardenAvailabilityScreen() {
                 <h2 className="text-lg font-bold">Các giống cây</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {current.data.groups.map((group) => (
-                    <VarietyAvailabilityCard key={group.key} group={group} expanded={open === group.key} onToggle={() => update('open', open === group.key ? '' : group.key)} returnTo={returnTo} searching={!!search.trim()} />
+                    <VarietyAvailabilityCard key={group.key} group={group} expanded={open === group.key} onToggle={() => update('open', open === group.key ? '' : group.key)} returnTo={returnTo} searching={!!search.trim()} onQuickUpdate={(batch) => setChooser({ batch })} />
                   ))}
                 </div>
               </section>
@@ -116,6 +133,7 @@ export function GardenAvailabilityScreen() {
           </>
         )}
       </div>
+      {chooser && <QuickUpdateChooser initialBatch={chooser.batch} returnTo={returnTo} onClose={() => setChooser(null)} />}
     </div>
   )
 }

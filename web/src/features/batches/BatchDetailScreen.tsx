@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -45,8 +45,15 @@ import { ReadyQuantityUpdateModal } from './ReadyQuantityUpdateModal'
 import { undoService } from '../../services/undoService'
 import { BatchReconciliationModal } from './BatchReconciliationModal'
 import { gardenReturnPath } from '../garden/gardenNavigation'
+import { readQuickUpdateIntent, type QuickUpdateIntent } from '../garden/quickUpdateIntent'
 
 export const BatchDetailScreen: React.FC = () => {
+  const { id } = useParams<{ id: string }>()
+  // A different route identity must never inherit the previous batch or open modal.
+  return <BatchDetailContent key={id} />
+}
+
+const BatchDetailContent: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -61,9 +68,21 @@ export const BatchDetailScreen: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const sequence = useRef(0)
+  const initialIntent = useRef(readQuickUpdateIntent(location.state?.quickUpdateIntent, id))
+  const quickReturn = useRef<string | undefined>(undefined)
 
-  const fetchData = useCallback(async () => {
+  // Remove the intent from browser history before reading. Retry/back/remount cannot replay it.
+  useEffect(() => {
+    if (!location.state || !Object.hasOwn(location.state, 'quickUpdateIntent')) return
+    const state = { ...location.state }
+    delete state.quickUpdateIntent
+    navigate(`${location.pathname}${location.search}${location.hash}`, { replace: true, state })
+  }, [location, navigate])
+
+  const fetchData = useCallback(async (intent?: QuickUpdateIntent) => {
     if (!id) return
+    const ticket = ++sequence.current
     try {
       const [b, r, allEvents, dos] = await Promise.all([
         batchRepository.getById(id),
@@ -72,6 +91,8 @@ export const BatchDetailScreen: React.FC = () => {
         dossierRepository.getByBatchId(id)
       ])
 
+      if (ticket !== sequence.current) return
+      initialIntent.current = undefined
       setBatch(b)
       setReservations(r)
       setDossier(dos)
@@ -82,21 +103,62 @@ export const BatchDetailScreen: React.FC = () => {
       )
       setEvents(batchEvents)
       setError(null)
+      if (b && intent?.batchId === b.id) {
+        quickReturn.current = backTo
+        if (intent.kind === 'inventory') setIsInventoryModalOpen(true)
+        else setIsReadyModalOpen(true)
+      }
     } catch (err) {
+      if (ticket !== sequence.current) return
+      initialIntent.current = undefined
       console.error('Error loading batch detail:', err)
       setError('Chưa tải được chi tiết lô cây.')
     } finally {
-      setLoading(false)
+      if (ticket === sequence.current) setLoading(false)
     }
-  }, [id])
+  }, [id, backTo])
 
   useEffect(() => {
-    fetchData()
+    const requestSequence = sequence
+    // Kept across StrictMode's effect replay; only the latest successful read may open it.
+    void fetchData(initialIntent.current)
     const unsubscribe = undoService.subscribe(() => {
       fetchData()
     })
-    return unsubscribe
+    return () => { ++requestSequence.current; unsubscribe() }
   }, [fetchData])
+
+  const finishQuickUpdate = () => {
+    const returnTo = quickReturn.current
+    quickReturn.current = undefined
+    if (returnTo) { navigate(returnTo, { state: { focusGardenUpdate: id } }); return true }
+    return false
+  }
+  const closeInventory = () => { setIsInventoryModalOpen(false); finishQuickUpdate() }
+  const closeReady = () => { setIsReadyModalOpen(false); finishQuickUpdate() }
+  const updateSucceeded = () => {
+    if (!finishQuickUpdate()) void fetchData()
+  }
+
+  useEffect(() => {
+    if (!quickReturn.current || (!isInventoryModalOpen && !isReadyModalOpen)) return
+    const modal = document.querySelector<HTMLElement>('[role="dialog"]')
+    modal?.querySelector<HTMLInputElement>('input')?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      const controls = Array.from(modal?.querySelectorAll<HTMLElement>('button:not(:disabled), input, textarea, select') ?? [])
+      if (event.key === 'Escape' && !modal?.textContent?.includes('ĐANG LƯU...')) {
+        event.preventDefault()
+        modal?.querySelector<HTMLButtonElement>('[aria-label="Đóng cửa sổ"]')?.click()
+      }
+      if (event.key !== 'Tab') return
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [isInventoryModalOpen, isReadyModalOpen])
 
   const handleRetry = () => {
     setLoading(true)
@@ -427,8 +489,8 @@ export const BatchDetailScreen: React.FC = () => {
         batch={batch}
         reservations={reservations}
         isOpen={isInventoryModalOpen}
-        onClose={() => setIsInventoryModalOpen(false)}
-        onSuccess={() => fetchData()}
+        onClose={closeInventory}
+        onSuccess={updateSucceeded}
       />
 
       {/* Ready Quantity Update Modal */}
@@ -436,8 +498,8 @@ export const BatchDetailScreen: React.FC = () => {
         batch={batch}
         reservedQuantity={reserved}
         isOpen={isReadyModalOpen}
-        onClose={() => setIsReadyModalOpen(false)}
-        onSuccess={() => fetchData()}
+        onClose={closeReady}
+        onSuccess={updateSucceeded}
       />
     </div>
   )
