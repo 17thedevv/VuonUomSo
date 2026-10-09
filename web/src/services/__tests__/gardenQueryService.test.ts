@@ -4,6 +4,7 @@ import { db, VuonUomDatabase } from '../../data/db'
 import { clearAllData, resetDemoData } from '../../data/seed'
 import type { Batch } from '../../domain/batch'
 import type { Reservation } from '../../domain/reservation'
+import { validReservation } from '../../domain/reconciliation'
 import { updateBatchInventory, updateBatchReadyQuantity } from '../batchService'
 import { undoService } from '../undoService'
 import { getGardenAvailability, type GardenAvailabilityQuery } from '../gardenQueryService'
@@ -173,6 +174,36 @@ describe('getGardenAvailability (real Dexie + fake-indexeddb)', () => {
   })
 
   describe('fail-closed data validation', () => {
+    it.each<Partial<Reservation>>([
+      { supplierId: 'supplier_x' },
+      { supplierId: '   ' },
+      { supplierId: 'supplier_x', status: 'released' },
+      { supplierId: 'supplier_x', status: 'fulfilled', fulfilledQuantity: 30 }
+    ])('rejects malformed own-batch source %j for the entire view without writes', async (changes) => {
+      const malformed = reservation('bad', changes)
+      expect(validReservation(malformed)).toBe(false)
+      await seed([batch()], [reservation('good', { quantity: 5 }), malformed])
+      const snapshot = () => Promise.all(db.tables.map((table) => table.toArray()))
+      const before = await snapshot()
+      await expect(getGardenAvailability()).rejects.toThrow('supplierId')
+      await expect(getGardenAvailability({ search: 'no-matching-variety-or-code', view: 'all' })).rejects.toThrow('supplierId')
+      expect(await snapshot()).toEqual(before)
+    })
+    it('accepts an empty optional supplierId consistently with the canonical own source shape', async () => {
+      const own = reservation('r', { supplierId: '' })
+      expect(validReservation(own)).toBe(true)
+      await seed([batch()], [own])
+      expect((await getGardenAvailability()).ownTotals.outstanding).toBe(30)
+    })
+    // These invalid identities are persistable IndexedDB keys; missing keys cannot be stored.
+    it.each(['', '   ', 123])('rejects invalid persisted own reservation id %s', async (id) => {
+      await seed([batch()], [reservation('bad', { id } as unknown as Partial<Reservation>)])
+      await expect(getGardenAvailability({ search: 'missing' })).rejects.toThrow('reservation.id')
+    })
+    it.each(['', '   ', undefined, null, 123])('rejects blank/missing/non-string own orderId %s without joining orders', async (orderId) => {
+      await seed([batch()], [reservation('bad', { orderId } as unknown as Partial<Reservation>)])
+      await expect(getGardenAvailability({ search: 'missing' })).rejects.toThrow('orderId')
+    })
     const badNumbers = [-1, 0.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1]
     for (const field of ['currentQuantity', 'readyQuantity'] as const) {
       it.each(badNumbers)(`rejects invalid ${field}=%s even outside the search/view`, async (value) => {

@@ -89,6 +89,10 @@ function projectSnapshot(batches: Batch[], reservations: Reservation[], query: G
     // External facts are not own stock, even if an extraneous batchId collides.
     if (reservation.sourceType === 'external_supplier') continue
     if (reservation.sourceType !== 'own_batch') invalid(`reservation ${reservation.id}.sourceType`)
+    requireText(reservation.id, 'reservation.id')
+    requireText(reservation.orderId, `reservation ${reservation.id}.orderId`)
+    // Match validReservation()'s own-source shape: batchId present, supplierId falsy.
+    if (reservation.supplierId) invalid(`reservation ${reservation.id}.supplierId`)
     requireText(reservation.batchId, `reservation ${reservation.id}.batchId`)
     if (!batchIds.has(reservation.batchId)) invalid(`reservation ${reservation.id}: missing batch`)
     if (!['active', 'released', 'fulfilled'].includes(reservation.status)) invalid(`reservation ${reservation.id}.status`)
