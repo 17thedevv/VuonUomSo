@@ -1,73 +1,61 @@
-# FC4 — Final Acceptance: required correction
+# FC4 — Final Acceptance: PASS / CLOSED
 
-Ngày: **09/10/2026**. **FC4 FINAL ACCEPTANCE NOT CLOSED / FC4 IN PROGRESS / FC5 NOT STARTED.**
+Ngày: **09/10/2026**. **FC4 DONE / FC4 FINAL ACCEPTANCE CLOSED / FC5 NOT STARTED.**
 
-FC4-1 đã được người dùng duyệt và merge. Nghiệm thu trên main phát hiện một HIGH về truthfulness trong release/shipment flow; bản vá riêng đã được chuẩn bị, nhưng chưa được review/merge. Kết quả trên branch không thay thế nghiệm thu trên main.
+Nghiệm thu đã chạy lại trên main sau khi merge correction được người dùng duyệt. External commitment, release, shipment, sửa/hủy đơn và backup/restore đạt trong phạm vi dưới đây. Không phát hiện BLOCKER/HIGH hoặc lifecycle dead-end trong các luồng đã kiểm.
 
-## 1. Merge và main evidence
+## 1. Merge và quality gate
 
-- [PR #24](https://github.com/17thedevv/VuonUomSo/pull/24), approved exact-head `6221ad15137607c5ebde0f1e77948c851b81acbc`, merged tại **`6d31d456413ace29c40f996e4517ec451e04192d`**.
-- [Merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37891865192): typecheck/lint/full tests/build PASS. 52 files / 717 tests; lint0/0 (157 files), PWA14. `git diff approvedHead main -- web` rỗng.
-- Browser acceptance dưới đây thực sự chạy trên clean main `6d31d45`, origin riêng `http://127.0.0.1:5209`, Chromium headless và các IndexedDB/browser contexts tách biệt. Không chạm dữ liệu người dùng.
-- A–G PASS tại **360/390/430/1280px**: candidate/contact truth, confirmed12k→shortage8k, named catalog35k không cap confirmed40k, acknowledgement reset/cây-vạn, supplier phone optional, duplicate customer-only Option B, released-F reject30/pass20 ở cả creation paths. Height400px có checkbox/submit reachable, không horizontal overflow. Đây không phải full FC4 verdict vì finding dưới đây.
+- FC4-1: [PR #24](https://github.com/17thedevv/VuonUomSo/pull/24), approved head `6221ad15137607c5ebde0f1e77948c851b81acbc`, merged tại `6d31d456413ace29c40f996e4517ec451e04192d`; [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37891865192).
+- Lifecycle correction: người dùng duyệt exact head **`2110fcd2bc51469606256f36265e3bd2ab3e3f1c`**, [PR #25](https://github.com/17thedevv/VuonUomSo/pull/25), [exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37893571084).
+- PR #25 merged tại **`f812162814a65b7c38fe11eff3ee4cee3b77bb28`**; [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37894202547). Đã kiểm từng step typecheck/lint/full test suite/production build. Full gate: **53/53 test files, 723/723 tests PASS**, lint **0 warnings / 0 errors** (158 files), typecheck/build PASS, PWA14 entries. Local full gate trên approved correction head cũng PASS.
+- Web diff giữa approved head và merge commit rỗng; main sạch trước browser acceptance.
+- Browser dưới đây chạy **sau merge-CI xanh**, trên main **f812162**, origin riêng http://127.0.0.1:5229, Chromium headless với browser/IndexedDB contexts tách biệt. Không dùng kết quả branch thay nghiệm thu main, không chạm dữ liệu người dùng.
+- Closure chỉ cập nhật report này và .agent/PROJECT_STATE.md; không đổi web/schema/dependency. Docs-only closure dùng full exact-head CI trước merge, không chạy lại full local suite khi web diff rỗng.
 
-## 2. HIGH H01 — external lifecycle presentation chưa đúng authority
+## 2. HIGH H01 đã được sửa và nghiệm thu trên main
 
-Trên main, setup bằng real services và thao tác confirm/release qua UI tại390px:
+Acceptance ban đầu trên main 6d31d45 phát hiện copy/history release dùng historical Q12k dù đã xuất F5k, và shipment nguồn ngoài nói own stock giảm. Physical stock/Q/F mutation vẫn đúng. Finding được xử lý trong PR #25, không rewrite lịch sử cũ:
 
-```text
-external Q12.000 / F0
-→ completed external shipment5.000
-→ Q12.000 / F5.000 / O7.000
-→ independent release
-→ released Q12.000 / F5.000 / O0
-```
+- Release preview dùng canonical O. Success generic tránh quantity stale nếu shipment hoàn tất sau khi modal mở.
+- Service re-read reservation, kiểm planned guard và capture O trong cùng transaction trước status write. New event giữ quantity=Q để compatibility, thêm releasedQuantity=O, fulfilledQuantity=F; message dùng commit-time O.
+- External release chỉ nhả cam kết chưa xuất; own living/ready không đổi. Own release nói availability được tính lại, không khẳng định stock tăng.
+- Shipment copy chỉ claim reduction của own lines. External-only không trừ cây vườn mình; mixed chỉ nói own portion. Legacy no-lines báo thiếu chi tiết để xác định, không suy luận stock effect.
+- Mutation/atomicity/idempotency của shipment/reservation không đổi. Không schema/dependency/domain-lifecycle expansion, FC5/backend/external transfer hoặc generic refactor.
 
-Mutation giữ stock nguyên vẹn và coverage sau release còn F5k. Tuy nhiên:
+**6 real Dexie regressions** bảo vệ own/external Q12/F5/O7, intervening shipment, external-only, mixed own3/ext5 và legacy no-lines. Asserts gồm Q/F/completed history/batch snapshots/availability và duplicate release-event count; năm regression đầu FAIL trên code cũ trước correction. Existing FC2/FC3, confirmation, races/rollback, Undo và backup corruption gates vẫn nằm trong full suite xanh.
 
-1. `ReleaseConfirmModal` preview/success nói bỏ12k và phần cây sẽ trở lại `Cây còn bán` của vườn mình. Thực tế chỉ nhả O7k từ nguồn ngoài; own availability/stock không đổi.
-2. New `reservation_released` event message dùng historical Q12k thay vì commit-time O7k. Historical `quantity` giữ Q là hợp lệ, nhưng message không nói đúng số vừa nhả.
-3. `ShipmentDetailScreen` confirmation/completed explanation luôn nói own physical stock bị trừ, kể cả chuyến chỉ có external lines. Mixed shipment cũng chưa nói rõ chỉ own portion giảm kho.
+## 3. Browser acceptance trên main
 
-Đây là **HIGH product truthfulness**, không phải finding inventory mutation/atomicity. Chặn FC4 closure để tránh chủ vườn hiểu nhầm số vừa nhả và stock của vườn mình. PR #24 đã qua đúng review/merge gate; finding phát hiện ở cross-flow acceptance rộng hơn, không rewrite lịch sử hoặc đảo merge đã duyệt.
-
-## 3. Bản vá hẹp, REVIEW PENDING
-
-Branch: `fix/fc4-release-truthfulness`, base main `6d31d45`. Diff: **6 files — 3 production / 1 test / 2 docs-state**.
-
-- `ReleaseConfirmModal`: dùng `remainingReservationQuantity` cho preview O; external nói nhả cam kết chưa xuất và stock vườn mình không đổi; own nói đúng availability của lô, không giảm living/ready. Giữ F/history. Success generic, không lấy stale modal quantity làm commit-time authority. Modal cuộn được height400px, hai primary controls ≥44px.
-- `reservationService`: capture canonical O trước status write; new events thêm `releasedQuantity=O` và `fulfilledQuantity=F`, message dùng O. Existing payload `quantity=Q` giữ nguyên để tương thích history; không rewrite event cũ. Mutation/transaction/planned guard/idempotency/stock/status semantics không đổi.
-- `ShipmentDetailScreen`: copy kế hoạch/confirmation/completed dùng own portion của source breakdown; pure external nói rõ không trừ own stock, mixed3k own +5k external chỉ trình bày effect3k lên own stock. Legacy shipment không source lines báo chưa có chi tiết để xác định stock effect, không tự suy luận external hoặc own stock reduction. Không đổi shipment service/line lifecycle.
-- Không schema/dependency/domain formula/refactor/FC5/backend/external transfer; FC3 marker-integrity và stable order differentiator notes vẫn deferred.
-
-`ExternalLifecycleTruthfulness.test.tsx` có **6 real Dexie regressions**: năm regression trước production fix **5/5 FAIL**, sau fix PASS (own/external Q12/F5 preview/event O7, intervening shipment không gây stale success/history quantity, external-only shipment không claim own reduction, mixed own3/ext5 đúng own3); thêm một legacy no-lines regression để tránh suy luận stock khi không có source detail. Snapshot Q/F/completed/batches/availability và duplicate release event-count được assert.
-
-Related gate ban đầu: 6 files / 75 tests PASS; full gate ban đầu 53 files / 722 tests PASS. Sau thêm legacy no-lines guard, **full final local gate: typecheck PASS, lint0/0 (158 files), 53/53 files / 723/723 tests PASS, build PASS, PWA14**. Build có bundle-size advisory; jsdom có navigation-to-another-document notice từ test hiện có. Không đổi code để bỏ qua các notice này. Exact-head CI và PR được xác minh trước handoff, ghi trong PR/handoff để tránh self-referential commit SHA.
-
-## 4. Browser evidence trên bản vá — chưa phải main acceptance
-
-Origin riêng `http://127.0.0.1:5219`; branch có đúng production correction nêu trên. A–G chạy lại PASS tại cả bốn widths.
-
-| Cross-flow | 360 | 390 | 430 | 1280 |
+| Gate | 360px | 390px | 430px | 1280px |
 | --- | --- | --- | --- | --- |
-| H external12k→confirm shipment5k qua UI: preview/completed không claim own reduction; all own stock objects không đổi | PASS | PASS | PASS | PASS |
-| H tiếp release qua UI: preview7k, no own availability claim, Q12/F5/released và event O7 giữ đúng; shortage15k | PASS | PASS | PASS | PASS |
-| Release modal height400px: confirm reachable, ≥44px, no horizontal overflow | PASS | PASS | PASS | PASS |
-| M own12 + external12 → mixed own3/ext5: confirmation nói own3, completed only own stock giảm3; F3/F5 | PASS | PASS | PASS | PASS |
+| A–G: contact truth, blank explicit input, acknowledgement reset/cây-vạn, supplier/duplicate contact, partial commitment, released-F coverage | PASS | PASS | PASS | PASS |
+| H: external12k → confirm shipment5k qua UI; không claim own stock giảm | PASS | PASS | PASS | PASS |
+| H: release qua UI, preview7k; Q12/F5/released, event Q12/O7/F5; shortage15k | PASS | PASS | PASS | PASS |
+| M: own12 + external12 → mixed own3/ext5; confirmation own3, stock chỉ giảm own3, F3/F5 | PASS | PASS | PASS | PASS |
+| Height400px: acknowledgement/submit và release confirmation reachable; primary controls ≥44px, không horizontal overflow | PASS | PASS | PASS | PASS |
 
-Riêng390px:
+Fixture stock A: living80k / ready60k. H giữ nguyên toàn bộ own batch objects sau external shipment/release; released source coverage còn F5k. M giảm đúng own3k thành living77k / ready57k. Không nhầm historical Q với O hoặc nguồn ngoài với own inventory.
 
-- Ghi khách mới → ghi đơn50k → thêm supplier phone blank → nhập `3,2 vạn`/acknowledge/giữ32k → giảm requested25k bằng UI Trigger A → nguồn25k. Intentional note giữ qua reconciliation, DB chưa lưu note cho tới `CẬP NHẬT ĐƠN` riêng; customer/supplier roles đúng. Không lifecycle dead-end trong flow đã kiểm.
-- External12k + planned5k → preview/hủy đơn qua UI: source released, planned cancelled, history tồn tại, physical batches nguyên vẹn.
-- External release F5k, mixed shipment và cancelled external: **download backup JSON → validate → restore qua UI → reload/reopen**, business data và history JSON-equivalent giữ nguyên. Optional undefined properties bị JSON bỏ theo serialization hiện có; không clamp/auto-repair/migrate dữ liệu.
+A–G kiểm supplier contact không có estimate/fallback, gọi điện không xác nhận/autofill/write, nhập confirmed12k cho đơn20k → shortage8k, rapid double-submit tạo một reservation/event. Confirmed40k không bị catalog35k cũ cap; supplier không phone vẫn dùng được. Supplier mới có role supplier, phone optional; customer-only duplicate dùng Option B tạo supplier riêng, giữ customer cũ nguyên trạng.
 
-Source audit theo thứ tự correctness → scope → architecture → UX → tests: creation/helpers/confirmation/transaction và existing physical stock invariants giữ đúng; patch chỉ event facts/presentation, UI vẫn dùng service/helper. Existing corruption/races/Undo/FC2/FC3/backup gates nằm trong full suite xanh. Không tự suy diễn tests là field pilot.
+Released-F fixture requested50k / released Q20k F10k / active Q20k: own/external +30k reject không partial write; +20k PASS nếu guard nguồn đạt, coverage50k/shortage0 và stock/F/completed history đúng. Fixture setup và attempt riêng gate này gọi real services trong browser; không mô tả chúng là toàn bộ thao tác UI.
 
-## 5. Evidence, giới hạn và bước tiếp
+Riêng **390px**, chuỗi thao tác qua UI:
 
-- Main evidence: `C:/Users/84387/.codex/fc4-final-evidence/main-browser.mjs`, `results.json`, A–G screenshots và `H-main-external-{shipment,release}-finding-390.png`.
-- Correction evidence: `C:/Users/84387/.codex/fc4-final-evidence/correction/browser.mjs`, `results.json`, A–G/H/M screenshots, `external-release.json`, `mixed-shipment.json`, `cancelled-external.json`.
-- Đã inspect trực tiếp main release390, corrected release360, mixed shipment confirmation360 và pure external confirmation1280 screenshots. Các paths là local-only, không phải attachment tải qua GitHub connector. Browser runtime/backup/screenshot không commit vào repo.
-- Chưa test physical Android/iOS IME, field pilot, offline installed-PWA acceptance hoặc stress multi-tab ngoài real Dexie race suites. Giữ limitation đã công bố ở FC4-1.
+1. Tạo khách mới → tạo đơn50k → thêm supplier phone trống → nhập **3,2 vạn**, acknowledge và giữ32k.
+2. Sửa requested25k kèm draft note → Trigger A reconciliation nguồn25k → DB chưa lưu note → bấm riêng **CẬP NHẬT ĐƠN** để lưu note. Customer/supplier roles đúng; không lifecycle dead-end.
+3. Đơn20k, external12k, planned5k → preview/hủy đơn: source released, planned shipment cancelled, history còn nguyên, physical batch objects không đổi.
+4. External release F5k, mixed shipment và cancelled external đều **download backup JSON → validate → restore qua UI → reload/reopen**. Orders/reservations/events/batches/contacts/shipments JSON-equivalent trước/sau. Optional undefined properties bị JSON bỏ theo serialization hiện có; không clamp/auto-repair/migrate.
 
-**Required next gate:** review exact correction head → merge khi được duyệt → merge-CI xanh → chạy lại H/M và create/edit/cancel/backup trên main đã có correction → mới đổi **FC4 DONE**. Chưa mở FC5.
+Browser script exit0; không có page errors ở cả bốn widths. Đã xem trực tiếp screenshots main: release360, mixed confirmation360 và external-only confirmation1280; nội dung/layout phù hợp asserts.
+
+## 4. Evidence và giới hạn
+
+- Main accepted evidence: C:/Users/84387/.codex/fc4-final-evidence/accepted-main/browser.mjs, results.json, A–G/H/M screenshots, external-release.json, mixed-shipment.json, cancelled-external.json.
+- Evidence phát hiện cũ vẫn ở C:/Users/84387/.codex/fc4-final-evidence/; correction branch evidence vẫn ở subdirectory correction/. Không ghi đè bằng kết quả main mới.
+- Screenshot/runtime/backup là local-only, không phải attachment tải được qua GitHub connector; không commit vào repo. CI và report truy cập được qua GitHub.
+- Chưa kiểm physical Android/iOS IME, field pilot hoặc offline installed-PWA acceptance. Height400px là mô phỏng keyboard, không thay kiểm thiết bị thật. Stress multi-tab ngoài real Dexie race suites chưa kiểm.
+- FC3 stable order differentiator và deep idempotency marker integrity notes vẫn deferred; closure này không triển khai các mục đó.
+
+**Verdict: FC4 FINAL ACCEPTANCE PASS / CLOSED; FC4 DONE. FC5 PLANNED / NOT STARTED.** Không triển khai FC5 trong task closure.
