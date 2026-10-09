@@ -75,6 +75,13 @@ export const ShipmentDetailScreen: React.FC = () => {
   const isCancelled = shipment.status === 'cancelled'
 
   const displayQuantity = isCompleted ? shipment.shippedQuantity : shipment.plannedQuantity
+  const hasSourceDetails = linesWithDetails.length > 0
+  const ownQuantity = linesWithDetails.filter(line => line.sourceType === 'own_batch').reduce((sum, line) => sum + line.quantity, 0)
+  const plannedStockMessage = !hasSourceDetails
+    ? 'Chưa có chi tiết nguồn để xác định tác động tồn kho.'
+    : ownQuantity > 0
+    ? `Các lô trong vườn sẽ giảm ${formatQuantity(ownQuantity)} cây khi xác nhận đã giao.`
+    : 'Nguồn ngoài không trừ cây trong vườn mình.'
   const vanQuantity = (displayQuantity / 10000).toLocaleString('vi-VN', {
     maximumFractionDigits: 1
   })
@@ -257,10 +264,9 @@ export const ShipmentDetailScreen: React.FC = () => {
               <span>Tác động tồn kho vật lý</span>
             </div>
             <p className="leading-relaxed">
-              Chuyến giao đang ở trạng thái <strong>Kế hoạch (Chưa trừ tồn kho)</strong>. Khi xe bốc
-              xong và bạn bấm <strong>&ldquo;Xác nhận đã giao&rdquo;</strong>, tồn kho thực tế của các
-              lô cây trên mới bị giảm.
+              Chuyến giao đang ở trạng thái <strong>Kế hoạch (Chưa trừ tồn kho)</strong>.
             </p>
+            <p>{plannedStockMessage}</p>
           </div>
         )}
 
@@ -268,11 +274,14 @@ export const ShipmentDetailScreen: React.FC = () => {
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 text-xs text-emerald-900 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-emerald-950">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Tồn kho vật lý đã được trừ</span>
+              <span>{!hasSourceDetails ? 'Đã ghi nhận chuyến giao' : ownQuantity > 0 ? 'Tồn kho vật lý đã được trừ' : 'Đã ghi nhận giao nguồn ngoài'}</span>
             </div>
             <p className="leading-relaxed">
-              Chuyến giao đã hoàn thành xuất vườn. Số lượng thực tế và đủ chuẩn của các lô liên quan
-              đã được ghi nhận giảm trực tiếp.
+              {!hasSourceDetails
+                ? 'Chưa có chi tiết nguồn để xác định tác động tồn kho.'
+                : ownQuantity > 0
+                ? `Các lô trong vườn đã giảm ${formatQuantity(ownQuantity)} cây.`
+                : 'Số đã xuất được ghi nhận trên nguồn giữ. Cây trong vườn mình không đổi.'}
             </p>
           </div>
         )}
@@ -326,7 +335,7 @@ export const ShipmentDetailScreen: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-bold text-sm text-slate-900">Xác nhận xuất cây lên xe?</h3>
-                <p className="text-xs text-slate-500">Thao tác này ghi nhận cây đã rời vườn</p>
+                <p className="text-xs text-slate-500">Ghi nhận số cây đã giao từ các nguồn trong chuyến</p>
               </div>
             </div>
 
@@ -335,9 +344,9 @@ export const ShipmentDetailScreen: React.FC = () => {
               <strong className="text-slate-900 font-extrabold">
                 {formatQuantity(displayQuantity)} cây
               </strong>{' '}
-              cho đơn của <strong>{customer?.name}</strong>. Tồn kho thực tế trong vườn sẽ giảm ngay
-              lập tức.
+              cho đơn của <strong>{customer?.name}</strong>.
             </p>
+            <p className="text-xs text-slate-600">{plannedStockMessage}</p>
 
             <div className="flex gap-2">
               <SecondaryButton
