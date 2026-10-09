@@ -138,7 +138,7 @@ Chỉ thị roadmap mới đã supersede FC5/FC6, giữ FC0–FC4. Thứ tự: c
 
 **Cần functional contract/migration:** item/variant/size, location partial movement, condition buckets, catalog/customer prices, quote/draft, multi-item orders, payment/debt, photo storage/backup, public publishing/request intake. Không dùng placeholder data hay zero values để làm chúng trông đã hoạt động.
 
-Các G01/G02 correctness findings ở audit trước vẫn cần patch riêng; G10 custom variety picker cũng chưa sửa. Đây là findings trên core merged cũng như snapshot audit; reset docs chưa vá hoặc rerun probes. Previous audit test/browser evidence không phải bằng chứng acceptance cho UI V2 chưa tồn tại.
+Các G01/G02 correctness findings ở audit trước đã DONE / CLOSED qua [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), merge `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940). G10 custom variety picker chưa sửa và là NEXT duy nhất; V2-A1 queued sau G10. Reset docs không triển khai G10/V2-A. Previous audit test/browser evidence không phải bằng chứng acceptance cho UI V2 chưa tồn tại.
 
 Product validation tiếp theo: quan sát chủ vườn trả lời “giờ còn bán gì?”/tìm lô/ghi đơn thật; đo số bước và điểm sai nghĩa; thử bảng text họ tự gửi Zalo; hỏi size/vị trí/công nợ có gây thao tác lặp thực tế không. Teardown không chứng minh những module đó nằm trên critical path PMF.
 

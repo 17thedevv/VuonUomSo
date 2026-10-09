@@ -21,23 +21,26 @@
 
 **Chỉ thị người dùng: FC5 / FC6 SUPERSEDED BY V2.** Đây là quyết định đổi roadmap rõ ràng, thay các NEXT/prerequisite trong snapshot cũ bên dưới. FC0–FC4 vẫn DONE / CLOSED. Base merged khi tạo reset: `0d8d97a7254998ac84c7fedc087724f8ccc44da2`.
 
-- [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 DOCUMENTED / READY FOR REVIEW**; không tuyên bố reset đã merge hoặc UI đã triển khai.
+- [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 APPROVED / INTEGRATING INTO MAIN VIA PR #30**; roadmap có hiệu lực trên main khi [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30) merge. UI V2 chưa triển khai.
 - [V2-A Functional Contract](../docs/product/V2-A-FUNCTIONAL-CONTRACT.md): frozen legacy grouping + coherent read snapshot + available labels/sum per-batch.
 - **FC5-1 PRESERVED / NOT ADOPTED / OUT OF ACTIVE ROADMAP**: branch `feat/fc5-close-remaining-domain`, head `ac68325b8deab6445e833b6f7c78c28fa97f9484`, [PR #29](https://github.com/17thedevv/VuonUomSo/pull/29). Không merge/xóa/đóng PR bằng reset này; không phụ thuộc service hoặc enum chưa merge. Muốn tiếp nhận lại cần task/review riêng.
 
 | Phase | Trạng thái | Gate / scope |
 |---|---|---|
-| Correctness cleanup G01/G02/G10 | **OPEN / NEXT CODING TASK** | Atomic create + numeric boundary; custom variety picker. Không bỏ bug theo roadmap cũ |
-| V2-A1 | **NEXT AFTER CLEANUP / NOT STARTED** | Garden availability read model, không schema mới |
-| V2-A2 | PLANNED / NOT STARTED | Garden UI/search trên A1 |
-| V2-A3 | PLANNED / NOT STARTED | Quick update composition dùng mutation hiện có |
-| V2-A4 | PLANNED / NOT STARTED | Today/nav integration; giữ bốn tab và routes cũ |
+| Correctness G01/G02 | **DONE / CLOSED** | [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32) merged; atomic create + numeric boundary, evidence bên dưới |
+| Correctness G10 | **NEXT — DUY NHẤT** | Custom variety picker; chưa triển khai |
+| V2-A1 | **QUEUED / NEXT AFTER G10** | Garden availability read model, không schema mới; chỉ mở sau G10 closure |
+| V2-A2 | QUEUED / PLANNED | Garden UI/search trên A1 |
+| V2-A3 | QUEUED / PLANNED | Quick update composition dùng mutation hiện có |
+| V2-A4 | QUEUED / PLANNED | Today/nav integration; giữ bốn tab và routes cũ |
 | V2-B1 | PLANNED / NOT STARTED | Local bảng hàng preview → Copy/Web Share → owner tự gửi |
 | V2-B2 | PLANNED / NOT STARTED | Customer read views, không giá/thu tiền/công nợ |
 | REAL PILOT / STOP FEATURE BUILD | **REQUIRED AFTER V2-B** | Điện thoại/số liệu thật; năm task và metrics trong roadmap |
 | V2-C / V2-D / V2-E | **EVIDENCE GATED / NOT AUTHORIZED** | Không mặc định xây; pilot + contract/scope riêng trước implementation |
 
-V2-0 chỉ docs/state/policy; không triển khai correctness fixes hoặc A/B trong reset. G01/G02/G10 chưa sửa. Không đợi FC5/FC6 trước V2; schema/Product/Variant/Location/Size/payment/public URL/backend đều ngoài scope A/B. Physical IME, installed-PWA offline thực tế và field pilot vẫn NOT VERIFIED.
+**G01/G02 closure evidence:** reviewed head `e57cf29c5ed4da550048c7efae1b4e36c9dfda34`; PR #32 merged vào main tại `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, lúc `2026-10-09T13:09:03Z`. [Merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940): typecheck, lint, full tests và production build PASS. Code và regressions của #32 được giữ nguyên khi tích hợp reset.
+
+V2-0 chỉ docs/state/policy; code G01/G02 đã tích hợp riêng qua #32. G10 là task coding kế tiếp duy nhất; V2-A1 đang queued sau G10. Task integration này dừng ở closure, không sửa G10 hoặc triển khai A/B. Không đợi FC5/FC6 trước V2; schema/Product/Variant/Location/Size/payment/public URL/backend đều ngoài scope A/B. Physical IME, installed-PWA offline thực tế và field pilot vẫn NOT VERIFIED.
 
 
 ### Giai đoạn kỹ thuật nền tảng (Foundation Phases):

@@ -131,7 +131,7 @@ CloseRemainingModal/service/closed_remaining thuộc FC5 **preserved/not adopted
 |---|---|---|
 | Thêm lô | `batchService.createBatch()` | Batch/availability/history |
 | Kiểm kê / cây đủ bán | `updateBatchInventory()` / `updateBatchReadyQuantity()` | Batch/reservations/availability/shortage |
-| Ghi/sửa/hủy đơn | `createOrder()` / `updateOrder()` / `cancelOrder()` | Order/source/planned/history; G01/G02 patch still pending |
+| Ghi/sửa/hủy đơn | `createOrder()` / `updateOrder()` / `cancelOrder()` | Order/source/planned/history; G01/G02 DONE / CLOSED qua #32 |
 | Giữ/nhả | `reserveOwnBatch()` / `reserveExternalSupplier()` / `releaseReservation()` | Current source/coverage/O/stock read facts |
 | Điều chỉnh nguồn | `reconcileOrderReduction()` / `reconcileBatchShortage()` | Current DB authority; not projection as permanent local state |
 | Lên/xuất/hủy chuyến | `createShipment()` / `confirmShipment()` / `cancelShipment()` | Order/shipment/F/own stock/history |
@@ -176,7 +176,7 @@ Read view → select task → draft → validate preview
 
 ### V2-A: bốn slice trên facts hiện tại
 
-Sau cleanup G01/G02/G10: A1 read/query + real Dexie snapshot tests → A2 Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
+G01/G02 đã DONE / CLOSED qua #32. G10 NEXT duy nhất; A1 queued sau G10 closure: A1 read/query + real Dexie snapshot tests → A2 Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
 
 Files có khả năng chạm sau khi duyệt: proposed garden components/query service; [TodayScreen](D:/Project-17/VuonUom/web/src/features/today/TodayScreen.tsx); [router](D:/Project-17/VuonUom/web/src/app/router.tsx); [NAV_ITEMS](D:/Project-17/VuonUom/web/src/shared/navigation.ts). Batch/order/shipment command files chỉ là dependencies, không có lý do sửa mutation để thay hero/list UI.
 
@@ -201,4 +201,4 @@ Reuse [readiness migration plan](D:/Project-17/VuonUom/docs/architecture/GENERAL
 
 Để giao coding task tiếp theo, chỉ định **một slice**, base merged, exact files/allowed authority và acceptance tương ứng; record explicit exclusions. Source/reference teardown không thay thế functional contract.
 
-V2-0 cập nhật PROJECT_STATE/roadmap/contracts, không đổi NAV_ITEMS hoặc code V2 và không merge FC5-1. Bước coding tiếp theo: cleanup G01/G02, G10 rồi V2-A1; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.
+V2-0 cập nhật PROJECT_STATE/roadmap/contracts, không đổi NAV_ITEMS hoặc code V2 và không merge FC5-1. G01/G02 DONE / CLOSED (#32); G10 NEXT duy nhất; V2-A1 QUEUED / NEXT AFTER G10. Task integration dừng trước G10; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.

@@ -10,11 +10,14 @@ Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 →
 - FC5 và FC6: **SUPERSEDED BY V2**, không còn prerequisite hoặc task NEXT. Không đánh dấu chúng DONE.
 - FC5-0 đã merge là bằng chứng lịch sử; contract FC5 được giữ làm tài liệu tham khảo, không buộc hoàn thành close remaining trước V2.
 - FC5-1 ở `feat/fc5-close-remaining-domain`, head `ac68325b8deab6445e833b6f7c78c28fa97f9484`, [PR #29](https://github.com/17thedevv/VuonUomSo/pull/29): **PRESERVED / NOT ADOPTED / OUT OF ACTIVE ROADMAP**. Giữ nguyên code/branch để tham khảo; reset này không merge, xóa hoặc đóng PR đó. V2 không import `closeOrderRemaining()`, thêm `closed_remaining` hoặc dựa vào terminal guards chưa merge. Muốn dùng lại phải mở một task correctness/capability riêng với review theo hướng sản phẩm mới.
-- G01/G02/G10 là lỗi độc lập trên core hiện tại: **OPEN / REQUIRED CORRECTNESS CLEANUP**. Thay roadmap không làm chúng biến mất hoặc biến các kết quả test cũ thành bằng chứng đã sửa.
+- **V2-0 APPROVED / INTEGRATING INTO MAIN VIA [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30)**; reset có hiệu lực trên main sau merge PR này.
+- **G01/G02 DONE / CLOSED**: [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), reviewed head `e57cf29c5ed4da550048c7efae1b4e36c9dfda34`, merged `9c29fa2beea57bd82eb74a4b88c5b79987acefb1` lúc `2026-10-09T13:09:03Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940), typecheck/lint/full tests/build PASS.
+- **G10 NEXT — task coding duy nhất**. V2-A1 **QUEUED / NEXT AFTER G10**; chưa triển khai G10 hoặc V2-A.
 
 ```text
-V2-0: reset roadmap + freeze contract
-  → Correctness cleanup G01/G02/G10
+V2-0: reset roadmap + freeze contract (integrating via #30)
+  → G01/G02 (DONE / CLOSED, #32 merged)
+  → G10 (NEXT duy nhất)
   → V2-A1 → V2-A2 → V2-A3 → V2-A4
   → V2-B1 → V2-B2
   → REAL PILOT / STOP FEATURE BUILD
@@ -25,13 +28,13 @@ V2-0: reset roadmap + freeze contract
 
 Nguồn và cách tái hiện: [readiness audit](../architecture/GENERAL-COMMERCE-READINESS-AUDIT.md). Mỗi patch có phạm vi và regression riêng; không refactor reservation engine hoặc đưa FC5-1 vào main qua cleanup.
 
-| Gate | Patch hẹp | Điều kiện đóng |
-|---|---|---|
-| **G01** | Atomic create order + required event/feedback reads | Real Dexie event/read failure không lưu order một phần; retry không nhân đôi order vì lần thất bại trước đã ghi dữ liệu; Undo intent chỉ capture sau commit thành công |
-| **G02** | Validate create quantity/optional price tại service boundary | Quantity nguyên an toàn dương; price nếu có là số nguyên an toàn không âm, khớp edit boundary hiện có; NaN/Infinity/phân số/out-of-range reject trước write. Không tạo financial authority mới |
-| **G10** | Picker giống phản ánh common options + dữ liệu lô + intentional draft/custom value | Batch Monthong → Ghi đơn: label nhìn thấy = variety submitted; query prefill không bị select đổi ngầm sang giống khác; default/common flow giữ được |
+| Gate | Trạng thái | Patch hẹp | Điều kiện đóng |
+|---|---|---|---|
+| **G01** | **DONE / CLOSED (#32)** | Atomic create order + required event/feedback reads | Real Dexie event/read failure không lưu order một phần; retry không nhân đôi order vì lần thất bại trước đã ghi dữ liệu; Undo intent chỉ capture sau commit thành công |
+| **G02** | **DONE / CLOSED (#32)** | Validate create quantity/optional price tại service boundary | Quantity nguyên an toàn dương; price nếu có là số nguyên an toàn không âm, khớp edit boundary hiện có; NaN/Infinity/phân số/out-of-range reject trước write. Không tạo financial authority mới |
+| **G10** | **NEXT — DUY NHẤT** | Picker giống phản ánh common options + dữ liệu lô + intentional draft/custom value | Batch Monthong → Ghi đơn: label nhìn thấy = variety submitted; query prefill không bị select đổi ngầm sang giống khác; default/common flow giữ được |
 
-G01/G02 có thể chung một PR correctness; G10 là patch UI riêng. Full CI và regression phải xanh trước tích hợp. Không mở Product/Variant chỉ để sửa picker.
+G01/G02 đã đóng qua PR #32 với merge CI xanh. G10 là patch UI riêng, cần regression và full CI trước closure; chỉ sau đó mới mở V2-A1. Không mở Product/Variant chỉ để sửa picker.
 
 ## 3. V2-A — Availability & Quick Update
 
@@ -96,6 +99,6 @@ E có boundary: owner IndexedDB → publish snapshot → public URL → customer
 
 ## 7. Handoff
 
-V2-0 chỉ đổi docs/state/skill routing policy; không `web/` diff. Bước coding tiếp theo là correctness cleanup G01/G02, rồi G10; **V2-A1 NEXT sau cleanup**. Không mở tất cả A/B trong một PR.
+V2-0 chỉ đổi docs/state/skill routing policy; không `web/` diff so với main đã chứa #32. **G01/G02 DONE / CLOSED; G10 NEXT duy nhất; V2-A1 QUEUED / NEXT AFTER G10**. A2/A3/A4 QUEUED / PLANNED; B1/B2 PLANNED. Task integration dừng ở closure, không bắt đầu G10 hoặc mở A/B trong cùng PR.
 
 Đọc cùng: [workflow audit](V2-WORKFLOW-AUDIT.md), [IA](V2-INFORMATION-ARCHITECTURE.md), [route/component map](V2-ROUTE-COMPONENT-MAP.md). Những đề xuất C/D/E trong các tài liệu này là hypotheses có gate, không mở rộng authorized scope của A/B. Trạng thái merge của reset phải được báo riêng, không lấy việc đã viết roadmap để claim main đã đổi.

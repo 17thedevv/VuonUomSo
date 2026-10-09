@@ -187,7 +187,7 @@ Tối thiểu conceptual future core: `SellableItem/Variant` cho cái bán đư�
 
 | Slice | Outcome | Dependency / không bao gồm |
 |---|---|---|
-| **V2-A1/A2/A3/A4 — Availability & quick entry** | Read model → UI/search → quick composition → Today/nav | G01/G02/G10 cleanup trước; V2-A Contract đã freeze; không size/location/condition/schema rewrite |
+| **V2-A1/A2/A3/A4 — Availability & quick entry** | Read model → UI/search → quick composition → Today/nav | G01/G02 DONE / CLOSED (#32); G10 NEXT duy nhất; A1 queued sau G10; V2-A Contract đã freeze; không size/location/condition/schema rewrite |
 | **V2-B1/B2 — Local bảng hàng + customer read** | Preview text/copy/share → customer reads | Sau A acceptance; không live/public intake/giá khách/payment/công nợ |
 | **REAL PILOT / STOP FEATURE BUILD** | Năm task trên số liệu/điện thoại thật; đo time/taps/sai lô/nhầm ready-available/Excel | Ngay sau B; không chờ FC5/FC6/C/D/E |
 | **V2-C — Identity & nursery facts** | Hỗ trợ grade/size hoặc location theo pain point pilot | Contract/migration/backup/current-state guards trước UI; whole-batch labels và partial movements tách slice |

@@ -72,6 +72,7 @@ Dự án **TUYỆT ĐỐI CHƯA ĐƯỢC PHÉP** đầu tư xây dựng Cloud Ba
 Chỉ thị trực tiếp người dùng ngày 09/10/2026 đã supersede FC5/FC6 và thay gate STOP sau P6 bằng **correctness cleanup → V2-A → V2-B → REAL PILOT**. Xem [PROJECT_STATE](../../PROJECT_STATE.md), [V2 Roadmap](../../../docs/product/V2-ROADMAP.md). Đây là ngoại lệ scope được user chỉ định, không cho agent tự mở thêm phase.
 
 ### Mệnh lệnh cho Agent:
+- Current task authority: **G01/G02 DONE / CLOSED (#32 merged); G10 NEXT duy nhất; V2-A1 QUEUED / NEXT AFTER G10**. Chỉ mở A1 khi G10 đã closure; task integration không bắt đầu G10.
 - Chỉ thực hiện từng slice cleanup/A/B theo roadmap; không tự triển khai C/D/E hoặc quay lại hoàn tất FC5/FC6.
 - Sau V2-B: **STOP FEATURE BUILD → USER VALIDATION**, dùng thiết bị/số liệu vườn thật. Correctness fixes vẫn được phép khi phát hiện lỗi.
 - Pilot có năm task và metrics time/taps/chọn sai lô/nhầm ready-available/Excel/thông tin ghi ngoài app trong roadmap. Không kết luận PASS từ browser/teardown/lời khen.

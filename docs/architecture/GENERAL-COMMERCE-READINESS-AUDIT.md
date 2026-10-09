@@ -1,6 +1,6 @@
 # General-Commerce Readiness Audit
 
-> **HISTORICAL AUDIT SNAPSHOT.** Roadmap hiện hành: [V2 Roadmap](../product/V2-ROADMAP.md). FC5/FC6 SUPERSEDED; FC5-1 branch preserved/not adopted. Bằng chứng snapshot cũ bên dưới không phải current-main V2 acceptance. G01/G02/G10 vẫn OPEN và cần cleanup riêng; reset roadmap không vá code.
+> **HISTORICAL AUDIT SNAPSHOT.** Roadmap hiện hành: [V2 Roadmap](../product/V2-ROADMAP.md). FC5/FC6 SUPERSEDED; FC5-1 branch preserved/not adopted. Bằng chứng và trạng thái OPEN/NEXT trong snapshot cũ bên dưới không phải current-main acceptance hoặc task authority. G01/G02 đã DONE / CLOSED qua [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), merge `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940). G10 NEXT duy nhất; V2-A1 queued sau G10. Reset roadmap chỉ đổi docs, không triển khai G10/V2-A.
 
 ## Executive Summary
 
