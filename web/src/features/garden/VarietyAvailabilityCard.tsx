@@ -1,15 +1,16 @@
 import { useId } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
-import type { GardenVarietyGroup } from '../../services/gardenQueryService'
+import type { GardenVarietyGroup, GardenBatchAvailability } from '../../services/gardenQueryService'
 import { formatQuantity } from '../../domain/quantity'
 
-export function VarietyAvailabilityCard({ group, expanded, onToggle, returnTo, searching }: {
+export function VarietyAvailabilityCard({ group, expanded, onToggle, returnTo, searching, onQuickUpdate }: {
   group: GardenVarietyGroup
   expanded: boolean
   onToggle: () => void
   returnTo: string
   searching: boolean
+  onQuickUpdate: (batch: GardenBatchAvailability) => void
 }) {
   const listId = useId()
   return (
@@ -55,6 +56,7 @@ export function VarietyAvailabilityCard({ group, expanded, onToggle, returnTo, s
                 </dl>
                 <p className="text-emerald-800 font-semibold mt-3">Mở chi tiết lô →</p>
               </Link>
+              <button type="button" data-update-batch-id={batch.id} aria-label={`Cập nhật lô ${batch.code}`} onClick={() => onQuickUpdate(batch)} className="min-h-11 w-full mt-2 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-800 font-semibold">Cập nhật lô</button>
             </li>
           ))}
         </ul>
