@@ -33,12 +33,12 @@ description: >-
 
 ### Sản phẩm này LÀ:
 - Sổ tay số thay thế sổ giấy và trí nhớ của chủ vườn/thương lái.
-- Công cụ trả lời ngay lập tức: *Còn bao nhiêu cây đủ bán? Đã giữ cho ai? Khi nào giao?*
+- Công cụ trả lời ngay lập tức: *Còn bán được cây gì? Đã giữ cho ai? Khi nào xuất?*
 
 ### Sản phẩm này TUYỆT ĐỐI KHÔNG PHẢI LÀ:
 - Một hệ sinh thái ERP nông nghiệp tổng quát.
 - Một sàn thương mại điện tử (Marketplace) kết nối người mua kẻ bán công cộng.
-- Một phần mềm kế toán, ghi sổ nợ, theo dõi dòng tiền hay tính thuế.
+- Một hệ thống kế toán/tính thuế. Quote/payment/debt tối thiểu chỉ là V2-D có điều kiện sau pilot, chưa được mở trong V2-A/B.
 - Một mạng xã hội hay ứng dụng nhắn tin chat.
 - Một nền tảng AI nông nghiệp chẩn đoán sâu bệnh qua ảnh.
 
@@ -72,31 +72,24 @@ Hệ thống mô hình hóa bằng danh sách năng lực mềm dẻo (`capabili
 ## 6. Current Roadmap
 
 ```text
-P0 — Foundation                 [DONE]
-P1 — Read-only UX               [DONE]
-P2 — Core write flow            [DONE]
-P3 — Reservation                [DONE]
-P4 — Shipment                   [DONE]
-P5 — Dossier + Backup           [DONE]
-P6 — Validation instrumentation [DONE]
----------------------------------------------
-FC0 — Functional Contract Gate  [DONE / CLOSED]
-FC1 — Batch Stock Lifecycle     [NEXT — CURRENT]
-FC2 — Order Corrections         [PLANNED]
-FC3 — Shortage Reconciliation   [PLANNED]
-FC4 — External Supply           [PLANNED]
-FC5 — Fulfillment Completion    [PLANNED]
-FC6 — Pilot Hardening           [PLANNED]
----------------------------------------------
-STOP CODE — GO TO NURSERY FIELD PILOT
+P0–P6 / FC0–FC4                 [DONE / CLOSED]
+FC5 / FC6                      [SUPERSEDED BY V2]
+V2-0                           [ROADMAP RESET + CONTRACT FREEZE]
+Correctness G01/G02/G10         [OPEN / NEXT CODING TASK]
+V2-A1 → A2 → A3 → A4            [AFTER CLEANUP]
+V2-B1 → B2                     [AFTER V2-A ACCEPTANCE]
+REAL PILOT / STOP FEATURE BUILD [AFTER V2-B]
+V2-C / V2-D / V2-E              [EVIDENCE GATED / NOT AUTHORIZED]
 ```
 
 ---
 
+Roadmap chi tiết: [V2 Roadmap](../../../docs/product/V2-ROADMAP.md). Status authority: [PROJECT_STATE](../../PROJECT_STATE.md). FC5-1 branch preserved/not adopted; không dependency ngầm hoặc điều kiện hoàn tất V2. V2-A/B giữ schema và authority hiện có; C/D/E không mặc định phải xây.
+
 ## 7. Rules & Scope Discipline
 
 ### MUST:
-1. **MUST** kiểm tra [.agent/PROJECT_STATE.md](../PROJECT_STATE.md) trước khi nhận định phase hiện tại.
+1. **MUST** kiểm tra [.agent/PROJECT_STATE.md](../../PROJECT_STATE.md) trước khi nhận định phase hiện tại.
 2. **MUST** từ chối mọi yêu cầu thêm tính năng thuộc phase sau nếu task hiện tại chỉ yêu cầu phase trước.
 3. **MUST** giữ ngôn ngữ hiển thị tiếng Việt mộc mạc, gần gũi với đời sống lâm nghiệp.
 

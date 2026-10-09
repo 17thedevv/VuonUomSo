@@ -2,14 +2,14 @@
 name: validation
 description: >-
   Use this skill to guide user validation strategy, empirical evidence thresholds,
-  and enforce the stop-build rule after P6 to prevent unverified feature development.
+  and enforce the current pilot gate to prevent unverified feature development.
 ---
 
 # Product Validation Strategy & The Stop-Build Rule
 
 ## 1. Purpose
 
-Ngăn chặn căn bệnh phổ biến của các AI Coding Agent: **tự ý thêm tính năng cho "trông hoàn thiện"** dựa trên cảm giác chủ quan thay vì dữ liệu bằng chứng thực tế từ người dùng vườn ươm. Kỹ năng này định nghĩa thang đo bằng chứng xác thực và quy tắc **STOP CODE** khi kết thúc phase P6.
+Ngăn chặn căn bệnh phổ biến của các AI Coding Agent: **tự ý thêm tính năng cho "trông hoàn thiện"** dựa trên cảm giác chủ quan thay vì dữ liệu bằng chứng thực tế từ người dùng vườn ươm. Kỹ năng này định nghĩa thang đo bằng chứng xác thực và quy tắc **STOP FEATURE BUILD** tại pilot gate hiện hành trong PROJECT_STATE.
 
 ---
 
@@ -19,7 +19,7 @@ Ngăn chặn căn bệnh phổ biến của các AI Coding Agent: **tự ý thê
   - Khi thảo luận về tính hiệu quả hoặc giá trị thực tế của một tính năng.
   - Khi quyết định có nên đầu tư làm tiếp một tính năng mới hay không.
   - Khi xây dựng công cụ đo lường thực địa trong Phase P6.
-  - Khi dự án hoàn thành P6 và cần kích hoạt quy tắc dừng code để mang đi thử nghiệm.
+  - Khi đến pilot gate hiện hành và cần dừng feature build để mang đi thử nghiệm.
 - **WHEN NOT TO USE**:
   - Khi giải quyết lỗi cú pháp code, lỗi type, hay viết test kỹ thuật (dùng `implementation` hoặc `testing`).
   - Khi thiết kế giao diện form nhập liệu (dùng `ux-design`).
@@ -67,16 +67,16 @@ Dự án **TUYỆT ĐỐI CHƯA ĐƯỢC PHÉP** đầu tư xây dựng Cloud Ba
 
 ---
 
-## 6. The "STOP-BUILD" Rule (Quy tắc dừng code sau P6)
+## 6. The "STOP-BUILD" Rule — current pilot gate
 
-Khi Phase P6 (Validation Instrumentation) hoàn tất:
-
-$$\mathbf{STOP\; CODE} \quad\Longrightarrow\quad \mathbf{USER\; VALIDATION}$$
+Chỉ thị trực tiếp người dùng ngày 09/10/2026 đã supersede FC5/FC6 và thay gate STOP sau P6 bằng **correctness cleanup → V2-A → V2-B → REAL PILOT**. Xem [PROJECT_STATE](../../PROJECT_STATE.md), [V2 Roadmap](../../../docs/product/V2-ROADMAP.md). Đây là ngoại lệ scope được user chỉ định, không cho agent tự mở thêm phase.
 
 ### Mệnh lệnh cho Agent:
-- Sau khi P6 hoàn thành, **ĐÓNG BĂNG MỌI HOẠT ĐỘNG PHÁT TRIỂN TÍNH NĂNG MỚI**.
-- Không được phép tự vẽ ra P7, P8 hay "tối ưu hóa thêm chút nữa".
-- Mang bản PWA ra các vườn ươm tại Hữu Lũng, Tuấn Sơn để người thật dùng thử và ghi nhận phản hồi.
+- Chỉ thực hiện từng slice cleanup/A/B theo roadmap; không tự triển khai C/D/E hoặc quay lại hoàn tất FC5/FC6.
+- Sau V2-B: **STOP FEATURE BUILD → USER VALIDATION**, dùng thiết bị/số liệu vườn thật. Correctness fixes vẫn được phép khi phát hiện lỗi.
+- Pilot có năm task và metrics time/taps/chọn sai lô/nhầm ready-available/Excel/thông tin ghi ngoài app trong roadmap. Không kết luận PASS từ browser/teardown/lời khen.
+- IME điện thoại thật, installed-PWA offline và dùng lại ngày sau phải ghi bằng chứng riêng.
+- Chỉ mở C/D/E khi có evidence và task/contract/scope riêng. Ngưỡng production §5 không thay đổi; evidence không tự cấp authorization backend.
 
 ---
 
@@ -85,4 +85,4 @@ $$\mathbf{STOP\; CODE} \quad\Longrightarrow\quad \mathbf{USER\; VALIDATION}$$
 - [ ] Tính năng đang làm có phục vụ trực tiếp cho một thí nghiệm xác thực không?
 - [ ] Có đang bị cám dỗ "làm thêm cho hoàn chỉnh" mà không có bằng chứng từ người dùng không?
 - [ ] Có đang coi lời khen chủ quan là dấu hiệu thành công của sản phẩm không?
-- [ ] Nếu đã đến cuối P6, đã dừng code và kích hoạt Stop-build rule chưa?
+- [ ] Nếu đã hoàn tất V2-B, đã dừng feature build và bắt đầu real pilot chưa?

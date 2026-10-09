@@ -23,6 +23,12 @@ docs/
   - Khi có Native mobile app: Thêm Capacitor shell trong `web/` (`web/android`, `web/ios`).
 
 ## 2. `product/`
+
+- [V2 Roadmap](product/V2-ROADMAP.md): roadmap hiện hành; FC5/FC6 SUPERSEDED; cleanup → A → B → real pilot → evidence decides C/D/E.
+- [V2-A Functional Contract](product/V2-A-FUNCTIONAL-CONTRACT.md): grouping legacy, coherent IndexedDB snapshot, available sum theo từng lô.
+- [Workflow audit](product/V2-WORKFLOW-AUDIT.md), [Information Architecture](product/V2-INFORMATION-ARCHITECTURE.md), [Route & Component Map](product/V2-ROUTE-COMPONENT-MAP.md): blueprint; không phải mọi screen/module đã được triển khai.
+- [General-Commerce Readiness Audit](architecture/GENERAL-COMMERCE-READINESS-AUDIT.md): bằng chứng lịch sử và G01/G02/G10 còn mở. Trạng thái task mới nhất ở [PROJECT_STATE](../.agent/PROJECT_STATE.md).
+
 - Định vị: **Sổ cây giống trên điện thoại** cho hệ sinh thái lâm nghiệp (Hữu Lũng, Lạng Sơn và mở rộng).
 - Bất biến cốt lõi: Quản lý lô, khả năng đáp ứng (Availability), giữ cây (Reservation), xuất xe (Shipment).
 
