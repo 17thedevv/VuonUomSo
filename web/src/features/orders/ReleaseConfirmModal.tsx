@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { AlertCircle, RotateCcw } from 'lucide-react'
 import type { ResolvedReservation } from '../../services/reservationService'
 import { formatQuantity } from '../../domain/quantity'
+import { remainingReservationQuantity } from '../../domain/reservation'
 import { releaseReservation } from '../../services/reservationService'
 import { validationTracker } from '../../validation/validationTracker'
 
@@ -23,15 +24,17 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
 
   if (!isOpen || !reservation) return null
 
+  const outstanding = remainingReservationQuantity(reservation)
+  const isOwnBatch = reservation.sourceType === 'own_batch'
+
   const handleConfirm = async () => {
     setIsSubmitting(true)
     setError(null)
     try {
       await releaseReservation({ reservationId: reservation.id })
       void validationTracker.actionCompleted('reservation_released')
-      onSuccess(
-        `Đã bỏ giữ ${formatQuantity(reservation.quantity)} cây từ ${reservation.sourceLabel}. Số cây này đã trở lại cây còn bán.`
-      )
+      // Do not turn the modal snapshot into a claim about commit-time quantities.
+      onSuccess('Đã bỏ giữ nguồn. Dữ liệu đơn được tải lại.')
       onClose()
     } catch (err: unknown) {
       console.error('Error releasing reservation:', err)
@@ -52,7 +55,7 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
       aria-modal="true"
       aria-labelledby="release-modal-title"
     >
-      <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-2xl shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center gap-3 text-rose-600">
           <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
             <AlertCircle className="w-6 h-6 text-rose-600" />
@@ -68,11 +71,14 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
         </div>
 
         <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs text-slate-700 leading-relaxed">
-          Bỏ giữ <strong>{formatQuantity(reservation.quantity)} cây</strong> từ{' '}
+          Bỏ giữ phần chưa xuất <strong>{formatQuantity(outstanding)} cây</strong> từ{' '}
           <strong>{reservation.sourceLabel}</strong>?
           <p className="text-slate-500 mt-1">
-            Số cây này sẽ trở lại mục <em>Cây còn bán</em> của vườn và đơn hàng sẽ bị thiếu cây tương ứng.
+            {isOwnBatch
+              ? 'Bỏ cam kết chưa xuất của lô. Cây còn bán được tính lại; cây còn sống và cây đủ bán không đổi.'
+              : 'Chỉ nhả cam kết chưa xuất từ nhà vườn ngoài. Cây trong vườn mình không đổi.'}
           </p>
+          <p className="text-slate-500 mt-1">Số đã xuất và lịch sử được giữ nguyên. Đơn sẽ thiếu nguồn theo phần được nhả.</p>
         </div>
 
         {error && (
@@ -86,7 +92,7 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
+            className="w-full min-h-[44px] py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
           >
             Giữ nguyên
           </button>
@@ -95,7 +101,7 @@ export const ReleaseConfirmModal: React.FC<ReleaseConfirmModalProps> = ({
             type="button"
             onClick={handleConfirm}
             disabled={isSubmitting}
-            className="w-full py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+            className="w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
           >
             {isSubmitting ? (
               <span>Đang xử lý...</span>

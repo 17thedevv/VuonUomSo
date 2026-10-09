@@ -21,6 +21,7 @@ import {
   validateReservationQuantity,
   validateBatchAvailability,
   validateOrderShortage,
+  remainingReservationQuantity,
   type ExternalSupplierCandidate
 } from '../domain/reservation'
 import { undoService } from './undoService'
@@ -486,6 +487,8 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
       )
     }
 
+    const releasedQuantity = remainingReservationQuantity(reservation)
+
     // Update reservation status to 'released'
     reservation.status = 'released'
     await db.reservations.put(reservation)
@@ -539,7 +542,9 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
           sourceType: 'own_batch',
           batchId: reservation.batchId,
           quantity: reservation.quantity,
-          message: `Đã bỏ giữ ${formatQuantity(reservation.quantity)} cây đơn ${customerName}`
+          releasedQuantity,
+          fulfilledQuantity: reservation.fulfilledQuantity ?? 0,
+          message: `Đã bỏ giữ ${formatQuantity(releasedQuantity)} cây đơn ${customerName}`
         },
         createdAt: new Date().toISOString()
       })
@@ -559,7 +564,9 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
         orderId: reservation.orderId,
         sourceType: reservation.sourceType,
         quantity: reservation.quantity,
-        message: `Đã bỏ giữ ${formatQuantity(reservation.quantity)} cây từ ${sourceName}`
+        releasedQuantity,
+        fulfilledQuantity: reservation.fulfilledQuantity ?? 0,
+        message: `Đã bỏ giữ ${formatQuantity(releasedQuantity)} cây từ ${sourceName}`
       },
       createdAt: new Date().toISOString()
     })
