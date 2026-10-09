@@ -115,9 +115,12 @@ describe('OrderReserveScreen (Phase P3)', () => {
       expect(screen.getByText('Giữ cây từ Vườn Thảo')).toBeInTheDocument()
     })
 
-    // Default quantity is min(35k, 18k) = 18k
+    // External quantity is explicit user input and requires acknowledgement.
+    expect(screen.getByLabelText(/Số cây đã xác nhận giữ/)).toHaveValue('')
+    fireEvent.change(screen.getByLabelText(/Số cây đã xác nhận giữ/), { target: { value: '18000' } })
     expect(screen.getByText('= 18.000 cây')).toBeInTheDocument()
-    const submitButton = screen.getByRole('button', { name: /GIỮ 18.000 CÂY/i })
+    fireEvent.click(screen.getByRole('checkbox', { name: /Đã gọi/ }))
+    const submitButton = screen.getByRole('button', { name: 'GIỮ NGUỒN' })
     fireEvent.click(submitButton)
 
     await waitFor(() => {

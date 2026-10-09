@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Contact } from '../../domain/contact'
 import { createContact } from '../../services/contactService'
 import { X, UserPlus, AlertCircle, Phone, Check } from 'lucide-react'
@@ -8,38 +8,52 @@ export interface ContactQuickCreateModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: (contact: Contact) => void
+  mode?: 'customer' | 'supplier'
 }
 
 export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = ({
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
+  mode = 'customer'
 }) => {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [duplicateWarning, setDuplicateWarning] = useState<Contact | null>(null)
+  const submitting = useRef(false)
+  const isSupplier = mode === 'supplier'
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(''); setPhone(''); setError(null); setDuplicateWarning(null)
+    }
+  }, [isOpen, mode])
 
   if (!isOpen) return null
 
   const handleSave = async (forceAllowDuplicate = false) => {
+    if (submitting.current) return
     const trimmedName = name.trim()
     if (!trimmedName) {
-      setError('Vui lòng nhập tên khách hàng.')
+      setError(isSupplier ? 'Vui lòng nhập tên nhà vườn.' : 'Vui lòng nhập tên khách hàng.')
       return
     }
 
+    submitting.current = true
     setIsSubmitting(true)
     setError(null)
 
     const result = await createContact({
       name: trimmedName,
       phone: phone.trim() || undefined,
+      roles: [mode],
       allowDuplicatePhone: forceAllowDuplicate
     })
 
     setIsSubmitting(false)
+    submitting.current = false
 
     if (result.success && result.contact) {
       void validationTracker.actionCompleted('contact_created')
@@ -49,12 +63,12 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
       setDuplicateWarning(result.existingContact)
     } else {
       void validationTracker.actionFailed('contact_created', 'validation')
-      setError(result.error || 'Chưa lưu được thông tin khách hàng.')
+      setError(result.error || (isSupplier ? 'Chưa lưu được thông tin nhà vườn.' : 'Chưa lưu được thông tin khách hàng.'))
     }
   }
 
   const handleUseExisting = () => {
-    if (duplicateWarning) {
+    if (duplicateWarning && !submitting.current && (!isSupplier || duplicateWarning.roles.includes('supplier'))) {
       onSuccess(duplicateWarning)
       onClose()
     }
@@ -63,7 +77,7 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-200">
       <div
-        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
+        className="w-full max-w-md max-h-[90dvh] bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="contact-modal-title"
@@ -75,12 +89,13 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
               <UserPlus className="w-4 h-4" />
             </div>
             <h2 id="contact-modal-title" className="text-base font-bold text-slate-900">
-              Thêm khách mới
+              {isSupplier ? 'Thêm nhà vườn' : 'Thêm khách mới'}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             aria-label="Đóng"
             className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
           >
@@ -94,16 +109,17 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
             e.preventDefault()
             handleSave(false)
           }}
-          className="p-4 sm:p-5 space-y-4"
+          className="p-4 sm:p-5 space-y-4 overflow-y-auto min-h-0"
         >
           <div>
             <label htmlFor="contact-name" className="block text-xs font-bold text-slate-800 mb-1">
-              Tên khách hàng / Cơ sở <span className="text-rose-600">*</span>
+              {isSupplier ? 'Tên nhà vườn' : 'Tên khách hàng / Cơ sở'} <span className="text-rose-600">*</span>
             </label>
             <input
               id="contact-name"
               type="text"
               value={name}
+              disabled={isSubmitting}
               onChange={(e) => {
                 setName(e.target.value)
                 setError(null)
@@ -124,6 +140,7 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
                 id="contact-phone"
                 type="tel"
                 value={phone}
+                disabled={isSubmitting}
                 onChange={(e) => {
                   setPhone(e.target.value)
                   setError(null)
@@ -143,21 +160,28 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
                 <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
                 <span>Số điện thoại này đã có trong danh bạ: <strong>{duplicateWarning.name}</strong></span>
               </div>
+              {isSupplier && !duplicateWarning.roles.includes('supplier') && (
+                <p>Liên hệ này chỉ là khách hàng. Bạn có thể tạo nhà vườn riêng; thông tin khách cũ được giữ nguyên.</p>
+              )}
               <div className="flex items-center gap-2 pt-1">
+                {(!isSupplier || duplicateWarning.roles.includes('supplier')) && (
                 <button
                   type="button"
                   onClick={handleUseExisting}
-                  className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 shadow-2xs"
+                  disabled={isSubmitting}
+                  className="flex-1 min-h-[44px] py-2 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 shadow-2xs"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>Dùng khách này</span>
+                  <span>{isSupplier ? 'Dùng nhà vườn này' : 'Dùng khách này'}</span>
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleSave(true)}
-                  className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs border border-slate-300"
+                  disabled={isSubmitting}
+                  className="min-h-[44px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs border border-slate-300"
                 >
-                  Vẫn tạo mới
+                  {isSupplier ? 'Vẫn tạo nhà vườn mới' : 'Vẫn tạo mới'}
                 </button>
               </div>
             </div>
@@ -184,7 +208,7 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
               disabled={isSubmitting}
               className="flex-1 py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-sm disabled:opacity-50 transition-all min-h-[46px]"
             >
-              {isSubmitting ? 'Đang lưu...' : 'Lưu khách'}
+              {isSubmitting ? 'Đang lưu...' : isSupplier ? 'Lưu nhà vườn' : 'Lưu khách'}
             </button>
           </div>
         </form>

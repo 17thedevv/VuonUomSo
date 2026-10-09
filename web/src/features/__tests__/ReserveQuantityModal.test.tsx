@@ -110,19 +110,73 @@ describe('ReserveQuantityModal quantity units', () => {
     expect(screen.getByRole('button', { name: 'GIỮ 32.000 CÂY' })).toBeEnabled()
   })
 
-  it('keeps external source defaults and order maximum consistent after a vạn chip', async () => {
+  it('external opens blank without shortage quick-fill; requires confirmed cây/vạn input and bound acknowledgement', async () => {
     setup({
       type: 'external_supplier',
-      supplier: { supplierId: 'supplier_test', name: 'Vườn thử', variety: 'Keo lai BV16', estimatedQuantity: 35000 }
+      supplier: { supplierId: 'supplier_test', name: 'Vườn thử' }
     }, 32000)
+    expect(screen.getByLabelText(/Số cây đã xác nhận giữ/)).toHaveValue('')
+    expect(screen.queryByText(/Tham khảo nguồn/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Giữ đủ đơn/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'GIỮ NGUỒN' })).toBeDisabled()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Đơn vị tính số lượng' }), { target: { value: 'van' } })
+    fireEvent.change(screen.getByLabelText(/Số cây đã xác nhận giữ/), { target: { value: '3,2' } })
     expect(screen.getByText('= 32.000 cây')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '2 vạn' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Giữ đủ đơn (32.000 cây)' }))
-    expect(screen.getByText('= 32.000 cây')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Đơn vị tính số lượng' })).toHaveValue('cay')
-    fireEvent.click(screen.getByRole('button', { name: 'GIỮ 32.000 CÂY' }))
+    expect(screen.getByRole('button', { name: 'GIỮ NGUỒN' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Đã gọi/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'GIỮ NGUỒN' }))
     await waitFor(() => expect(reserveExternalSupplier).toHaveBeenCalledWith({
-      orderId: 'order_test', supplierId: 'supplier_test', quantity: 32000
+      orderId: 'order_test', supplierId: 'supplier_test', quantity: 32000,
+      confirmation: { acknowledged: true, supplierId: 'supplier_test', variety: 'Keo lai BV16', quantity: 32000 }
     }))
+  })
+
+  it('changing external quantity invalidates acknowledgement even if user later restores the old value', () => {
+    setup({ type: 'external_supplier', supplier: { supplierId: 'supplier_test', name: 'Vườn thử' } })
+    const input = screen.getByLabelText(/Số cây đã xác nhận giữ/)
+    fireEvent.change(input, { target: { value: '12000' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.change(input, { target: { value: '10000' } })
+    expect(screen.getByRole('checkbox')).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'GIỮ NGUỒN' })).toBeDisabled()
+    fireEvent.change(input, { target: { value: '12000' } })
+    expect(screen.getByRole('checkbox')).not.toBeChecked()
+  })
+
+  it.each(['order', 'supplier', 'variety'] as const)('changing external %s context invalidates acknowledgement', mode => {
+    const { rerender, props } = setup({ type: 'external_supplier', supplier: { supplierId: 'supplier_test', name: 'Vườn thử' } })
+    fireEvent.change(screen.getByLabelText(/Số cây đã xác nhận giữ/), { target: { value: '12000' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    rerender(<ReserveQuantityModal {...props}
+      orderId={mode === 'order' ? 'other-order' : props.orderId}
+      orderVariety={mode === 'variety' ? 'AH1' : props.orderVariety}
+      source={mode === 'supplier' ? { type: 'external_supplier', supplier: { supplierId: 'other-supplier', name: 'Vườn khác' } } : props.source} />)
+    expect(screen.getByRole('checkbox')).not.toBeChecked()
+    expect(screen.getByRole('button', { name: 'GIỮ NGUỒN' })).toBeDisabled()
+  })
+
+  it('external double-submit commits one action and success does not subtract stale shortage', async () => {
+    const { props } = setup({ type: 'external_supplier', supplier: { supplierId: 'supplier_test', name: 'Vườn thử' } }, 12000)
+    fireEvent.change(screen.getByLabelText(/Số cây đã xác nhận giữ/), { target: { value: '12000' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    const form = screen.getByRole('button', { name: 'GIỮ NGUỒN' }).closest('form')!
+    fireEvent.submit(form); fireEvent.submit(form)
+    await waitFor(() => expect(props.onSuccess).toHaveBeenCalledWith('Đã ghi nhận giữ 12.000 cây từ Vườn thử.'))
+    expect(reserveExternalSupplier).toHaveBeenCalledTimes(1)
+  })
+
+  it('stale rejection preserves input, refreshes facts, and requires confirmation again', async () => {
+    vi.mocked(reserveExternalSupplier).mockRejectedValueOnce(new Error('Đơn này chỉ còn thiếu 10.000 cây.'))
+    const { props, rerender } = setup({ type: 'external_supplier', supplier: { supplierId: 'supplier_test', name: 'Vườn thử' } }, 20000)
+    const refresh = vi.fn(async () => { rerender(<ReserveQuantityModal {...props} orderShortage={10000} onRefreshFacts={refresh} />) })
+    rerender(<ReserveQuantityModal {...props} onRefreshFacts={refresh} />)
+    fireEvent.change(screen.getByLabelText(/Số cây đã xác nhận giữ/), { target: { value: '12000' } })
+    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('button', { name: 'GIỮ NGUỒN' }))
+    await screen.findByText('Đơn này chỉ còn thiếu 10.000 cây.')
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText(/Số cây đã xác nhận giữ/)).toHaveValue('12000')
+    expect(screen.getByRole('checkbox')).not.toBeChecked()
+    expect(props.onSuccess).not.toHaveBeenCalled()
   })
 })

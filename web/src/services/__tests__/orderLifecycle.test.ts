@@ -53,7 +53,7 @@ describe('FC2 transactional order corrections', () => {
     expect(orderShortage(order, await db.reservations.toArray())).toBe(28000)
     expect(await db.reservations.toArray()).toEqual(before.reservations)
     expect(await db.batches.toArray()).toEqual(before.batches)
-    await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 28000 })
+    await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 28000, confirmation: { acknowledged: true, supplierId: 'supplier', variety: 'BV16', quantity: 28000 } })
     expect((await db.orders.get('order'))?.status).toBe('reserved')
     expect(await db.batches.toArray()).toEqual(before.batches)
   })

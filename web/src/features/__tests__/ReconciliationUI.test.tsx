@@ -53,7 +53,7 @@ describe('FC3-3 UI intent → real Dexie services → reloaded screens', () => {
     await db.orders.bulkPut([{ id: 'Lan', customerId: 'c1', variety: 'BV16', requestedQuantity: 50000, status: 'open', note: 'old' },
       { id: 'Hung', customerId: 'c2', variety: 'BV16', requestedQuantity: 30000, status: 'open' }])
     own = (await reserveOwnBatch({ orderId: 'Lan', batchId: 'A', quantity: 20000 })).reservation.id
-    external = (await reserveExternalSupplier({ orderId: 'Lan', supplierId: 'supplier', quantity: 12000 })).reservation.id
+    external = (await reserveExternalSupplier({ orderId: 'Lan', supplierId: 'supplier', quantity: 12000, confirmation: { acknowledged: true, supplierId: 'supplier', variety: 'BV16', quantity: 12000 } })).reservation.id
     other = (await reserveOwnBatch({ orderId: 'Hung', batchId: 'A', quantity: 8000 })).reservation.id
     undoService.clearLastMutation()
   })

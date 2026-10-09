@@ -63,9 +63,14 @@ export type ExternalSupplierCandidate = {
   supplierId: string
   name: string
   phone?: string
+}
+
+/** User acknowledgement for one action; never persisted as supplier stock verification. */
+export type ExternalReservationConfirmation = {
+  acknowledged: boolean
+  supplierId: string
   variety: string
-  estimatedQuantity: number
-  note?: string
+  quantity: number
 }
 
 /**
@@ -123,7 +128,7 @@ export function sortBatchCandidatesForReservation(
 export function validateReservationQuantity(
   quantity: number
 ): { valid: boolean; error?: string } {
-  if (!Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0) {
+  if (!Number.isSafeInteger(quantity) || quantity <= 0) {
     return { valid: false, error: 'Số lượng giữ phải là số nguyên dương lớn hơn 0 cây.' }
   }
   return { valid: true }

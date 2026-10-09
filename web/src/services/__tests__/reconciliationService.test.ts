@@ -50,7 +50,7 @@ describe('FC3-1B atomic order reduction (real Dexie/service)', () => {
       { id: 'other', customerId: 'customer', variety: 'BV16', requestedQuantity: 10000, status: 'open' }
     ])
     ownId = (await reserveOwnBatch({ orderId: 'order', batchId: 'batch', quantity: 20000 })).reservation.id
-    externalId = (await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 12000 })).reservation.id
+    externalId = (await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 12000, confirmation: { acknowledged: true, supplierId: 'supplier', variety: 'BV16', quantity: 12000 } })).reservation.id
     await reserveOwnBatch({ orderId: 'other', batchId: 'batch', quantity: 5000 })
     await db.reservations.put({ id: 'old', orderId: 'order', sourceType: 'own_batch', batchId: 'batch',
       quantity: 3000, fulfilledQuantity: 0, status: 'released', createdAt: '2026-10-01' })

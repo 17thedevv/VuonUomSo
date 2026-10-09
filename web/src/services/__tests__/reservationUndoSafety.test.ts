@@ -66,7 +66,7 @@ describe('FC3-1A: reservation Undo commit safety (real Dexie)', () => {
 
   it('fresh external reservation Undo uses the same guard without changing own stock', async () => {
     const before = await db.batches.toArray()
-    const { reservation } = await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 10000 })
+    const { reservation } = await reserveExternalSupplier({ orderId: 'order', supplierId: 'supplier', quantity: 10000, confirmation: { acknowledged: true, supplierId: 'supplier', variety: 'Keo', quantity: 10000 } })
     expect((await undoService.undoLastMutation()).success).toBe(true)
     expect((await db.reservations.get(reservation.id))?.status).toBe('released')
     expect(await db.batches.toArray()).toEqual(before)

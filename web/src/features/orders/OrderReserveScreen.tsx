@@ -15,6 +15,7 @@ import {
 import { PageHeader } from '../../shared/components/PageHeader'
 import { EmptyState } from '../../shared/components/EmptyState'
 import { formatQuantity } from '../../domain/quantity'
+import { remainingReservationQuantity, fulfilledQuantityForReservation } from '../../domain/reservation'
 import { formatShortDate } from '../../domain/date'
 import {
   getReservationOptions,
@@ -27,6 +28,7 @@ import {
   type ReserveSource
 } from './ReserveQuantityModal'
 import { ReleaseConfirmModal } from './ReleaseConfirmModal'
+import { ContactQuickCreateModal } from './ContactQuickCreateModal'
 
 export const OrderReserveScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -43,6 +45,7 @@ export const OrderReserveScreen: React.FC = () => {
   const [isReserveModalOpen, setIsReserveModalOpen] = useState(false)
   const [reservationToRelease, setReservationToRelease] = useState<ResolvedReservation | null>(null)
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false)
+  const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!id) return
@@ -99,7 +102,7 @@ export const OrderReserveScreen: React.FC = () => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-slate-400 space-y-2 min-h-screen">
         <Clock className="w-6 h-6 animate-pulse text-emerald-600" />
-        <span className="text-sm font-medium">Đang tìm nguồn cây khả dụng...</span>
+        <span className="text-sm font-medium">Đang tìm nguồn cây cho đơn...</span>
       </div>
     )
   }
@@ -398,27 +401,31 @@ export const OrderReserveScreen: React.FC = () => {
               ref={externalSectionRef}
               className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="font-bold text-slate-900 text-sm flex items-center gap-1.5 uppercase tracking-wide">
                   <Store className="w-4 h-4 text-sky-700" />
-                  <span>NGUỒN NGOÀI GOM CÂY ({order.variety})</span>
+                  <span>NGUỒN NGOÀI</span>
                 </h4>
-                <span className="text-xs text-slate-400">Số lượng tham khảo</span>
+                <button type="button" onClick={() => setIsSupplierCreateOpen(true)}
+                  className="min-h-[44px] px-3 py-2 rounded-xl border border-sky-200 text-sky-800 font-bold text-xs">
+                  + THÊM NHÀ VƯỜN
+                </button>
               </div>
 
               <p className="text-xs text-slate-500 leading-relaxed">
-                Khi vườn nhà không đủ cây hoặc muốn giữ nguồn từ các chủ vườn liên kết quanh vùng
-                (Hữu Lũng / Tuấn Sơn / Bắc Giang).
+                Chọn nhà vườn, gọi hoặc nhắn xác nhận bên ngoài rồi nhập số cây họ đồng ý giữ cho đơn này.
               </p>
 
               <div className="space-y-2.5">
                 {externalSuppliers.map((supplier) => {
                   const canReserve = !isFullyReserved
+                  const outstanding = currentReservations.filter(r => r.supplierId === supplier.supplierId)
+                    .reduce((sum, r) => sum + remainingReservationQuantity(r), 0)
 
                   return (
                     <div
                       key={supplier.supplierId}
-                      className="bg-slate-50/80 border border-slate-200 p-3 rounded-xl flex items-center justify-between gap-3 text-xs"
+                      className="bg-slate-50/80 border border-slate-200 p-3 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -431,17 +438,18 @@ export const OrderReserveScreen: React.FC = () => {
                         </div>
 
                         <div className="text-slate-600 mt-1">
-                          {order.variety} · Có khoảng{' '}
-                          <strong className="text-slate-900">
-                            {formatQuantity(supplier.estimatedQuantity)} cây
-                          </strong>
+                          Giống của đơn: {order.variety}
                         </div>
 
+                        {outstanding > 0 && <p className="text-slate-700 mt-1">Đang giữ {formatQuantity(outstanding)} cây cho đơn này</p>}
+
                         {supplier.phone && (
-                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                          <a href={`tel:${supplier.phone.replace(/\s/g, '')}`}
+                            aria-label={`GỌI XÁC NHẬN ${supplier.name}`}
+                            className="text-xs text-sky-800 mt-0.5 flex items-center gap-1 min-h-[44px] font-semibold">
                             <Phone className="w-3 h-3" />
-                            <span>{supplier.phone}</span>
-                          </div>
+                            <span>GỌI XÁC NHẬN · {supplier.phone}</span>
+                          </a>
                         )}
                       </div>
 
@@ -487,7 +495,7 @@ export const OrderReserveScreen: React.FC = () => {
 
               {currentReservations.length === 0 ? (
                 <p className="text-xs text-slate-400 italic py-2">
-                  Chưa giữ cây từ nguồn nào. Chọn nguồn khả dụng phía trên để bắt đầu giữ cây.
+                  Chưa giữ cây từ nguồn nào. Chọn lô trong vườn hoặc xác nhận với nhà vườn ngoài để bắt đầu giữ cây.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -523,7 +531,7 @@ export const OrderReserveScreen: React.FC = () => {
 
                         <div className="text-right shrink-0">
                           <span className="font-black text-slate-900 text-sm">
-                            {formatQuantity(res.quantity)}
+                            {formatQuantity(res.status === 'fulfilled' ? fulfilledQuantityForReservation(res) : remainingReservationQuantity(res))}
                           </span>
                           <span className="text-[10px] text-slate-400 block">cây</span>
                         </div>
@@ -537,7 +545,7 @@ export const OrderReserveScreen: React.FC = () => {
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
-                          {res.status === 'fulfilled' ? 'Đã giao' : 'Đang giữ'}
+                          {res.status === 'fulfilled' ? 'Đã xuất' : 'Đang giữ'}
                         </span>
 
                         {res.status === 'active' && (
@@ -569,6 +577,13 @@ export const OrderReserveScreen: React.FC = () => {
         source={activeSource}
         onClose={() => setIsReserveModalOpen(false)}
         onSuccess={handleSuccessAction}
+        onRefreshFacts={fetchData}
+      />
+
+      <ContactQuickCreateModal
+        isOpen={isSupplierCreateOpen} mode="supplier"
+        onClose={() => setIsSupplierCreateOpen(false)}
+        onSuccess={contact => handleSuccessAction(`Nhà vườn ${contact.name} đã có trong danh sách. Hãy xác nhận số cây trước khi giữ nguồn.`)}
       />
 
       {/* Release Confirmation Modal */}

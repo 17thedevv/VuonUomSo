@@ -120,7 +120,7 @@ describe('FC3-2 Trigger B + own transfer (real Dexie/services)', () => {
     if (mode === 'invalid-stock') { await db.batches.update('B', { currentQuantity: 0 }); code = 'INVALID_STATE' }
     if (mode === 'excess') p.adjustments[0].transfer!.quantity = 3001
     if (mode === 'external') {
-      p.adjustments[0].reservationId = (await reserveExternalSupplier({ orderId: 'Lan', supplierId: 'supplier', quantity: 10000 })).reservation.id; code = 'INVALID_SELECTION'
+      p.adjustments[0].reservationId = (await reserveExternalSupplier({ orderId: 'Lan', supplierId: 'supplier', quantity: 10000, confirmation: { acknowledged: true, supplierId: 'supplier', variety: 'BV16', quantity: 10000 } })).reservation.id; code = 'INVALID_SELECTION'
     }
     if (mode === 'wrong-batch') {
       p.adjustments[0].reservationId = (await reserveOwnBatch({ orderId: 'Other', batchId: 'B', quantity: 5000 })).reservation.id; code = 'INVALID_SELECTION'
