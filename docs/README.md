@@ -27,7 +27,7 @@ docs/
 - [V2 Roadmap](product/V2-ROADMAP.md): roadmap hiện hành; FC5/FC6 SUPERSEDED; cleanup → A → B → real pilot → evidence decides C/D/E.
 - [V2-A Functional Contract](product/V2-A-FUNCTIONAL-CONTRACT.md): grouping legacy, coherent IndexedDB snapshot, available sum theo từng lô.
 - [Workflow audit](product/V2-WORKFLOW-AUDIT.md), [Information Architecture](product/V2-INFORMATION-ARCHITECTURE.md), [Route & Component Map](product/V2-ROUTE-COMPONENT-MAP.md): blueprint; không phải mọi screen/module đã được triển khai.
-- [General-Commerce Readiness Audit](architecture/GENERAL-COMMERCE-READINESS-AUDIT.md): bằng chứng lịch sử; G01/G02 DONE / CLOSED qua #32, G10 NEXT duy nhất, V2-A1 queued sau G10. Trạng thái task mới nhất ở [PROJECT_STATE](../.agent/PROJECT_STATE.md).
+- [General-Commerce Readiness Audit](architecture/GENERAL-COMMERCE-READINESS-AUDIT.md): bằng chứng lịch sử; G01/G02/G10 DONE / CLOSED qua #32/#33; V2-A1 NEXT duy nhất. Trạng thái task mới nhất ở [PROJECT_STATE](../.agent/PROJECT_STATE.md).
 
 - Định vị: **Sổ cây giống trên điện thoại** cho hệ sinh thái lâm nghiệp (Hữu Lũng, Lạng Sơn và mở rộng).
 - Bất biến cốt lõi: Quản lý lô, khả năng đáp ứng (Availability), giữ cây (Reservation), xuất xe (Shipment).
