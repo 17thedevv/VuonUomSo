@@ -177,6 +177,7 @@ export const OrdersScreen: React.FC = () => {
         ) : displayedOrders.length === 0 ? (
           <div className="my-auto">
             <EmptyState
+              illustration={filter === 'all' ? 'orders' : 'noResults'}
               title={
                 filter === 'all'
                   ? 'Chưa có đơn hàng nào.'

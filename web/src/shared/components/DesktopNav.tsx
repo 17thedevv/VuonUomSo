@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Sprout } from 'lucide-react'
 import { NAV_ITEMS } from '../navigation'
+import { brandAssets } from '../visualAssets'
 
 export const DesktopNav: React.FC = () => {
   return (
@@ -11,9 +11,7 @@ export const DesktopNav: React.FC = () => {
     >
       {/* Brand Header */}
       <div className="p-5 border-b border-slate-100 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-sm">
-          <Sprout className="w-6 h-6" />
-        </div>
+        <img src={brandAssets.mark} alt="" aria-hidden="true" width="40" height="40" className="w-10 h-10 shrink-0" />
         <div className="min-w-0">
           <div className="font-bold text-slate-900 text-base leading-tight tracking-tight">VƯỜN ƯƠM</div>
           <div className="text-[11px] text-slate-500 truncate">Sổ cây giống</div>

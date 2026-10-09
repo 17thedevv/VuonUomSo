@@ -1,0 +1,51 @@
+{
+  "name": "VuonUomSo",
+  "version": "1.0.0",
+  "color": {
+    "forest": "#163E33",
+    "pine": "#246C4D",
+    "leaf": "#48A878",
+    "mint": "#BDE9C8",
+    "lime": "#CFE18F",
+    "gold": "#E6B967",
+    "cream": "#F8F7F0",
+    "paper": "#FFFFFF",
+    "ink": "#21342F",
+    "slate": "#667A72",
+    "line": "#DFE8DF",
+    "soft": "#EEF5EC",
+    "sand": "#F4E9D5",
+    "coral": "#D9825D",
+    "danger": "#B65A49"
+  },
+  "typography": {
+    "family": "Inter, Noto Sans, system-ui, sans-serif",
+    "weights": [
+      400,
+      500,
+      600,
+      700,
+      800
+    ]
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 18,
+    "xl": 24
+  },
+  "spacing": {
+    "unit": 4
+  },
+  "assets": {
+    "iconSize": 24,
+    "emptyState": {
+      "width": 640,
+      "height": 420
+    },
+    "productPlaceholder": {
+      "width": 500,
+      "height": 320
+    }
+  }
+}

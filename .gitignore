@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .audit
+
+# Original local archive; extracted visual assets are tracked under web/src/assets/visual.
+/VuonUomSo-Visual-Assets-v1.zip

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ChevronRight, AlertTriangle, Clock, RotateCcw, Sprout, Truck } from 'lucide-react'
+import { Plus, ChevronRight, AlertTriangle, Clock, RotateCcw, Truck } from 'lucide-react'
+import { emptyStateIllustrations } from '../../shared/visualAssets'
 import type { Organization } from '../../domain/organization'
 import type { BatchWithAvailability } from '../../domain/batch'
 import type { OrderWithDerived } from '../../domain/order'
@@ -411,9 +412,8 @@ export const TodayScreen: React.FC = () => {
 
                 {batches.length === 0 && (
                   <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs text-center space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto">
-                      <Sprout className="w-6 h-6" />
-                    </div>
+                    <img src={emptyStateIllustrations.catalog} alt="" aria-hidden="true"
+                      width="640" height="420" className="w-40 max-w-full h-auto mx-auto" />
                     <h3 className="font-bold text-slate-800 text-sm">Chưa có dữ liệu trong vườn</h3>
                     <p className="text-xs text-slate-500 max-w-xs mx-auto">
                       Hãy tạo lô giống đầu tiên để theo dõi số lượng cây đang ươm, cây đủ bán và ghi đơn cho khách.
