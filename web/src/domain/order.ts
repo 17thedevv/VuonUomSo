@@ -8,6 +8,7 @@ export type OrderStatus =
   | 'partially_shipped'
   | 'shipped'
   | 'cancelled'
+  | 'closed_remaining'
 
 export type Order = {
   id: string
@@ -22,12 +23,18 @@ export type Order = {
 }
 
 export type OrderDisplayStatusKind =
+  | 'invalid'
   | 'full'
   | 'partial'
   | 'none'
   | 'partially_shipped'
   | 'shipped'
   | 'cancelled'
+  | 'closed_remaining'
+
+export function isTerminalOrder(order: Pick<Order, 'status'>): boolean {
+  return ['shipped', 'cancelled', 'closed_remaining'].includes(order.status)
+}
 
 export type OrderDisplayStatus = {
   kind: OrderDisplayStatusKind
@@ -60,7 +67,7 @@ export function reservedQuantityForOrder(orderId: string, reservations: Reservat
  * Calculates remaining plants needed for an order: max(requestedQuantity - reserved, 0).
  */
 export function orderShortage(order: Order, reservations: Reservation[]): number {
-  if (order.status === 'shipped' || order.status === 'cancelled') return 0
+  if (isTerminalOrder(order)) return 0
   const reserved = reservedQuantityForOrder(order.id, reservations)
   return Math.max(order.requestedQuantity - reserved, 0)
 }
@@ -76,9 +83,19 @@ export function deriveOrderDisplayStatus(
 ): OrderDisplayStatus {
   const shipped = shippedQuantityForOrder(order.id, shipments)
 
-  // If explicitly shipped or fulfilled via shipments
-  if (order.status === 'shipped' || (order.requestedQuantity > 0 && shipped >= order.requestedQuantity)) {
-    return { kind: 'shipped', label: 'Đã giao', shortage: 0 }
+  if (!Number.isSafeInteger(shipped) || shipped < 0 || !Number.isSafeInteger(order.requestedQuantity) ||
+    order.requestedQuantity <= 0 || shipped > order.requestedQuantity ||
+    (order.status === 'shipped' && shipped !== order.requestedQuantity) ||
+    (order.status === 'closed_remaining' && (shipped === 0 || shipped >= order.requestedQuantity)) ||
+    (order.status === 'cancelled' && shipped !== 0)) {
+    return { kind: 'invalid', label: 'Dữ liệu xuất cần kiểm tra', shortage: 0 }
+  }
+  if (order.requestedQuantity > 0 && shipped === order.requestedQuantity) {
+    return { kind: 'shipped', label: 'Đã xuất đủ', shortage: 0 }
+  }
+  if (order.status === 'closed_remaining') {
+    const format = (n: number) => new Intl.NumberFormat('vi-VN').format(n)
+    return { kind: 'closed_remaining', label: `Đã xuất ${format(shipped)} / ${format(order.requestedQuantity)} · Đã dừng ${format(Math.max(order.requestedQuantity - shipped, 0))} còn lại`, shortage: 0 }
   }
 
   if (order.status === 'cancelled') {
@@ -93,7 +110,7 @@ export function deriveOrderDisplayStatus(
     const formattedShipped = new Intl.NumberFormat('vi-VN').format(shipped)
     return {
       kind: 'partially_shipped',
-      label: `Đã giao ${formattedShipped} cây`,
+      label: `Đã xuất ${formattedShipped} cây`,
       shortage
     }
   }
@@ -135,14 +152,14 @@ export function filterOrders(
         (o) =>
           o.displayStatus.shortage > 0 &&
           o.displayStatus.kind !== 'shipped' &&
-          o.displayStatus.kind !== 'cancelled'
+          o.displayStatus.kind !== 'cancelled' && o.displayStatus.kind !== 'invalid' && !isTerminalOrder(o)
       )
     case 'ready_pickup':
       return orders.filter(
         (o) =>
           (o.displayStatus.kind === 'full' ||
             (o.displayStatus.kind === 'partially_shipped' && o.displayStatus.shortage === 0)) &&
-          o.status !== 'shipped'
+          !isTerminalOrder(o)
       )
     case 'shipped':
       return orders.filter((o) => o.displayStatus.kind === 'shipped')

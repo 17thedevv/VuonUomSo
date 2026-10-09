@@ -13,14 +13,14 @@ export type OrderChanges = {
 export type OrderLifecycleFailure = {
   success: false
   code: 'NOT_FOUND' | 'INVALID_INPUT' | 'ORDER_CANCELLED' | 'ALREADY_SHIPPED' |
-    'VARIETY_LOCKED' | 'RECONCILIATION_REQUIRED' | 'PREVIEW_CHANGED' | 'STORAGE_ERROR'
+    'ORDER_TERMINAL' | 'VARIETY_LOCKED' | 'RECONCILIATION_REQUIRED' | 'PREVIEW_CHANGED' | 'STORAGE_ERROR'
   error: string
   conflict?: { coveredQuantity: number; requestedQuantity: number; excessQuantity: number }
 }
 
 /** Includes historical evidence even if a stored order status is stale. */
 export function hasOrderShipmentHistory(order: Order, reservations: Reservation[], shipments: Shipment[]): boolean {
-  return order.status === 'shipped' || order.status === 'partially_shipped' ||
+  return order.status === 'shipped' || order.status === 'partially_shipped' || order.status === 'closed_remaining' ||
     shipments.some((s) => s.orderId === order.id && s.status === 'completed') ||
     reservations.some((r) => r.orderId === order.id &&
       (r.status === 'fulfilled' || (r.fulfilledQuantity ?? 0) > 0))
@@ -29,6 +29,7 @@ export function hasOrderShipmentHistory(order: Order, reservations: Reservation[
 export function validateOrderChanges(
   order: Order, changes: OrderChanges, reservations: Reservation[], shipments: Shipment[]
 ): { success: true; order: Order } | OrderLifecycleFailure {
+  if (order.status === 'closed_remaining') return { success: false, code: 'ORDER_TERMINAL', error: 'Đơn đã dừng phần còn lại, không thể sửa.' }
   if (order.status === 'cancelled') {
     return { success: false, code: 'ORDER_CANCELLED', error: 'Không thể sửa đơn đã hủy.' }
   }
@@ -87,6 +88,7 @@ export function validateOrderChanges(
 export function validateOrderCancellation(
   order: Order, reservations: Reservation[], shipments: Shipment[]
 ): { success: true } | OrderLifecycleFailure {
+  if (order.status === 'closed_remaining') return { success: false, code: 'ORDER_TERMINAL', error: 'Đơn đã dừng phần còn lại, không thể hủy toàn bộ.' }
   if (hasOrderShipmentHistory(order, reservations, shipments)) {
     return { success: false, code: 'ALREADY_SHIPPED', error: 'Đơn đã xuất cây không thể hủy toàn bộ. Dừng phần còn lại thuộc FC5.' }
   }

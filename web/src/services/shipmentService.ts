@@ -1,12 +1,15 @@
 import { db } from '../data/db'
 import type { Shipment, ShipmentLine } from '../domain/shipment'
-import type { Order } from '../domain/order'
+import { isTerminalOrder, type Order } from '../domain/order'
+import { validateOrderFulfillment } from '../domain/orderCompletion'
+import { safeSum, nonNegativeInteger } from '../domain/reconciliation'
 import type { Contact } from '../domain/contact'
 import { type Batch, deriveBatchStatus } from '../domain/batch'
 import type { Reservation } from '../domain/reservation'
 import {
   shippedQuantityForOrder,
   remainingToShipForOrder,
+  actionableRemainingToShipForOrder,
   validateShipmentLineAllocation,
   validateShipmentQuantity
 } from '../domain/shipment'
@@ -93,6 +96,7 @@ export async function createShipment(params: CreateShipmentParams): Promise<{
     if (!order) {
       throw new Error('Đơn hàng không tồn tại.')
     }
+    if (order.status === 'closed_remaining') throw new Error('Đơn đã dừng phần còn lại; không tạo chuyến xuất mới.')
     if (order.status === 'shipped') {
       throw new Error('Đơn hàng đã giao đủ toàn bộ cây.')
     }
@@ -169,6 +173,10 @@ export async function createShipment(params: CreateShipmentParams): Promise<{
       )
     }
 
+    if (!Number.isSafeInteger(totalPlanned) || !Number.isSafeInteger(order.requestedQuantity) || order.requestedQuantity <= 0) {
+      throw new Error('INVALID_STATE: Tổng số lượng không an toàn.')
+    }
+
     // 4. Create planned shipment
     const shipment: Shipment = {
       id: `ship_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -214,7 +222,7 @@ export async function cancelShipment(params: CancelShipmentParams): Promise<{
 }> {
   const { shipmentId } = params
 
-  return await db.transaction('rw', [db.shipments, db.events], async () => {
+  return await db.transaction('rw', [db.shipments, db.orders, db.events], async () => {
     const shipment = await db.shipments.get(shipmentId)
     if (!shipment) {
       throw new Error('Chuyến giao không tồn tại.')
@@ -227,6 +235,9 @@ export async function cancelShipment(params: CancelShipmentParams): Promise<{
     if (shipment.status === 'cancelled') {
       return { success: true }
     }
+
+    const order = await db.orders.get(shipment.orderId)
+    if (!order || isTerminalOrder(order)) throw new Error('Đơn đã kết thúc; chỉ được xem lịch sử chuyến xuất.')
 
     shipment.status = 'cancelled'
     await db.shipments.put(shipment)
@@ -263,7 +274,7 @@ export async function cancelShipment(params: CancelShipmentParams): Promise<{
  *    - shipment.shippedQuantity = plannedQuantity
  *    - shipment.shippedAt = now
  * 7. Updates order:
- *    - If total completed shipped >= order.requestedQuantity -> 'shipped'
+ *    - If total completed shipped === order.requestedQuantity -> 'shipped'
  *    - Else -> 'partially_shipped'
  * 8. All changes committed atomically in one Dexie transaction.
  */
@@ -322,14 +333,53 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
         throw new Error('Đơn hàng không tồn tại.')
       }
 
-      // Re-verify total completed shipped does not exceed requested quantity
-      const allOrderShipments = await db.shipments.where('orderId').equals(order.id).toArray()
-      const alreadyShipped = allOrderShipments
-        .filter((s) => s.status === 'completed' && s.id !== shipment.id)
-        .reduce((sum, s) => sum + s.shippedQuantity, 0)
-
-      if (alreadyShipped + shipment.plannedQuantity > order.requestedQuantity) {
-        throw new Error('Tổng số cây xuất vượt quá số lượng khách đặt của đơn hàng.')
+      if (isTerminalOrder(order)) throw new Error('ORDER_TERMINAL: Đơn đã kết thúc, không được xuất thêm.')
+      if (!['open', 'partially_reserved', 'reserved', 'partially_shipped'].includes(order.status)) {
+        throw new Error('INVALID_STATE: Trạng thái đơn không hợp lệ.')
+      }
+      const allOrderReservations = await db.reservations.where('orderId').equals(order.id).toArray()
+      const reservationIds = new Set(allOrderReservations.map(r => r.id))
+      const allOrderShipments = await db.shipments.filter(s => s.orderId === order.id ||
+        !!s.lines?.some(l => reservationIds.has(l.reservationId))).toArray()
+      const facts = validateOrderFulfillment(order, allOrderReservations, allOrderShipments)
+      if (!facts.success) throw new Error(`INVALID_STATE: ${facts.error}`)
+      if ((order.status === 'partially_shipped') !== (facts.shippedQuantity > 0)) {
+        throw new Error('INVALID_STATE: Trạng thái đơn không khớp lịch sử xuất.')
+      }
+      const prospectiveShipped = safeSum([facts.shippedQuantity, shipment.plannedQuantity])
+      if (prospectiveShipped === undefined || prospectiveShipped > order.requestedQuantity) {
+        throw new Error('INVALID_STATE: Tổng số cây xuất vượt quá số lượng khách đặt của đơn hàng.')
+      }
+      // Prove all post-state fulfillment/terminal facts before the first stock write.
+      const projectedSources = allOrderReservations.map(r => {
+        const line = shipment.lines!.find(l => l.reservationId === r.id)
+        if (!line) return r
+        const f = (r.fulfilledQuantity ?? 0) + line.quantity
+        return { ...r, fulfilledQuantity: f, status: f === r.quantity ? 'fulfilled' as const : r.status }
+      })
+      const projectedShipments = allOrderShipments.map(s => s.id === shipment.id ?
+        { ...s, status: 'completed' as const, shippedQuantity: s.plannedQuantity } : s)
+      const post = validateOrderFulfillment(order, projectedSources, projectedShipments)
+      if (!post.success || (prospectiveShipped === order.requestedQuantity &&
+        (post.outstanding !== 0 || projectedShipments.some(s => s.status === 'planned')))) {
+        throw new Error('INVALID_STATE: Phân bổ hoặc cam kết sau xuất không hợp lệ; không tự nhả nguồn dư.')
+      }
+      const sourceBatches = await db.batches.toArray()
+      const sourceContacts = await db.contacts.toArray()
+      if (!order.variety?.trim() || !sourceContacts.some(c => c.id === order.customerId && c.roles.includes('customer'))) {
+        throw new Error('INVALID_STATE: Giống cây hoặc khách hàng không hợp lệ.')
+      }
+      for (const r of allOrderReservations) {
+        if (r.sourceType === 'own_batch') {
+          const b = sourceBatches.find(b => b.id === r.batchId)
+          if (!b || ![b.initialQuantity, b.currentQuantity, b.readyQuantity].every(nonNegativeInteger) ||
+            b.readyQuantity > b.currentQuantity || b.currentQuantity > b.initialQuantity ||
+            b.variety.trim().toLowerCase() !== order.variety.trim().toLowerCase()) {
+            throw new Error('INVALID_STATE: Lô nguồn không hợp lệ.')
+          }
+        } else if (!sourceContacts.some(c => c.id === r.supplierId && c.roles.includes('supplier'))) {
+          throw new Error('INVALID_STATE: Nhà vườn của nguồn ngoài không hợp lệ.')
+        }
       }
 
       const now = new Date().toISOString()
@@ -408,7 +458,7 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
 
         // Update reservation fulfilledQuantity and status
         reservation.fulfilledQuantity = (reservation.fulfilledQuantity ?? 0) + line.quantity
-        if (reservation.fulfilledQuantity >= reservation.quantity) {
+        if (reservation.fulfilledQuantity === reservation.quantity) {
           reservation.status = 'fulfilled'
         }
         await db.reservations.put(reservation)
@@ -426,7 +476,7 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
         .filter((s) => s.status === 'completed' || s.id === shipment.id)
         .reduce((sum, s) => sum + (s.id === shipment.id ? shipment.shippedQuantity : s.shippedQuantity), 0)
 
-      if (completedShipped >= order.requestedQuantity) {
+      if (completedShipped === order.requestedQuantity) {
         order.status = 'shipped'
       } else {
         order.status = 'partially_shipped'
@@ -440,7 +490,7 @@ export async function confirmShipment(params: ConfirmShipmentParams): Promise<{
           shippedQuantity: shipment.shippedQuantity,
           totalShipped: completedShipped,
           orderStatus: order.status,
-          message: `Xác nhận đã bốc xe xuất ${formatQuantity(shipment.shippedQuantity)} cây (${order.status === 'shipped' ? 'Hoàn thành toàn bộ đơn' : 'Giao một phần'})`
+          message: `Xác nhận đã bốc xe xuất ${formatQuantity(shipment.shippedQuantity)} cây (${order.status === 'shipped' ? 'Hoàn thành toàn bộ đơn' : 'Đã xuất một phần'})`
         })
       )
 
@@ -500,7 +550,7 @@ export async function getShipmentDetail(shipmentId: string): Promise<ShipmentDet
   })
 
   const orderShipped = shippedQuantityForOrder(order.id, allShipments)
-  const orderRemaining = remainingToShipForOrder(order.requestedQuantity, order.id, allShipments)
+  const orderRemaining = actionableRemainingToShipForOrder(order, allShipments)
 
   return {
     shipment,
@@ -532,7 +582,7 @@ export async function getOrderShipmentSummary(orderId: string): Promise<OrderShi
   const contactMap = new Map<string, Contact>(allContacts.map((c: Contact) => [c.id, c]))
 
   const totalShipped = shippedQuantityForOrder(order.id, orderShipments)
-  const remainingToShip = remainingToShipForOrder(order.requestedQuantity, order.id, orderShipments)
+  const remainingToShip = actionableRemainingToShipForOrder(order, orderShipments)
   const plannedShipment = orderShipments.find((s) => s.status === 'planned')
 
   // Filter reservations that still have remaining plants to deliver
@@ -572,6 +622,7 @@ export async function getOrderShipmentSummary(orderId: string): Promise<OrderShi
   const canCreateShipment =
     order.status !== 'shipped' &&
     order.status !== 'cancelled' &&
+    order.status !== 'closed_remaining' &&
     remainingToShip > 0 &&
     !plannedShipment &&
     hasRemainingSupply

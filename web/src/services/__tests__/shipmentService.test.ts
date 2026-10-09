@@ -459,7 +459,7 @@ describe('Service: Shipment & Physical Fulfillment', () => {
 
       await expect(
         confirmShipment({ shipmentId: shipment.id })
-      ).rejects.toThrow('Nguồn cây trong chuyến không thuộc đơn hàng này.')
+      ).rejects.toThrow('INVALID_STATE')
 
       const batch = (await db.batches.get(BATCH_ID))!
       expect(batch.currentQuantity).toBe(45200)
@@ -478,7 +478,7 @@ describe('Service: Shipment & Physical Fulfillment', () => {
 
       await expect(
         confirmShipment({ shipmentId: shipment.id })
-      ).rejects.toThrow('Loại nguồn cây trong chuyến không khớp với bản ghi giữ cây.')
+      ).rejects.toThrow('INVALID_STATE')
 
       const batch = (await db.batches.get(BATCH_ID))!
       expect(batch.currentQuantity).toBe(45200)
@@ -513,7 +513,7 @@ describe('Service: Shipment & Physical Fulfillment', () => {
 
       await expect(
         confirmShipment({ shipmentId: shipment.id })
-      ).rejects.toThrow('Mã lô cây trong chuyến không khớp với bản ghi giữ cây.')
+      ).rejects.toThrow('INVALID_STATE')
 
       // Neither batch A nor batch B is modified
       const batch1 = (await db.batches.get(BATCH_ID))!
@@ -568,6 +568,9 @@ describe('Service: Shipment & Physical Fulfillment', () => {
         status: 'active',
         createdAt: '2026-09-02'
       })
+
+      // Keep coverage valid (35k); this regression must reach the physical-stock failure.
+      await db.orders.update(ORDER_ID, { requestedQuantity: 35000 })
 
       // Plan shipment: line 1 = 5.000 from batch 1 (valid), line 2 = 3.000 from batch 2
       // (Line 2 planned is 3.000, which exceeds batch 2 readyQuantity = 2.000)

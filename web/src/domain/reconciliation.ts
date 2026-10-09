@@ -23,7 +23,7 @@ export type OrderReductionState = {
 }
 export type ReconciliationFailure = {
   success: false
-  code: 'NOT_FOUND' | 'INVALID_INPUT' | 'INVALID_STATE' | 'ORDER_CANCELLED' | 'ALREADY_SHIPPED' |
+  code: 'ORDER_TERMINAL' | 'NOT_FOUND' | 'INVALID_INPUT' | 'INVALID_STATE' | 'ORDER_CANCELLED' | 'ALREADY_SHIPPED' |
     'INVALID_SELECTION' | 'PLANNED_ALLOCATION_CONFLICT' | 'UNVERIFIABLE_PLANNED_SHIPMENT' |
     'COVERAGE_EXCEEDS_REQUESTED' | 'PREVIEW_CHANGED' | 'OPERATION_ID_CONFLICT' | 'NO_OP' | 'STORAGE_ERROR'
   error: string
@@ -168,6 +168,7 @@ export function projectOrderReduction(
   const { order } = state
   if (order.id !== plan.orderId) return failure('NOT_FOUND', 'Đơn hàng không tồn tại.')
   const reservations = state.reservations.filter(r => r.orderId === order.id)
+  if (order.status === 'closed_remaining') return failure('ORDER_TERMINAL', 'Không điều chỉnh đơn đã dừng phần còn lại.')
   if (order.status === 'cancelled') return failure('ORDER_CANCELLED', 'Không thể điều chỉnh đơn đã hủy.')
   if (hasOrderShipmentHistory(order, reservations, state.shipments)) {
     return failure('ALREADY_SHIPPED', 'Chỉ được giảm số đặt trước khi xuất cây.')

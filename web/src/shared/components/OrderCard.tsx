@@ -38,7 +38,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
 
         {/* Status Badge */}
         <div className="shrink-0">
-          {displayStatus.kind === 'shipped' ? (
+          {['closed_remaining', 'invalid'].includes(displayStatus.kind) ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">{displayStatus.kind === 'closed_remaining' ? 'Đã dừng phần còn lại' : displayStatus.label}</span>
+          ) : displayStatus.kind === 'shipped' ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
               <CheckCheck className="w-3.5 h-3.5 text-slate-500" />
               <span>Đã giao</span>
@@ -61,6 +63,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, onClick }) => {
           )}
         </div>
       </div>
+
+      {displayStatus.kind === 'closed_remaining' && <p className="text-xs text-slate-700">{displayStatus.label}</p>}
 
       {/* Date row & progress summary */}
       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">

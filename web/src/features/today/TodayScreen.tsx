@@ -134,10 +134,10 @@ export const TodayScreen: React.FC = () => {
 
   // Orders needing attention: shortage > 0 and active (not shipped, not cancelled)
   const attentionOrders = orders.filter(
-    (o) => o.shortage > 0 && o.status !== 'shipped' && o.status !== 'cancelled'
+    (o) => o.shortage > 0 && o.status !== 'shipped' && o.status !== 'cancelled' && o.status !== 'closed_remaining'
   )
   const pendingOrdersCount = orders.filter(
-    (o) => o.status !== 'shipped' && o.status !== 'cancelled'
+    (o) => o.status !== 'shipped' && o.status !== 'cancelled' && o.status !== 'closed_remaining'
   ).length
 
   if (loading) {

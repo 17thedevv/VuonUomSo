@@ -1,3 +1,6 @@
+import { validateOrderFulfillment, validCloseRemainingMarker, sameCompletionFacts } from '../../domain/orderCompletion'
+import { remainingReservationQuantity, coveredQuantityForReservation } from '../../domain/reservation'
+import { safeSum } from '../../domain/reconciliation'
 import type { VuonUomBackupV1 } from './backup.types'
 import { BACKUP_FORMAT, BACKUP_FORMAT_VERSION } from './backup.types'
 
@@ -15,11 +18,11 @@ function isNonEmptyString(val: unknown): val is string {
 }
 
 function isPositiveInteger(val: unknown): boolean {
-  return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val > 0
+  return typeof val === 'number' && Number.isFinite(val) && Number.isSafeInteger(val) && val > 0
 }
 
 function isNonNegativeInteger(val: unknown): boolean {
-  return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val >= 0
+  return typeof val === 'number' && Number.isFinite(val) && Number.isSafeInteger(val) && val >= 0
 }
 
 // Whitelisted enum values according to domain models
@@ -30,7 +33,8 @@ const KNOWN_ORDER_STATUSES = new Set([
   'reserved',
   'partially_shipped',
   'shipped',
-  'cancelled'
+  'cancelled',
+  'closed_remaining'
 ])
 const KNOWN_RESERVATION_STATUSES = new Set(['active', 'fulfilled', 'released'])
 const KNOWN_RESERVATION_SOURCE_TYPES = new Set(['own_batch', 'external_supplier'])
@@ -594,6 +598,56 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
       errors.push(
         `Đơn hàng "${o.id}": Tổng số cây đã xuất giao (${totalShipped}) vượt quá số cây khách đặt (${o.requestedQuantity}).`
       )
+    }
+  }
+
+  // Terminal facts are independent of presentation and of marker replay. Legacy non-closed
+  // imports retain their existing detail policy; a new closed state requires full line/F proof.
+  for (const o of orders.filter(isRecord)) {
+    const rs = reservations.filter(r => isRecord(r) && r.orderId === o.id)
+    const ss = shipments.filter(s => isRecord(s) && s.orderId === o.id)
+    const shipped = safeSum(ss.filter(s => s.status === 'completed').map(s => s.shippedQuantity))
+    const outstanding = safeSum(rs.map(remainingReservationQuantity))
+    const coverage = safeSum(rs.map(coveredQuantityForReservation))
+    if (shipped === undefined || outstanding === undefined || coverage === undefined) {
+      errors.push(`Đơn "${o.id}": Tổng số lượng không an toàn.`)
+      continue
+    }
+    if (['closed_remaining', 'shipped', 'cancelled'].includes(o.status)) {
+      if (outstanding !== 0 || ss.some(s => s.status === 'planned')) errors.push(`Đơn "${o.id}": Đơn kết thúc còn nguồn hoặc chuyến chờ xuất.`)
+      if (o.status === 'shipped' && shipped !== o.requestedQuantity) errors.push(`Đơn "${o.id}": Đã xuất đủ nhưng tổng xuất không bằng số đặt.`)
+      if (o.status === 'cancelled' && (shipped !== 0 || ss.some(s => s.status === 'completed') || rs.some(r => (r.fulfilledQuantity ?? 0) !== 0))) {
+        errors.push(`Đơn "${o.id}": Đã hủy nhưng còn lịch sử xuất hoặc fulfillment.`)
+      }
+      if (o.status === 'closed_remaining') {
+        const proof = validateOrderFulfillment(o, reservations.filter(isRecord), shipments.filter(isRecord))
+        if (!proof.success || shipped <= 0 || shipped >= o.requestedQuantity || coverage !== shipped) {
+          errors.push(`Đơn "${o.id}": Dữ liệu dừng phần còn lại không khớp lịch sử xuất.`)
+        }
+      }
+    }
+  }
+  for (const e of events.filter(e => isRecord(e) && e.type === 'order_closed_remaining')) {
+    const payload = e.payload
+    const order = orders.find(o => isRecord(o) && o.id === e.entityId)
+    if (!isRecord(payload) || !isNonEmptyString(payload.operationId) || !isNonEmptyString(payload.approvedFingerprint) ||
+      !order || e.entityType !== 'order' || order.status !== 'closed_remaining' ||
+      !validCloseRemainingMarker(payload, order.id)) {
+      errors.push(`Sự kiện "${e.id}": Lịch sử dừng phần còn lại không hợp lệ.`)
+      continue
+    }
+    const projection = payload.projection
+    const completed = safeSum(shipments.filter(s => s.orderId === order.id && s.status === 'completed').map(s => s.shippedQuantity))
+    if (projection.requestedQuantity !== order.requestedQuantity || projection.shippedQuantity !== completed ||
+      !sameCompletionFacts(projection.orderAfter, order) ||
+      projection.sources.some(r => !sameCompletionFacts(reservations.find(s => s.id === r.after.id), r.after)) ||
+      projection.completedShipments.some(p => !sameCompletionFacts(shipments.find(s => s.id === p.id), p)) ||
+      projection.cancelledPlans.some(p => !sameCompletionFacts(shipments.find(s => s.id === p.after.id), p.after))) {
+      errors.push(`Sự kiện "${e.id}": Projection dừng đơn không khớp state/history.`)
+    }
+    if (events.filter(m => isRecord(m) && ['order_reconciled', 'batch_reconciled', 'order_closed_remaining'].includes(m.type) &&
+      isRecord(m.payload) && m.payload.operationId === payload.operationId).length !== 1) {
+      errors.push(`Sự kiện "${e.id}": Mã thao tác dừng đơn trùng lặp.`)
     }
   }
 

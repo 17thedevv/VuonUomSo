@@ -1,3 +1,5 @@
+import { isTerminalOrder, type Order } from './order'
+
 export type ShipmentStatus =
   | 'planned'
   | 'completed'
@@ -47,6 +49,11 @@ export function remainingToShipForOrder(
   return Math.max(requestedQuantity - shipped, 0)
 }
 
+/** Historical remaining stays available for terminal history; queues use this helper. */
+export function actionableRemainingToShipForOrder(order: Order, shipments: Shipment[]): number {
+  return isTerminalOrder(order) ? 0 : remainingToShipForOrder(order.requestedQuantity, order.id, shipments)
+}
+
 /**
  * Checks if order currently has a shipment with status 'planned'.
  * (Enforces One Open Planned Shipment Rule: at most 1 planned shipment per order).
@@ -69,7 +76,7 @@ export function validateShipmentQuantity(quantity: number): { valid: boolean; er
   if (typeof quantity !== 'number' || isNaN(quantity) || !Number.isFinite(quantity)) {
     return { valid: false, error: 'Số lượng giao không hợp lệ.' }
   }
-  if (!Number.isInteger(quantity)) {
+  if (!Number.isSafeInteger(quantity)) {
     return { valid: false, error: 'Số lượng giao phải là số nguyên (không có phần thập phân).' }
   }
   if (quantity <= 0) {

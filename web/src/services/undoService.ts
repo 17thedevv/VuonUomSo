@@ -99,10 +99,17 @@ class UndoService {
 
     try {
       if (mutation.type === 'create_batch') {
-        const txResult = await db.transaction('rw', [db.batches, db.events], async () => {
+        const txResult = await db.transaction('rw', [db.batches, db.reservations, db.shipments, db.events], async () => {
           const batch = await db.batches.get(mutation.batchId)
           if (!batch) {
             return { status: 'not_found' as const }
+          }
+
+          // A released source still references this batch, including after FC5 closure.
+          // Old create-batch Undo must not erase physical/history authority under those records.
+          if (await db.reservations.where('batchId').equals(batch.id).count() ||
+            await db.shipments.filter(s => !!s.lines?.some(l => l.batchId === batch.id)).count()) {
+            return { status: 'changed' as const }
           }
 
           await db.batches.delete(mutation.batchId)
@@ -118,6 +125,10 @@ class UndoService {
         if (txResult.status === 'not_found') {
           this.clearLastMutation()
           return { success: false, message: 'Lô cây không còn tồn tại.' }
+        }
+        if (txResult.status === 'changed') {
+          this.clearLastMutation()
+          return { success: false, message: 'Không thể xóa lô đã có lịch sử giữ hoặc xuất cây bằng hoàn tác.' }
         }
 
         this.clearLastMutation()
@@ -251,7 +262,7 @@ class UndoService {
           const shipments = await db.shipments.where('orderId').equals(order.id).count()
           const corrected = await db.events.where('entityId').equals(order.id)
             .filter((e) => e.entityType === 'order' &&
-              (e.type === 'order_updated' || e.type === 'order_cancelled' || e.type === 'order_reconciled')).count()
+              (e.type === 'order_updated' || e.type === 'order_cancelled' || e.type === 'order_reconciled' || e.type === 'order_closed_remaining')).count()
           if (order.status !== 'open' || reservations > 0 || shipments > 0 || corrected > 0) {
             return { status: 'changed' as const }
           }
@@ -301,7 +312,7 @@ class UndoService {
               current.createdAt !== expected.createdAt) return false
 
             const order = await db.orders.get(current.orderId)
-            if (!order || order.status === 'cancelled' || order.status === 'shipped') return false
+            if (!order || order.status === 'cancelled' || order.status === 'shipped' || order.status === 'closed_remaining') return false
             if (current.sourceType === 'own_batch') {
               if (!current.batchId || !await db.batches.get(current.batchId)) return false
             } else {
