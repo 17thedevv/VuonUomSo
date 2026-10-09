@@ -113,6 +113,10 @@ export function projectBatchShortage(state: BatchShortageState, plan: BatchShort
   const source = state.batches.find(b => b.id === plan.sourceBatchId)
   if (!source || state.sourceBatchId !== plan.sourceBatchId) return fail('NOT_FOUND', 'Lô thiếu không tồn tại.')
   if (!validBatch(source)) return fail('INVALID_STATE', 'Số lượng vật lý của lô không hợp lệ.')
+  const intended = state.reservations.filter(r => plan.adjustments.some(a => a.reservationId === r.id))
+  if (intended.some(r => state.orders.some(o => o.id === r.orderId && o.status === 'closed_remaining'))) {
+    return fail('ORDER_TERMINAL', 'Kế hoạch chứa đơn đã dừng phần còn lại; không áp dụng bất kỳ dòng nào.')
+  }
   const selected = plan.adjustments.map(a => state.reservations.find(r => r.id === a.reservationId))
   if (selected.some(r => !r || r.sourceType !== 'own_batch' || r.batchId !== source.id ||
     r.status !== 'active' || remainingReservationQuantity(r) <= 0)) {

@@ -7,6 +7,7 @@ import {
   reservedQuantityForOrder,
   orderShortage,
   deriveOrderDisplayStatus,
+  isTerminalOrder,
   type OrderDisplayStatus
 } from '../domain/order'
 import {
@@ -77,11 +78,12 @@ export interface OrderReservationOptions {
  * Loads order information and all eligible candidate supply sources (own batches & external suppliers).
  */
 export async function getReservationOptions(orderId: string): Promise<OrderReservationOptions | null> {
-  const [order, allBatches, allReservations, allContacts] = await Promise.all([
+  const [order, allBatches, allReservations, allContacts, allShipments] = await Promise.all([
     db.orders.get(orderId),
     db.batches.toArray(),
     db.reservations.toArray(),
-    db.contacts.toArray()
+    db.contacts.toArray(),
+    db.shipments.where('orderId').equals(orderId).toArray()
   ])
 
   if (!order) return null
@@ -89,7 +91,7 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
   const customer = allContacts.find((c) => c.id === order.customerId) || null
   const reserved = reservedQuantityForOrder(order.id, allReservations)
   const shortage = orderShortage(order, allReservations)
-  const displayStatus = deriveOrderDisplayStatus(order, allReservations)
+  const displayStatus = deriveOrderDisplayStatus(order, allReservations, allShipments)
 
   // Map own batches with live availability
   const mappedBatches: BatchWithAvailability[] = allBatches.map((b) => ({
@@ -157,8 +159,8 @@ export async function getReservationOptions(orderId: string): Promise<OrderReser
     reservedQuantity: reserved,
     shortage,
     displayStatus,
-    ownBatches,
-    externalSuppliers,
+    ownBatches: isTerminalOrder(order) ? [] : ownBatches,
+    externalSuppliers: isTerminalOrder(order) ? [] : externalSuppliers,
     currentReservations
   }
 }
@@ -190,7 +192,7 @@ export async function reserveOwnBatch(params: ReserveOwnBatchParams): Promise<{
     if (!order) {
       throw new Error('Đơn hàng không tồn tại.')
     }
-    if (order.status === 'shipped' || order.status === 'cancelled') {
+    if (order.status === 'shipped' || order.status === 'cancelled' || order.status === 'closed_remaining') {
       throw new Error('Đơn hàng đã hoàn thành hoặc đã bị hủy.')
     }
 
@@ -340,7 +342,7 @@ export async function reserveExternalSupplier(params: ReserveExternalSupplierPar
     if (!order) {
       throw new Error('Đơn hàng không tồn tại.')
     }
-    if (order.status === 'shipped' || order.status === 'cancelled') {
+    if (order.status === 'shipped' || order.status === 'cancelled' || order.status === 'closed_remaining') {
       throw new Error('Đơn hàng đã hoàn thành hoặc đã bị hủy.')
     }
 
@@ -470,6 +472,9 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
       throw new Error('Chỉ có thể bỏ giữ cây đang được giữ.')
     }
 
+    const releaseOrder = await db.orders.get(reservation.orderId)
+    if (releaseOrder?.status === 'closed_remaining') throw new Error('Đơn đã dừng phần còn lại; không thay đổi nguồn giữ.')
+
     // Invariant: Cannot release reservation if it is allocated in an open planned shipment
     const plannedShipmentWithRes = await db.shipments
       .where('orderId')
@@ -495,13 +500,14 @@ export async function releaseReservation(params: ReleaseReservationParams): Prom
 
     // Recompute order status
     const order = await db.orders.get(reservation.orderId)
-    if (order && order.status !== 'shipped' && order.status !== 'cancelled') {
+    if (order && order.status !== 'shipped' && order.status !== 'cancelled' && order.status !== 'closed_remaining') {
       const orderShipments = await db.shipments.where('orderId').equals(reservation.orderId).toArray()
       const totalShipped = orderShipments
         .filter((s) => s.status === 'completed')
         .reduce((sum, s) => sum + s.shippedQuantity, 0)
 
-      if (totalShipped >= order.requestedQuantity) {
+      if (totalShipped > order.requestedQuantity) throw new Error('INVALID_STATE: Số đã xuất vượt số đặt.')
+      if (totalShipped === order.requestedQuantity) {
         order.status = 'shipped'
       } else if (totalShipped > 0) {
         order.status = 'partially_shipped'

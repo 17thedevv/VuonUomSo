@@ -5,12 +5,31 @@ import { OrderDetailScreen } from '../orders/OrderDetailScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import { undoService } from '../../services/undoService'
 import { db } from '../../data/db'
+import { createShipment, confirmShipment } from '../../services/shipmentService'
+import { previewCloseOrderRemaining, closeOrderRemaining } from '../../services/orderCompletionService'
 
 describe('OrderDetailScreen', () => {
   beforeEach(async () => {
     undoService.clearLastMutation()
     await clearAllData()
     await resetDemoData()
+  })
+
+  it('a real closed order keeps detail/history accessible and removes reserve/edit/cancel/shipment eligibility', async () => {
+    const r = (await db.reservations.where('orderId').equals('order_lan_01').first())!
+    const s = (await createShipment({ orderId: 'order_lan_01', lines: [{ reservationId: r.id, quantity: 5000 }] })).shipment
+    await confirmShipment({ shipmentId: s.id })
+    const preview = await previewCloseOrderRemaining({ orderId: 'order_lan_01' })
+    expect(preview.success).toBe(true)
+    if (!preview.success) return
+    await closeOrderRemaining({ orderId: 'order_lan_01', operationId: 'closed-detail', expectedFingerprint: preview.fingerprint })
+    render(<MemoryRouter initialEntries={['/orders/order_lan_01']}><Routes>
+      <Route path="/orders/:id" element={<OrderDetailScreen />} />
+    </Routes></MemoryRouter>)
+    expect(await screen.findByText(/Đã xuất 5.000 \/ 50.000 · Đã dừng 45.000/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /SỬA ĐƠN|HỦY ĐƠN|GIỮ THÊM|GIỮ CÂY|LÊN CHUYẾN/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/Nguồn chưa xuất đã được nhả/)).toBeInTheDocument()
+    expect(screen.queryByText(/Đã chuẩn bị đủ toàn bộ/)).not.toBeInTheDocument()
   })
 
   it('renders order detail for fully reserved multi-source order (Anh Hùng)', async () => {

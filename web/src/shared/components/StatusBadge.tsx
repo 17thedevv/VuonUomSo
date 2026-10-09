@@ -62,6 +62,9 @@ const statusMap: Record<BadgeKind, StatusConfig> = {
     icon: CheckCheck,
     classes: 'bg-slate-100 text-slate-800 border-slate-300'
   },
+  closed_remaining: {
+    label: 'Đã dừng phần còn lại', icon: XCircle, classes: 'bg-slate-100 text-slate-700 border-slate-300'
+  },
   cancelled: {
     label: 'Đã hủy',
     icon: XCircle,

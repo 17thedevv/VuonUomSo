@@ -66,11 +66,11 @@ export async function reconcileBatchShortage(input: ConfirmBatchShortageInput): 
       }
       const intentKey = batchShortageIntentKey(plan)
       // Same registry as Trigger A, so an ID cannot be reused across trigger/order/batch.
-      const marker = await db.events.where('type').anyOf(['order_reconciled', 'batch_reconciled'])
+      const marker = await db.events.where('type').anyOf(['order_reconciled', 'batch_reconciled', 'order_closed_remaining'])
         .filter(e => isRecord(e.payload) && e.payload.operationId === operationId).first()
       if (marker) {
         const payload = marker.payload
-        if (!isRecord(payload) || payload.intentKey !== intentKey || payload.trigger !== 'batch_shortage') {
+        if (marker.type === 'order_closed_remaining' || !isRecord(payload) || payload.intentKey !== intentKey || payload.trigger !== 'batch_shortage') {
           return { success: false, code: 'OPERATION_ID_CONFLICT', error: 'Mã thao tác đã được dùng cho kế hoạch khác.' }
         }
         const projection = payload.projection

@@ -36,7 +36,7 @@
 | **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
 | **FC3** | **Reservation Reconciliation** | **DONE** | FC3-0/1A/1B/2/3 CLOSED; PR #20 merged `bce3abc`, CI merge xanh; Final Acceptance trên main 08/10/2026 PASS; FC3-1 DONE |
 | **FC4** | **External Supply Truthfulness** | **DONE** | FC4-0/FC4-1 CLOSED; PR #24/#25 merged, correction main `f812162`, merge-CI SUCCESS. Final Acceptance trên main 09/10/2026 PASS; H/M, create/edit/cancel/backup đạt |
-| **FC5** | **Fulfillment & Completion Semantics** | **CONTRACT CLOSED / IMPLEMENTATION NOT STARTED** | FC5-0 approved; PR #27 merged `29d97c8`, merge-CI SUCCESS. FC5-1 NEXT; FC5 overall NOT DONE |
+| **FC5** | **Fulfillment & Completion Semantics** | **IN PROGRESS / FC5-1 REVIEW PENDING** | FC5-0 CLOSED. FC5-1 domain/service + terminal/backup/Undo correctness implemented for review; FC5-2 NOT STARTED; FC5 overall NOT DONE |
 | **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
 | **STOP**| **FIELD PILOT** | **PLANNED** | Mang app ra vườn sau khi hoàn thành FC6 |
 
@@ -72,7 +72,13 @@
 - **FC5-0 CLOSED / ACCEPTED / MERGED — docs-only**: [Fulfillment & Completion Functional Contract](../docs/development/FC5-FUNCTIONAL-CONTRACT.md), exact audit baseline `0647bfbbdb183ac0e7a652275096e7044b2cef04`; người dùng duyệt head `2ccec90b3053af5f5aa937af5b2edb9307475aba`; [PR #27](https://github.com/17thedevv/VuonUomSo/pull/27) merged tại `29d97c87de810a68607e7dc4433599d8945dfaf7`; [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37898636631), typecheck/lint/full tests/build PASS. Approved gate lint0/0 (158 files), 53 files / 723 tests PASS, PWA14. FC0–FC4 DONE / CLOSED; terminal truth table cancelled S0, shipped S=R, closed_remaining 0<S<R; S>R là invalid state, không normalize.
 - Close giữ requested/Q/F/completed history/physical stock; nhả O và cancel mọi planned trong một transaction, append history/operation marker. stopped=R−S khác releasedOutstanding=O_before; closed actionable remaining/shortage=0 nhưng stopped/history không biến mất. Không reopen/Undo riêng hoặc receipt/delivery semantics.
 - Required FC5-1 gates: explicit terminal guards mọi mutation/helper/queue; completion exact S=R/O0/planned0; stale preview/reconfirm; collision operationId **hai chiều** xuyên FC3 A/B và FC5; real Dexie rollback/races/stale Undo/backup regressions trước expose mutation. Policy persisted: giữ Dexie5 / backupV1 / record shape, new enum phải được validate; valid legacy restore giữ tương thích, pre-FC5 reader reject closed enum trước write, không infer/migrate partial thành closed.
-- **FC5-1 NEXT — Atomic Close Remaining domain/service + terminal guards/backup/Undo correctness**. Contract review/approved merge/merge-CI đã đạt; sau FC5-1 mới FC5-2 UI/vocabulary → FC5-3 cross-flow hardening → Final Acceptance trên main. **FC5 implementation NOT STARTED / FC5 overall NOT DONE / FC6 PLANNED**, không `web/` diff ở task closure này. Physical IME/PWA offline thực tế/field pilot vẫn chưa kiểm chứng; FC3 deferred notes giữ nguyên.
+- Snapshot closure FC5-0: **FC5-1 NEXT — Atomic Close Remaining domain/service + terminal guards/backup/Undo correctness**. Contract review/approved merge/merge-CI đã đạt; sau FC5-1 mới FC5-2 UI/vocabulary → FC5-3 cross-flow hardening → Final Acceptance trên main. **FC5 implementation NOT STARTED / FC5 overall NOT DONE / FC6 PLANNED**, không `web/` diff ở task closure này. Physical IME/PWA offline thực tế/field pilot vẫn chưa kiểm chứng; FC3 deferred notes giữ nguyên.
+
+### FC5-1 implementation handoff (09/10/2026)
+
+- **FC5-1 REVIEW PENDING**, base `0d8d97a7254998ac84c7fedc087724f8ccc44da2`, branch `feat/fc5-close-remaining-domain`. [Implementation report](../docs/development/FC5-1-ATOMIC-CLOSE-REMAINING.md): atomic Close Remaining, strict confirmation, deep new-marker retry validation, collision registry FC3↔FC5, explicit terminal guards, exact completion, backup and old Undo protection. No close CTA/modal; existing read models handle the enum and remove terminal eligibility.
+- Local typecheck/lint0/0/full suite **56 files / 823 tests**/build/PWA14 PASS; read-model browser smoke All/detail/direct reserve at360/390/430/1280 PASS. Exact-head remote CI and PR link are supplied in the post-push handoff. No merge/final acceptance claimed.
+- **FC5 overall IN PROGRESS / NOT DONE; FC5-2 NOT STARTED; FC6 PLANNED.** User review and merge + merge-CI must precede FC5-2. Physical IME/PWA offline/field pilot and earlier deferred notes remain unverified/deferred.
 
 ---
 

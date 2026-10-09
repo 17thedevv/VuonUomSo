@@ -111,11 +111,11 @@ describe('Domain: Order calculations & filters', () => {
   })
 
   describe('deriveOrderDisplayStatus', () => {
-    it('detects shipped status', () => {
+    it('does not fabricate shipped status without completed evidence', () => {
       const order = createMockOrder({ status: 'shipped', requestedQuantity: 10000 })
       const result = deriveOrderDisplayStatus(order, [], [])
-      expect(result.kind).toBe('shipped')
-      expect(result.label).toBe('Đã giao')
+      expect(result.kind).toBe('invalid')
+      expect(result.label).toBe('Dữ liệu xuất cần kiểm tra')
     })
 
     it('detects shipped status when shipments cover full requested quantity', () => {

@@ -38,7 +38,7 @@ import {
 } from '../../domain/order'
 import {
   shippedQuantityForOrder,
-  remainingToShipForOrder
+  actionableRemainingToShipForOrder
 } from '../../domain/shipment'
 import { remainingReservationQuantity } from '../../domain/reservation'
 import { PageHeader } from '../../shared/components/PageHeader'
@@ -204,7 +204,7 @@ export const OrderDetailScreen: React.FC = () => {
   const displayStatus = deriveOrderDisplayStatus(order, reservations, shipments)
 
   const shippedQuantity = shippedQuantityForOrder(order.id, shipments)
-  const remainingToShip = remainingToShipForOrder(order.requestedQuantity, order.id, shipments)
+  const remainingToShip = actionableRemainingToShipForOrder(order, shipments)
   const plannedShipment = shipments.find((s) => s.status === 'planned')
   const completedShipments = shipments.filter((s) => s.status === 'completed')
 
@@ -222,12 +222,12 @@ export const OrderDetailScreen: React.FC = () => {
   )
   const canCreateShipment =
     order.status !== 'shipped' &&
-    order.status !== 'cancelled' &&
+    order.status !== 'cancelled' && order.status !== 'closed_remaining' &&
     remainingToShip > 0 &&
     !plannedShipment &&
     hasRemainingReservedSupply
   const hasShipmentHistory = hasOrderShipmentHistory(order, reservations, shipments)
-  const canCorrect = order.status !== 'cancelled' && !hasShipmentHistory
+  const canCorrect = order.status !== 'cancelled' && order.status !== 'closed_remaining' && !hasShipmentHistory
   const actionSuccess = async (message: string) => {
     setNotice(message)
     setAction(null)
@@ -309,7 +309,7 @@ export const OrderDetailScreen: React.FC = () => {
             <SecondaryButton fullWidth onClick={() => setAction('edit')}>SỬA ĐƠN</SecondaryButton>
             <button type="button" onClick={() => setAction('cancel')} className="min-h-12 px-3 py-3 rounded-xl border border-rose-300 text-rose-800 font-bold text-base">HỦY ĐƠN</button>
           </div>}
-          {hasShipmentHistory && order.status !== 'cancelled' && <p className="text-base text-slate-600">Đơn đã xuất cây; không thể sửa hoặc hủy toàn bộ.</p>}
+          {hasShipmentHistory && order.status !== 'cancelled' && order.status !== 'closed_remaining' && <p className="text-base text-slate-600">Đơn đã xuất cây; không thể sửa hoặc hủy toàn bộ.</p>}
         </div>
 
         {/* TIẾN ĐỘ XUẤT GIAO HÀNG (Shipment Progress) */}
@@ -435,7 +435,7 @@ export const OrderDetailScreen: React.FC = () => {
             />
           </div>
 
-          {order.status === 'cancelled' ? <p className="text-base text-slate-700">Đơn đã hủy. Nguồn giữ đã được nhả; lịch sử được giữ lại.</p> : shortage > 0 ? (
+          {order.status === 'closed_remaining' ? <p className="text-base text-slate-700">Đã dừng phần còn lại. Nguồn chưa xuất đã được nhả; lịch sử được giữ lại.</p> : order.status === 'cancelled' ? <p className="text-base text-slate-700">Đơn đã hủy. Nguồn giữ đã được nhả; lịch sử được giữ lại.</p> : shortage > 0 ? (
             <div className="bg-amber-50/80 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
               <span>
@@ -457,7 +457,7 @@ export const OrderDetailScreen: React.FC = () => {
           </h4>
 
           {sourceDetails.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">Chưa phân bổ giữ cây từ nguồn nào.</p>
+            <p className="text-xs text-slate-400 italic">{order.status === 'closed_remaining' ? 'Các nguồn chưa xuất đã được nhả; xem lịch sử bên dưới.' : 'Chưa phân bổ giữ cây từ nguồn nào.'}</p>
           ) : (
             <div className="space-y-2">
               {sourceDetails.map(({ reservation, sourceLabel, isOwnBatch }) => {
@@ -555,7 +555,7 @@ export const OrderDetailScreen: React.FC = () => {
           )}
 
           {/* Action button to Reserve */}
-          {order.status !== 'shipped' && order.status !== 'cancelled' && (
+          {order.status !== 'shipped' && order.status !== 'cancelled' && order.status !== 'closed_remaining' && (
             <div className="pt-1">
               <SecondaryButton
                 fullWidth

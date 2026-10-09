@@ -5,6 +5,8 @@ import { OrderReserveScreen } from '../orders/OrderReserveScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import { db } from '../../data/db'
 import { undoService } from '../../services/undoService'
+import { createShipment, confirmShipment } from '../../services/shipmentService'
+import { previewCloseOrderRemaining, closeOrderRemaining } from '../../services/orderCompletionService'
 
 describe('OrderReserveScreen (Phase P3)', () => {
   beforeEach(async () => {
@@ -16,6 +18,23 @@ describe('OrderReserveScreen (Phase P3)', () => {
   afterEach(() => {
     cleanup()
     undoService.clearLastMutation()
+  })
+
+  it('a real closed order blocks the direct reserve route and exposes no supply CTA', async () => {
+    const r = (await db.reservations.where('orderId').equals('order_lan_01').first())!
+    const s = (await createShipment({ orderId: 'order_lan_01', lines: [{ reservationId: r.id, quantity: 5000 }] })).shipment
+    await confirmShipment({ shipmentId: s.id })
+    const preview = await previewCloseOrderRemaining({ orderId: 'order_lan_01' })
+    expect(preview.success).toBe(true)
+    if (!preview.success) return
+    await closeOrderRemaining({ orderId: 'order_lan_01', operationId: 'closed-route', expectedFingerprint: preview.fingerprint })
+    render(<MemoryRouter initialEntries={['/orders/order_lan_01/reserve']}><Routes>
+      <Route path="/orders/:id/reserve" element={<OrderReserveScreen />} />
+    </Routes></MemoryRouter>)
+    expect(await screen.findByText('Đơn đã dừng phần còn lại')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /GIỮ TỪ LÔ NÀY/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Giữ nguồn từ/i })).not.toBeInTheDocument()
+    expect((await db.orders.get('order_lan_01'))?.status).toBe('closed_remaining')
   })
 
   it('renders order summary, shortage, own batches, and external suppliers for Chị Lan', async () => {

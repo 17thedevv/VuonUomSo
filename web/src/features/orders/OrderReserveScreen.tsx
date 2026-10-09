@@ -134,6 +134,14 @@ export const OrderReserveScreen: React.FC = () => {
     currentReservations
   } = options
 
+  if (order.status === 'closed_remaining') return (
+    <div className="flex-1 flex flex-col bg-slate-50 min-h-screen">
+      <PageHeader title="Giữ cây cho đơn" showBack backTo={`/orders/${order.id}`} />
+      <div className="p-6"><EmptyState title="Đơn đã dừng phần còn lại" description="Nguồn giữ đã được nhả; lịch sử vẫn xem được trong chi tiết đơn."
+        actionText="Xem đơn" onAction={() => navigate(`/orders/${order.id}`)} icon={AlertTriangle} /></div>
+    </div>
+  )
+
   const progressPercent = Math.min(
     Math.round((reservedQuantity / order.requestedQuantity) * 100),
     100
