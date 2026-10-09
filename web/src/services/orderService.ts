@@ -96,17 +96,16 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     return { success: false, error: 'Vui lòng chọn loại cây giống.' }
   }
 
-  if (!input.requestedQuantity || input.requestedQuantity <= 0) {
-    return { success: false, error: 'Số lượng cây đặt phải lớn hơn 0.' }
+  if (!Number.isSafeInteger(input.requestedQuantity) || input.requestedQuantity <= 0) {
+    return { success: false, error: 'Số lượng cây đặt phải lớn hơn 0 và là số nguyên an toàn hợp lệ.' }
   }
 
-  const customer = await contactRepository.getById(customerId)
-  if (!customer) {
-    return { success: false, error: 'Khách hàng không tồn tại trong danh bạ.' }
+  if (input.unitPrice !== undefined && (!Number.isSafeInteger(input.unitPrice) || input.unitPrice < 0)) {
+    return { success: false, error: 'Giá mỗi cây phải là số nguyên không âm hợp lệ.' }
   }
 
   const id = `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
-  const requestedQuantity = Math.round(input.requestedQuantity)
+  const requestedQuantity = input.requestedQuantity
 
   // Status MUST be 'open' in P2 (demand created, no reservation yet)
   const newOrder: Order = {
@@ -115,44 +114,36 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     variety,
     requestedQuantity,
     requestedDate: input.requestedDate || undefined,
-    unitPrice: input.unitPrice !== undefined && input.unitPrice >= 0 ? Math.round(input.unitPrice) : undefined,
+    unitPrice: input.unitPrice,
     note: input.note?.trim() || undefined,
     status: 'open'
   }
 
+  let result: CreateOrderResult
   try {
-    await orderRepository.save(newOrder)
-
-    // Calculate informational availability feedback
-    const availabilityInfo = await getVarietyAvailability(variety, requestedQuantity)
-
-    await eventRepository.record({
-      type: 'order_created',
-      entityType: 'order',
-      entityId: newOrder.id,
-      payload: {
-        message: `Ghi đơn mới cho ${customer.name}: ${formatQuantity(newOrder.requestedQuantity)} cây ${newOrder.variety}`,
-        customerId: newOrder.customerId,
-        variety: newOrder.variety,
-        requestedQuantity: newOrder.requestedQuantity,
-        availableAtGarden: availabilityInfo.availableQuantity
+    // Repositories join this transaction, including reads needed by the result/history.
+    result = await db.transaction('rw', [db.orders, db.events, db.contacts, db.batches, db.reservations], async (): Promise<CreateOrderResult> => {
+      const customer = await contactRepository.getById(customerId)
+      if (!customer) {
+        return { success: false, error: 'Khách hàng không tồn tại trong danh bạ.' }
       }
-    })
+      await orderRepository.save(newOrder)
+      const availabilityInfo = await getVarietyAvailability(variety, requestedQuantity)
+      await eventRepository.record({
+        type: 'order_created',
+        entityType: 'order',
+        entityId: newOrder.id,
+        payload: {
+          message: `Ghi đơn mới cho ${customer.name}: ${formatQuantity(newOrder.requestedQuantity)} cây ${newOrder.variety}`,
+          customerId: newOrder.customerId,
+          variety: newOrder.variety,
+          requestedQuantity: newOrder.requestedQuantity,
+          availableAtGarden: availabilityInfo.availableQuantity
+        }
+      })
 
-    // Register reversible mutation for Undo
-    undoService.recordMutation({
-      type: 'create_order',
-      orderId: newOrder.id,
-      customerName: customer.name,
-      description: `Đã ghi đơn cho ${customer.name}`
+      return { success: true, order: newOrder, customerName: customer.name, availabilityInfo }
     })
-
-    return {
-      success: true,
-      order: newOrder,
-      customerName: customer.name,
-      availabilityInfo
-    }
   } catch (err) {
     console.error('Failed to create order:', err)
     return {
@@ -160,6 +151,22 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       error: 'Chưa lưu được đơn hàng trên thiết bị. Dữ liệu bạn vừa nhập vẫn còn trên màn hình.'
     }
   }
+
+  // UI-local Undo is optional and only registered after the transaction commits.
+  // A notification failure must not report a durable order as a failed create/retry.
+  if (result.success && result.order && result.customerName !== undefined) {
+    try {
+      undoService.recordMutation({
+        type: 'create_order',
+        orderId: result.order.id,
+        customerName: result.customerName,
+        description: `Đã ghi đơn cho ${result.customerName}`
+      })
+    } catch (err) {
+      console.error('Failed to register order Undo:', err)
+    }
+  }
+  return result
 }
 
 export type UpdateOrderInput = OrderChanges & { orderId: string }
