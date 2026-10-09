@@ -22,7 +22,7 @@ const COMMON_VARIETIES = [
 export const OrderNewScreen: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const prefillVariety = searchParams.get('variety') || COMMON_VARIETIES[0]
+  const prefillVariety = searchParams.get('variety')?.trim() || COMMON_VARIETIES[0]
 
   // Data baseline
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -176,6 +176,16 @@ export const OrderNewScreen: React.FC = () => {
     (b) => b.variety.toLowerCase().trim() === variety.toLowerCase().trim()
   )
 
+  // Common order first, then batch labels in code-point order; no persisted label changes.
+  const varietyOptions = new Map<string, string>()
+  for (const label of [...COMMON_VARIETIES, ...batches.map(batch => batch.variety.trim()).sort()]) {
+    const key = label.toLowerCase()
+    if (key && !varietyOptions.has(key)) varietyOptions.set(key, label)
+  }
+  // Keep the exact draft spelling selectable even before batches load or after a read failure.
+  // Replacing a logical duplicate preserves its position without resetting the draft.
+  varietyOptions.set(variety.toLowerCase(), variety)
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
       <PageHeader title="Ghi đơn mới" subtitle="Tiếp nhận nhu cầu đặt cây" showBack backTo="/orders" />
@@ -247,9 +257,9 @@ export const OrderNewScreen: React.FC = () => {
                   }}
                   className="w-full px-3.5 py-3 text-base rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white text-slate-900 font-semibold min-h-[48px]"
                 >
-                  {COMMON_VARIETIES.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
+                  {Array.from(varietyOptions, ([key, label]) => (
+                    <option key={key} value={label}>
+                      {label}
                     </option>
                   ))}
                 </select>
