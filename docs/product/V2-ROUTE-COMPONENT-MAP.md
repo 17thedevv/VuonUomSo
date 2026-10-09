@@ -78,7 +78,7 @@ flowchart TD
 - Giữ current URLs: planned links `/shipments/:id`, dossier batchId và existing order/batch refs không đổi hàng loạt khi rename tab.
 - `OrderNewScreen` hiện đọc `variety` query; **chưa đọc `customerId`, `itemId` hoặc `batchId` để tự reserve**. BatchDetail đang truyền batchId+variety, nhưng create demand không cam kết chọn source. New customer/item-prefill là enhancement riêng, validate current existence/role/identity trước submit; không mô tả query đó như đã hoạt động.
 - Garden query chỉ filter read projection. Whitelist `view`, sanitize/normalize search, preserve valid filter khi back; unknown values fallback rõ. Không dùng query params làm permission/canonical quantity/confirmation token.
-- Legacy variety query ngoài common options cần picker correction G10; visible selected label phải khớp draft/submit. Không dùng slug tạo từ tên giống làm permanent item key.
+- Picker correction G10 đã DONE / CLOSED qua #33; legacy variety query ngoài common options được render đúng và visible selected label khớp draft/submit. Không dùng slug tạo từ tên giống làm permanent item key.
 - Generated stable item/order display IDs phải có mapping/collision policy; không lấy random ordinal của sorted list để phân biệt đơn lâu dài. Nếu chỉ dùng shortened existing ID, resolve uniqueness và hiển thị full ID trong detail khi cần.
 - Direct link tới terminal order/reserve/ship phải fail closed như service; ẩn action không thay authority. Not-found/deleted ref có đường quay lại list, không mở form mutation trống.
 - Deep link vào proposed route trước release không được được coi là capability đã có. Không redirect `/batches` sang `/garden` cho tới khi backward navigation/filter behavior có regression.
@@ -176,7 +176,7 @@ Read view → select task → draft → validate preview
 
 ### V2-A: bốn slice trên facts hiện tại
 
-G01/G02 đã DONE / CLOSED qua #32. G10 NEXT duy nhất; A1 queued sau G10 closure: A1 read/query + real Dexie snapshot tests → A2 Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
+G01/G02/G10 đã DONE / CLOSED qua #32/#33. A1 NEXT duy nhất: A1 read/query + real Dexie snapshot tests → A2 Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
 
 Files có khả năng chạm sau khi duyệt: proposed garden components/query service; [TodayScreen](D:/Project-17/VuonUom/web/src/features/today/TodayScreen.tsx); [router](D:/Project-17/VuonUom/web/src/app/router.tsx); [NAV_ITEMS](D:/Project-17/VuonUom/web/src/shared/navigation.ts). Batch/order/shipment command files chỉ là dependencies, không có lý do sửa mutation để thay hero/list UI.
 
@@ -201,4 +201,4 @@ Reuse [readiness migration plan](D:/Project-17/VuonUom/docs/architecture/GENERAL
 
 Để giao coding task tiếp theo, chỉ định **một slice**, base merged, exact files/allowed authority và acceptance tương ứng; record explicit exclusions. Source/reference teardown không thay thế functional contract.
 
-V2-0 cập nhật PROJECT_STATE/roadmap/contracts, không đổi NAV_ITEMS hoặc code V2 và không merge FC5-1. G01/G02 DONE / CLOSED (#32); G10 NEXT duy nhất; V2-A1 QUEUED / NEXT AFTER G10. Task integration dừng trước G10; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.
+V2-0 đã merge qua #30; không đổi NAV_ITEMS hoặc code V2 và không merge FC5-1. G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1 NEXT duy nhất. Task integration dừng ở closure, không implement A1; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.

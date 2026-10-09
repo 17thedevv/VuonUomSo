@@ -1,6 +1,6 @@
 # General-Commerce Readiness Audit
 
-> **HISTORICAL AUDIT SNAPSHOT.** Roadmap hiện hành: [V2 Roadmap](../product/V2-ROADMAP.md). FC5/FC6 SUPERSEDED; FC5-1 branch preserved/not adopted. Bằng chứng và trạng thái OPEN/NEXT trong snapshot cũ bên dưới không phải current-main acceptance hoặc task authority. G01/G02 đã DONE / CLOSED qua [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), merge `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940). G10 NEXT duy nhất; V2-A1 queued sau G10. Reset roadmap chỉ đổi docs, không triển khai G10/V2-A.
+> **HISTORICAL AUDIT SNAPSHOT.** Roadmap hiện hành: [V2 Roadmap](../product/V2-ROADMAP.md). FC5/FC6 SUPERSEDED; FC5-1 branch preserved/not adopted. Bằng chứng và trạng thái OPEN/NEXT trong snapshot cũ bên dưới không phải current-main acceptance hoặc task authority. G01/G02 đã DONE / CLOSED qua [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), merge `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940). G10 DONE / CLOSED qua [PR #33](https://github.com/17thedevv/VuonUomSo/pull/33), merge `87d918d02ee5cbb22bb1e76475292fab4b7fdae2`, [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37946122446). V2-A1 NEXT duy nhất; chưa triển khai V2-A. Các findings G10 bên dưới giữ như snapshot trước patch.
 
 ## Executive Summary
 

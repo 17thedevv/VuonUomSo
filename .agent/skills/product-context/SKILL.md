@@ -74,10 +74,10 @@ Hệ thống mô hình hóa bằng danh sách năng lực mềm dẻo (`capabili
 ```text
 P0–P6 / FC0–FC4                 [DONE / CLOSED]
 FC5 / FC6                      [SUPERSEDED BY V2]
-V2-0                           [APPROVED / INTEGRATING VIA PR #30]
+V2-0                           [MERGED / CLOSED — PR #30]
 Correctness G01/G02            [DONE / CLOSED — PR #32 MERGED]
-Correctness G10                [NEXT — DUY NHẤT]
-V2-A1                         [QUEUED / NEXT AFTER G10]
+Correctness G10                [DONE / CLOSED — PR #33 MERGED]
+V2-A1                         [NEXT — DUY NHẤT / NOT STARTED]
 V2-A2 → A3 → A4               [QUEUED / PLANNED]
 V2-B1 → B2                     [AFTER V2-A ACCEPTANCE]
 REAL PILOT / STOP FEATURE BUILD [AFTER V2-B]
