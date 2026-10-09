@@ -17,6 +17,32 @@
 
 ## 2. Roadmap Matrix & Current Phase
 
+### Roadmap hiện hành — V2 reset (09/10/2026)
+
+**Chỉ thị người dùng: FC5 / FC6 SUPERSEDED BY V2.** Đây là quyết định đổi roadmap rõ ràng, thay các NEXT/prerequisite trong snapshot cũ bên dưới. FC0–FC4 vẫn DONE / CLOSED. Base merged khi tạo reset: `0d8d97a7254998ac84c7fedc087724f8ccc44da2`.
+
+- [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 APPROVED / INTEGRATING INTO MAIN VIA PR #30**; roadmap có hiệu lực trên main khi [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30) merge. UI V2 chưa triển khai.
+- [V2-A Functional Contract](../docs/product/V2-A-FUNCTIONAL-CONTRACT.md): frozen legacy grouping + coherent read snapshot + available labels/sum per-batch.
+- **FC5-1 PRESERVED / NOT ADOPTED / OUT OF ACTIVE ROADMAP**: branch `feat/fc5-close-remaining-domain`, head `ac68325b8deab6445e833b6f7c78c28fa97f9484`, [PR #29](https://github.com/17thedevv/VuonUomSo/pull/29). Không merge/xóa/đóng PR bằng reset này; không phụ thuộc service hoặc enum chưa merge. Muốn tiếp nhận lại cần task/review riêng.
+
+| Phase | Trạng thái | Gate / scope |
+|---|---|---|
+| Correctness G01/G02 | **DONE / CLOSED** | [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32) merged; atomic create + numeric boundary, evidence bên dưới |
+| Correctness G10 | **NEXT — DUY NHẤT** | Custom variety picker; chưa triển khai |
+| V2-A1 | **QUEUED / NEXT AFTER G10** | Garden availability read model, không schema mới; chỉ mở sau G10 closure |
+| V2-A2 | QUEUED / PLANNED | Garden UI/search trên A1 |
+| V2-A3 | QUEUED / PLANNED | Quick update composition dùng mutation hiện có |
+| V2-A4 | QUEUED / PLANNED | Today/nav integration; giữ bốn tab và routes cũ |
+| V2-B1 | PLANNED / NOT STARTED | Local bảng hàng preview → Copy/Web Share → owner tự gửi |
+| V2-B2 | PLANNED / NOT STARTED | Customer read views, không giá/thu tiền/công nợ |
+| REAL PILOT / STOP FEATURE BUILD | **REQUIRED AFTER V2-B** | Điện thoại/số liệu thật; năm task và metrics trong roadmap |
+| V2-C / V2-D / V2-E | **EVIDENCE GATED / NOT AUTHORIZED** | Không mặc định xây; pilot + contract/scope riêng trước implementation |
+
+**G01/G02 closure evidence:** reviewed head `e57cf29c5ed4da550048c7efae1b4e36c9dfda34`; PR #32 merged vào main tại `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, lúc `2026-10-09T13:09:03Z`. [Merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940): typecheck, lint, full tests và production build PASS. Code và regressions của #32 được giữ nguyên khi tích hợp reset.
+
+V2-0 chỉ docs/state/policy; code G01/G02 đã tích hợp riêng qua #32. G10 là task coding kế tiếp duy nhất; V2-A1 đang queued sau G10. Task integration này dừng ở closure, không sửa G10 hoặc triển khai A/B. Không đợi FC5/FC6 trước V2; schema/Product/Variant/Location/Size/payment/public URL/backend đều ngoài scope A/B. Physical IME, installed-PWA offline thực tế và field pilot vẫn NOT VERIFIED.
+
+
 ### Giai đoạn kỹ thuật nền tảng (Foundation Phases):
 | Phase | Tên giai đoạn | Trạng thái | Ghi chú |
 | :--- | :--- | :--- | :--- |
@@ -36,11 +62,13 @@
 | **FC2** | **Order Lifecycle & Corrections** | **DONE** | PR #8/#9 đã merge; CI xanh; nghiệm thu cuối mobile 08/10/2026 PASS |
 | **FC3** | **Reservation Reconciliation** | **DONE** | FC3-0/1A/1B/2/3 CLOSED; PR #20 merged `bce3abc`, CI merge xanh; Final Acceptance trên main 08/10/2026 PASS; FC3-1 DONE |
 | **FC4** | **External Supply Truthfulness** | **DONE** | FC4-0/FC4-1 CLOSED; PR #24/#25 merged, correction main `f812162`, merge-CI SUCCESS. Final Acceptance trên main 09/10/2026 PASS; H/M, create/edit/cancel/backup đạt |
-| **FC5** | **Fulfillment & Completion Semantics** | **CONTRACT CLOSED / IMPLEMENTATION NOT STARTED** | FC5-0 approved; PR #27 merged `29d97c8`, merge-CI SUCCESS. FC5-1 NEXT; FC5 overall NOT DONE |
-| **FC6** | **Pilot Hardening & Telemetry** | **PLANNED** | Chờ FC5 hoàn thành và merge |
-| **STOP**| **FIELD PILOT** | **PLANNED** | Mang app ra vườn sau khi hoàn thành FC6 |
+| **FC5** | **Fulfillment & Completion Semantics** | **SUPERSEDED BY V2** | FC5-0 contract merge được giữ là lịch sử; FC5-1 preserved/not adopted, không phải prerequisite |
+| **FC6** | **Pilot Hardening & Telemetry** | **SUPERSEDED BY V2** | Không tiếp tục phase cũ; giữ instrumentation đã có cho pilot sau V2-B |
+| **STOP** | **REAL PILOT** | **REQUIRED AFTER V2-B** | Không chờ FC5/FC6 hoặc C/D/E |
 
-### FC1 closure & next tasks (08/10/2026)
+### Lịch sử FC1–FC3 (08/10/2026)
+
+Các NEXT/PLANNED trong snapshot lịch sử không điều khiển roadmap hiện hành V2.
 
 - FC1 đã có trên `main`: [PR #4](https://github.com/17thedevv/VuonUomSo/pull/4), merge `7eb4987fcf3ff949f5874107de67ed2bd89a1e19`, [CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37709990216).
 - [Báo cáo nghiệm thu FC1](../docs/development/FC1-FINAL-ACCEPTANCE.md): transactional validation, Undo guard, 299 tests và core workflow mobile đến xuất đủ đơn; không phát hiện BLOCKER/HIGH ảnh hưởng số lượng trong phạm vi review.
@@ -57,7 +85,7 @@
 - **FC3 FINAL ACCEPTANCE PASS / FC3 DONE / FC3-1 DONE**: [Nghiệm thu trên main](../docs/development/FC3-FINAL-ACCEPTANCE.md), browser A–F 360/390/430/1280px, shortage/transfer backup-restore qua UI + retry idempotent, stale Undo và xuất sau reconciliation PASS. Không phát hiện BLOCKER/HIGH hoặc lifecycle dead-end trong scope đã kiểm. Chưa test IME thiết bị thật/field pilot. Before pilot NOTE: phân biệt ổn định các đơn cùng khách có cùng quantity/date; deep marker integrity NOTE vẫn deferred. FC4/FC5 PLANNED / NOT STARTED; không mở implementation FC4 trong closure.
 - UI Reference Study v0.1: **RESEARCH APPROVED**; chỉ R01/R02 đã nghiệm thu và merge. R03/R04/R05 chưa triển khai trong task này. Sản phẩm tham khảo không tạo requirement mới.
 
-### FC4-0 contract closure & next task (08/10/2026)
+### Lịch sử FC4 closure (08–09/10/2026)
 
 - **FC4-0 CLOSED / ACCEPTED / MERGED**: [External Supply Truthfulness Contract](../docs/development/FC4-FUNCTIONAL-CONTRACT.md), người dùng duyệt exact-head `69c2aa2a54c5ee991c518b498e8f82071845d7d8`; [PR #22](https://github.com/17thedevv/VuonUomSo/pull/22) merged tại `0507906421df4872d45f07ef4a625a61b7b90e54`; [CI merge SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37796903976), typecheck/lint/full tests/build PASS. Contract audit exact base `86f513c7ce8a8f7c95ef85099872b91b2d6cb64d`; PR đúng 2 file docs, không có `web/` diff. Closure này không phải FC4 DONE.
 - Contract khóa bỏ catalog estimate/fallback30k khỏi production workflow, external quantity trống ban đầu và explicit user-confirmed input/acknowledgement, supplier contact không phải inventory, legacy commitments/history/backup được giữ. Required implementation gate: **cả `reserveOwnBatch()` và `reserveExternalSupplier()`** phải dùng canonical current coverage/shortage gồm F của released source, kèm real Dexie regression riêng: requested50k/released Q20k F10k/active Q20k → add30k FAIL, add20k PASS nếu guard nguồn tương ứng đạt. Không over-cover sau xuất/release; không refactor toàn reservation engine.
@@ -67,12 +95,14 @@
 
 ---
 
-### FC5-0 contract closure & next task (09/10/2026)
+### Lịch sử FC5-0 contract closure (09/10/2026) — SUPERSEDED DELIVERY
+
+FC5-0 đã merge; các yêu cầu implementation bên dưới là contract tham khảo, không authorization hoặc prerequisite của V2.
 
 - **FC5-0 CLOSED / ACCEPTED / MERGED — docs-only**: [Fulfillment & Completion Functional Contract](../docs/development/FC5-FUNCTIONAL-CONTRACT.md), exact audit baseline `0647bfbbdb183ac0e7a652275096e7044b2cef04`; người dùng duyệt head `2ccec90b3053af5f5aa937af5b2edb9307475aba`; [PR #27](https://github.com/17thedevv/VuonUomSo/pull/27) merged tại `29d97c87de810a68607e7dc4433599d8945dfaf7`; [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37898636631), typecheck/lint/full tests/build PASS. Approved gate lint0/0 (158 files), 53 files / 723 tests PASS, PWA14. FC0–FC4 DONE / CLOSED; terminal truth table cancelled S0, shipped S=R, closed_remaining 0<S<R; S>R là invalid state, không normalize.
 - Close giữ requested/Q/F/completed history/physical stock; nhả O và cancel mọi planned trong một transaction, append history/operation marker. stopped=R−S khác releasedOutstanding=O_before; closed actionable remaining/shortage=0 nhưng stopped/history không biến mất. Không reopen/Undo riêng hoặc receipt/delivery semantics.
 - Required FC5-1 gates: explicit terminal guards mọi mutation/helper/queue; completion exact S=R/O0/planned0; stale preview/reconfirm; collision operationId **hai chiều** xuyên FC3 A/B và FC5; real Dexie rollback/races/stale Undo/backup regressions trước expose mutation. Policy persisted: giữ Dexie5 / backupV1 / record shape, new enum phải được validate; valid legacy restore giữ tương thích, pre-FC5 reader reject closed enum trước write, không infer/migrate partial thành closed.
-- **FC5-1 NEXT — Atomic Close Remaining domain/service + terminal guards/backup/Undo correctness**. Contract review/approved merge/merge-CI đã đạt; sau FC5-1 mới FC5-2 UI/vocabulary → FC5-3 cross-flow hardening → Final Acceptance trên main. **FC5 implementation NOT STARTED / FC5 overall NOT DONE / FC6 PLANNED**, không `web/` diff ở task closure này. Physical IME/PWA offline thực tế/field pilot vẫn chưa kiểm chứng; FC3 deferred notes giữ nguyên.
+- Snapshot trước reset: **FC5-1 NEXT — Atomic Close Remaining domain/service + terminal guards/backup/Undo correctness**. Contract review/approved merge/merge-CI đã đạt; sau FC5-1 mới FC5-2 UI/vocabulary → FC5-3 cross-flow hardening → Final Acceptance trên main. **FC5 implementation NOT STARTED / FC5 overall NOT DONE / FC6 PLANNED**, không `web/` diff ở task closure này. Physical IME/PWA offline thực tế/field pilot vẫn chưa kiểm chứng; FC3 deferred notes giữ nguyên.
 
 ---
 

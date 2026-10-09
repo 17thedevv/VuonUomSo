@@ -4,7 +4,9 @@
 
 **Exact base đã audit:** `main = 0647bfbbdb183ac0e7a652275096e7044b2cef04`.
 
-**FC5-0 APPROVED / CLOSED — FC5-1 NEXT / FC5 implementation NOT STARTED / FC5 overall NOT DONE. FC6 PLANNED / NOT STARTED.**
+> **SUPERSEDED BY V2 — DELIVERY CONTRACT RETAINED FOR REFERENCE (09/10/2026).** FC5/FC6 không còn prerequisite. Xem [V2 Roadmap](../product/V2-ROADMAP.md) và [PROJECT_STATE](../../.agent/PROJECT_STATE.md). FC5-1 trên branch riêng được giữ nhưng không tiếp nhận; V2 không phụ thuộc service/enum chưa merge. Các MUST, NEXT và acceptance bên dưới là contract lịch sử cho capability FC5 nếu được mở lại, không lệnh triển khai hiện hành.
+
+**Snapshot trước reset: FC5-0 APPROVED / CLOSED — FC5-1 NEXT / FC5 implementation NOT STARTED / FC5 overall NOT DONE. FC6 PLANNED / NOT STARTED.**
 
 Người dùng duyệt exact-head `2ccec90b3053af5f5aa937af5b2edb9307475aba`; [PR #27](https://github.com/17thedevv/VuonUomSo/pull/27) merged tại `29d97c87de810a68607e7dc4433599d8945dfaf7`. [Exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37897333014) và [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37898636631): typecheck/lint/full tests/build PASS. Gate approved head: lint0/0 (158 files), 53 files / 723 tests PASS, PWA14; merge đã được kiểm từng step full CI. Contract đúng hai file docs/state, không `web/` diff; đóng contract không phải nghiệm thu implementation.
 
