@@ -4,7 +4,9 @@
 
 **Exact base đã audit:** `main = 0647bfbbdb183ac0e7a652275096e7044b2cef04`.
 
-**FC5-0 REVIEW PENDING / FC5 implementation NOT STARTED / FC5 overall NOT DONE. FC6 PLANNED / NOT STARTED.**
+**FC5-0 APPROVED / CLOSED — FC5-1 NEXT / FC5 implementation NOT STARTED / FC5 overall NOT DONE. FC6 PLANNED / NOT STARTED.**
+
+Người dùng duyệt exact-head `2ccec90b3053af5f5aa937af5b2edb9307475aba`; [PR #27](https://github.com/17thedevv/VuonUomSo/pull/27) merged tại `29d97c87de810a68607e7dc4433599d8945dfaf7`. [Exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37897333014) và [merge-CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37898636631): typecheck/lint/full tests/build PASS. Gate approved head: lint0/0 (158 files), 53 files / 723 tests PASS, PWA14; merge đã được kiểm từng step full CI. Contract đúng hai file docs/state, không `web/` diff; đóng contract không phải nghiệm thu implementation.
 
 Task FC5-0 chỉ tạo contract này và cập nhật `.agent/PROJECT_STATE.md`. Không có `web/` diff, mutation/UI/schema/dependency thay đổi hoặc kiểm thử nghiệm thu FC5. MUST / MUST NOT dưới đây là yêu cầu cho implementation sau khi contract được duyệt và merge; không mô tả chúng là behavior đã có trên base.
 
@@ -261,7 +263,7 @@ Các gate này **chưa chạy như FC5 acceptance**. Domain assertions + real De
 
 | Slice | Scope | Trạng thái task FC5-0 |
 | --- | --- | --- |
-| FC5-0 | Contract docs-only, exact-base audit và review | REVIEW PENDING |
+| FC5-0 | Contract docs-only, exact-base audit và review | APPROVED / CLOSED; PR #27 merged, merge-CI SUCCESS |
 | FC5-1 | Atomic Close Remaining domain/service + all terminal guards + completion/backup/Undo/idempotency correctness | NOT STARTED; chỉ sau contract được duyệt/merge/merge-CI xanh |
 | FC5-2 | UI + completion vocabulary theo contract, không redesign | NOT STARTED |
 | FC5-3 | Cross-flow hardening / real-service races / UI integration | NOT STARTED; correctness regressions FC5-1 không được hoãn đến slice này |
@@ -275,4 +277,4 @@ Không web/schema/dependency diff trong FC5-0. Không FC6 implementation, backen
 
 Physical phone IME, installed-PWA offline thực tế và field pilot **chưa kiểm chứng**, đưa sang kế hoạch FC6, không claim PASS. FC3 stable order differentiator và deep old-marker validation NOTE giữ deferred; FC5 collision registry update và new-marker validation ở §7 vẫn required, không dùng deferred để bỏ gate mới.
 
-Handoff FC5-0 gồm exact head/PR/two changed files/full CI, truth table, stopped≠released, post-closure invariants, collision hai chiều, version policy, source/service/helper audit, backup/vocabulary/out-of-scope và xác nhận no web diff. Contract cần người dùng review trước merge; chỉ CLOSED sau approved merge + merge-CI SUCCESS. **FC5 implementation NOT STARTED / FC5 overall NOT DONE.**
+Handoff FC5-0 gồm exact head/PR/two changed files/full CI, truth table, stopped≠released, post-closure invariants, collision hai chiều, version policy, source/service/helper audit, backup/vocabulary/out-of-scope và xác nhận no web diff. Người dùng đã duyệt contract, PR #27 đã merge và merge-CI SUCCESS; gate closure đạt. **FC5-0 CLOSED / FC5-1 NEXT — Atomic Close Remaining domain/service + terminal guards/backup/Undo correctness. FC5 implementation NOT STARTED / FC5 overall NOT DONE.**
