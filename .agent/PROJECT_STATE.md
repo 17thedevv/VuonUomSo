@@ -29,8 +29,8 @@
 |---|---|---|
 | Correctness G01/G02 | **DONE / CLOSED** | [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32) merged; atomic create + numeric boundary, evidence bên dưới |
 | Correctness G10 | **DONE / CLOSED** | [PR #33](https://github.com/17thedevv/VuonUomSo/pull/33) merged; visible variety = submitted variety, evidence bên dưới |
-| V2-A1 | **NEXT — DUY NHẤT** | Garden availability read model theo frozen contract; chưa triển khai, không schema mới |
-| V2-A2 | QUEUED | Garden UI/search trên A1 |
+| V2-A1 | **DONE / CLOSED (#35)** | Garden availability read model đã merge theo frozen contract; real Dexie regressions và merge CI PASS, không schema mới |
+| V2-A2 | **NEXT — DUY NHẤT** | Garden UI/search trên A1 đã merge; chưa triển khai |
 | V2-A3 | QUEUED | Quick update composition dùng mutation hiện có |
 | V2-A4 | QUEUED | Today/nav integration; giữ bốn tab và routes cũ |
 | V2-B1 | PLANNED / NOT STARTED | Local bảng hàng preview → Copy/Web Share → owner tự gửi |
@@ -42,7 +42,9 @@
 
 **G10 closure evidence:** reviewed head `3bf2cdafdd48dc690c9d1fb3b39197cd5f3b956f`; PR #33 merged vào main tại `87d918d02ee5cbb22bb1e76475292fab4b7fdae2`, lúc `2026-10-09T14:41:55Z`. [Merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37946122446): typecheck, lint, full tests và production build PASS. Common/batch/current draft options, trim/lowercase dedupe, async selection và real persistence regressions đã có; không auto-reserve hoặc đổi stock/schema.
 
-G01/G02/G10 đã DONE / CLOSED qua #32/#33. **V2-A1 là task coding kế tiếp duy nhất**, chỉ theo frozen read-model contract; chưa triển khai. Task integration này dừng ở closure, không sửa G10 thêm hoặc triển khai A/B. Không đợi FC5/FC6 trước V2; schema/Product/Variant/Location/Size/payment/public URL/backend đều ngoài scope A/B. Physical IME, installed-PWA offline thực tế và field pilot vẫn NOT VERIFIED.
+**V2-A1 closure evidence:** người dùng duyệt head `2351151d5d58d6cf5c989e60d26fa7566700d986`; [PR #35](https://github.com/17thedevv/VuonUomSo/pull/35) merged tại `c83880b49136659aa9f592633e325332421d110e` lúc `2026-10-09T15:36:22Z`. [Merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37952987463) trên đúng merge commit, event `push`: typecheck, lint, 55 files / 860 tests và production build PASS. 91 Garden tests bảo vệ coherent two-table read snapshot, per-batch available15/shortage3, legacy grouping/search, external exclusion, fail-closed source/identity/quantity/overflow, no writes và re-query sau mutation hiện có. Đây là read-model acceptance; Garden UI chưa triển khai/nghiệm thu.
+
+G01/G02/G10 đã DONE / CLOSED qua #32/#33; **V2-A1 DONE / CLOSED qua #35**. **V2-A2 là task coding kế tiếp duy nhất**, theo frozen contract cho Garden UI/search và reload/error/stale-request handling. A3/A4 QUEUED; B1/B2 PLANNED. Task integration này dừng ở docs/state closure, không triển khai A2. Không đợi FC5/FC6 trước V2; schema/Product/Variant/Location/Size/payment/public URL/backend đều ngoài scope A/B. Physical IME, installed-PWA offline thực tế và field pilot vẫn NOT VERIFIED.
 
 
 ### Giai đoạn kỹ thuật nền tảng (Foundation Phases):

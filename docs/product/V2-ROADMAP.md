@@ -13,13 +13,15 @@ Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 →
 - **V2-0 MERGED / CLOSED** qua [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30), merge `85415ceaaff3b152e53c4a8df5552af3d335e0ee`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37935872623). Reset đã có hiệu lực trên main.
 - **G01/G02 DONE / CLOSED**: [PR #32](https://github.com/17thedevv/VuonUomSo/pull/32), reviewed head `e57cf29c5ed4da550048c7efae1b4e36c9dfda34`, merged `9c29fa2beea57bd82eb74a4b88c5b79987acefb1` lúc `2026-10-09T13:09:03Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940), typecheck/lint/full tests/build PASS.
 - **G10 DONE / CLOSED**: [PR #33](https://github.com/17thedevv/VuonUomSo/pull/33), reviewed head `3bf2cdafdd48dc690c9d1fb3b39197cd5f3b956f`, merged `87d918d02ee5cbb22bb1e76475292fab4b7fdae2` lúc `2026-10-09T14:41:55Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37946122446), typecheck/lint/full tests/build PASS.
-- **V2-A1 NEXT — DUY NHẤT**; chưa triển khai. V2-A2/A3/A4 QUEUED; V2-B1/B2 PLANNED.
+- **V2-A1 DONE / CLOSED**: [PR #35](https://github.com/17thedevv/VuonUomSo/pull/35), approved head `2351151d5d58d6cf5c989e60d26fa7566700d986`, merged `c83880b49136659aa9f592633e325332421d110e` lúc `2026-10-09T15:36:22Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37952987463) trên đúng merge commit (event `push`), typecheck/lint/55 files, 860 tests/build PASS. 91 Garden regressions bảo vệ read-model contract; chưa có Garden UI acceptance.
+- **V2-A2 NEXT — DUY NHẤT**; chưa triển khai. V2-A3/A4 QUEUED; V2-B1/B2 PLANNED.
 
 ```text
 V2-0: reset roadmap + freeze contract (MERGED / CLOSED, #30)
   → G01/G02 (DONE / CLOSED, #32 merged)
   → G10 (DONE / CLOSED, #33 merged)
-  → V2-A1 (NEXT duy nhất) → V2-A2 → V2-A3 → V2-A4
+  → V2-A1 (DONE / CLOSED, #35 merged)
+  → V2-A2 (NEXT duy nhất) → V2-A3 → V2-A4
   → V2-B1 → V2-B2
   → REAL PILOT / STOP FEATURE BUILD
   → evidence decides C / D / E
@@ -35,7 +37,7 @@ Nguồn và cách tái hiện: [readiness audit](../architecture/GENERAL-COMMERC
 | **G02** | **DONE / CLOSED (#32)** | Validate create quantity/optional price tại service boundary | Quantity nguyên an toàn dương; price nếu có là số nguyên an toàn không âm, khớp edit boundary hiện có; NaN/Infinity/phân số/out-of-range reject trước write. Không tạo financial authority mới |
 | **G10** | **DONE / CLOSED (#33)** | Picker giống phản ánh common options + dữ liệu lô + intentional draft/custom value | Batch Monthong → Ghi đơn: label nhìn thấy = variety submitted; query prefill không bị select đổi ngầm sang giống khác; default/common flow giữ được |
 
-G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup hoàn tất; V2-A1 là NEXT duy nhất theo frozen contract. Không mở Product/Variant chỉ để sửa picker.
+G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup và V2-A1 read model đã hoàn tất; V2-A2 là NEXT duy nhất theo frozen contract. Không mở Product/Variant chỉ để sửa picker.
 
 ## 3. V2-A — Availability & Quick Update
 
@@ -45,10 +47,10 @@ Mục tiêu: chủ vườn biết ngay còn bán được cây gì, tìm đúng 
 
 | Slice | Outcome / surface | Acceptance riêng |
 |---|---|---|
-| **V2-A1** | `gardenQueryService` + read DTO, nhóm giống sau khi derive từng lô | Real Dexie snapshot + normalization regressions; A ready15/O18 và B ready20/O5 → available15/shortage3; không write |
-| **V2-A2** | `/garden`, GardenAvailabilityScreen, AvailabilitySummary, VarietyAvailabilityCard, search/filter giống + mã lô | Tìm Monthong → thấy lô + đúng available/O/shortage → mở đúng batch ID; default Cây còn bán/Tất cả/empty/error rõ |
-| **V2-A3** | QuickUpdateChooser composition | Chọn lô → Kiểm kê số sống / Cập nhật cây đủ bán; Thêm lô mới vào flow cũ. Preview before/after giữ nguyên; ready≤living; shortage không chặn kiểm kê |
-| **V2-A4** | Today → Availability; tab Vườn; Garden → Batch/Ghi đơn | Giữ bốn tab Hôm nay/Vườn/Đơn/Thêm, URLs lô/đơn/chuyến cũ, back/search/filter; update rồi quay lại reload DB; create không auto-reserve |
+| **V2-A1 — DONE / CLOSED (#35)** | `gardenQueryService` + read DTO, nhóm giống sau khi derive từng lô | Real Dexie snapshot + normalization regressions; A ready15/O18 và B ready20/O5 → available15/shortage3; không write |
+| **V2-A2 — NEXT duy nhất** | `/garden`, GardenAvailabilityScreen, AvailabilitySummary, VarietyAvailabilityCard, search/filter giống + mã lô | Tìm Monthong → thấy lô + đúng available/O/shortage → mở đúng batch ID; default Cây còn bán/Tất cả/empty/error rõ |
+| **V2-A3 — QUEUED** | QuickUpdateChooser composition | Chọn lô → Kiểm kê số sống / Cập nhật cây đủ bán; Thêm lô mới vào flow cũ. Preview before/after giữ nguyên; ready≤living; shortage không chặn kiểm kê |
+| **V2-A4 — QUEUED** | Today → Availability; tab Vườn; Garden → Batch/Ghi đơn | Giữ bốn tab Hôm nay/Vườn/Đơn/Thêm, URLs lô/đơn/chuyến cũ, back/search/filter; update rồi quay lại reload DB; create không auto-reserve |
 
 Gate toàn V2-A: mở app → tổng **Cây còn bán** → tìm Monthong → chọn đúng lô → kiểm kê/cập nhật ready → quay lại → Availability phản ánh current authority. Browser 360/390/430/1280px, keyboard viewport và core flow regressions; không suy ra physical IME/offline PWA từ browser.
 
@@ -100,6 +102,6 @@ E có boundary: owner IndexedDB → publish snapshot → public URL → customer
 
 ## 7. Handoff
 
-V2-0 đã merge qua #30. **G01/G02/G10 DONE / CLOSED; V2-A1 NEXT duy nhất**. A2/A3/A4 QUEUED; B1/B2 PLANNED. Closure docs/state không có `web/` diff so với main đã chứa #32/#33; contract V2-A giữ nguyên. Task integration dừng ở closure, không implement V2-A1 hoặc mở A/B trong cùng PR.
+V2-0 đã merge qua #30. **G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1 DONE / CLOSED (#35); V2-A2 NEXT duy nhất**. A3/A4 QUEUED; B1/B2 PLANNED. Closure docs/state không có `web/` diff so với main đã chứa #35; contract V2-A giữ nguyên. Task integration dừng ở closure, không implement V2-A2 hoặc các slice sau trong cùng PR.
 
 Đọc cùng: [workflow audit](V2-WORKFLOW-AUDIT.md), [IA](V2-INFORMATION-ARCHITECTURE.md), [route/component map](V2-ROUTE-COMPONENT-MAP.md). Những đề xuất C/D/E trong các tài liệu này là hypotheses có gate, không mở rộng authorized scope của A/B. Trạng thái merge của reset phải được báo riêng, không lấy việc đã viết roadmap để claim main đã đổi.

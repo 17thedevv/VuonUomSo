@@ -176,7 +176,7 @@ Read view → select task → draft → validate preview
 
 ### V2-A: bốn slice trên facts hiện tại
 
-G01/G02/G10 đã DONE / CLOSED qua #32/#33. A1 NEXT duy nhất: A1 read/query + real Dexie snapshot tests → A2 Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
+G01/G02/G10 đã DONE / CLOSED qua #32/#33; A1 read/query + real Dexie snapshot tests DONE / CLOSED qua #35. A2 NEXT duy nhất: Garden UI/search → A3 quick-update composition → A4 Today/nav integration. Mỗi slice có regression/CI/review; không gộp toàn A thành một PR. Không đổi schema; bất kỳ logic quantity mới nào phải được review riêng.
 
 Files có khả năng chạm sau khi duyệt: proposed garden components/query service; [TodayScreen](D:/Project-17/VuonUom/web/src/features/today/TodayScreen.tsx); [router](D:/Project-17/VuonUom/web/src/app/router.tsx); [NAV_ITEMS](D:/Project-17/VuonUom/web/src/shared/navigation.ts). Batch/order/shipment command files chỉ là dependencies, không có lý do sửa mutation để thay hero/list UI.
 
@@ -201,4 +201,4 @@ Reuse [readiness migration plan](D:/Project-17/VuonUom/docs/architecture/GENERAL
 
 Để giao coding task tiếp theo, chỉ định **một slice**, base merged, exact files/allowed authority và acceptance tương ứng; record explicit exclusions. Source/reference teardown không thay thế functional contract.
 
-V2-0 đã merge qua #30; không đổi NAV_ITEMS hoặc code V2 và không merge FC5-1. G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1 NEXT duy nhất. Task integration dừng ở closure, không implement A1; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.
+V2-0 đã merge qua #30; không đổi NAV_ITEMS và không merge FC5-1. G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1 read model DONE / CLOSED (#35); V2-A2 NEXT duy nhất. Task integration dừng ở docs/state closure, không implement A2; không chờ FC5/FC6. Real pilot sau B là bắt buộc trước C/D/E. Ba read contracts đã freeze tại V2-A Contract; A/B không schema mới.
