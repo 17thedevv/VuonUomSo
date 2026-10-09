@@ -9,12 +9,12 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Vườn Ươm',
         short_name: 'Vườn Ươm',
         description: 'Sổ cây giống trên điện thoại',
-        theme_color: '#15803d',
+        theme_color: '#163e33',
         background_color: '#f8fafc',
         display: 'standalone',
         orientation: 'portrait',

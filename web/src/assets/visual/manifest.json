@@ -1,0 +1,354 @@
+{
+  "project": "VuonUomSo",
+  "version": "1.0",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3549
+    },
+    {
+      "path": "brand/app-icon-192.png",
+      "bytes": 6681
+    },
+    {
+      "path": "brand/app-icon-48.png",
+      "bytes": 1719
+    },
+    {
+      "path": "brand/app-icon-512.png",
+      "bytes": 18643
+    },
+    {
+      "path": "brand/app-icon-96.png",
+      "bytes": 3298
+    },
+    {
+      "path": "brand/app-icon.svg",
+      "bytes": 911
+    },
+    {
+      "path": "brand/apple-touch-icon.png",
+      "bytes": 6234
+    },
+    {
+      "path": "brand/favicon-16.png",
+      "bytes": 547
+    },
+    {
+      "path": "brand/favicon-32.png",
+      "bytes": 971
+    },
+    {
+      "path": "brand/favicon-48.png",
+      "bytes": 1437
+    },
+    {
+      "path": "brand/favicon.ico",
+      "bytes": 3835
+    },
+    {
+      "path": "brand/favicon.svg",
+      "bytes": 735
+    },
+    {
+      "path": "brand/logo-compact.svg",
+      "bytes": 859
+    },
+    {
+      "path": "brand/logo-horizontal.svg",
+      "bytes": 1066
+    },
+    {
+      "path": "brand/logo-reversed.svg",
+      "bytes": 1088
+    },
+    {
+      "path": "brand/mark-monochrome.svg",
+      "bytes": 663
+    },
+    {
+      "path": "brand/mark.svg",
+      "bytes": 677
+    },
+    {
+      "path": "icons/availability.svg",
+      "bytes": 359
+    },
+    {
+      "path": "icons/bed.svg",
+      "bytes": 344
+    },
+    {
+      "path": "icons/board.svg",
+      "bytes": 344
+    },
+    {
+      "path": "icons/calendar.svg",
+      "bytes": 355
+    },
+    {
+      "path": "icons/catalog.svg",
+      "bytes": 344
+    },
+    {
+      "path": "icons/checklist.svg",
+      "bytes": 354
+    },
+    {
+      "path": "icons/customers.svg",
+      "bytes": 370
+    },
+    {
+      "path": "icons/debt.svg",
+      "bytes": 347
+    },
+    {
+      "path": "icons/delivery.svg",
+      "bytes": 368
+    },
+    {
+      "path": "icons/filter.svg",
+      "bytes": 355
+    },
+    {
+      "path": "icons/growth.svg",
+      "bytes": 326
+    },
+    {
+      "path": "icons/location.svg",
+      "bytes": 354
+    },
+    {
+      "path": "icons/loss.svg",
+      "bytes": 375
+    },
+    {
+      "path": "icons/lot.svg",
+      "bytes": 347
+    },
+    {
+      "path": "icons/low-stock.svg",
+      "bytes": 325
+    },
+    {
+      "path": "icons/message.svg",
+      "bytes": 347
+    },
+    {
+      "path": "icons/payment.svg",
+      "bytes": 340
+    },
+    {
+      "path": "icons/plant.svg",
+      "bytes": 373
+    },
+    {
+      "path": "icons/pots.svg",
+      "bytes": 385
+    },
+    {
+      "path": "icons/price-tag.svg",
+      "bytes": 335
+    },
+    {
+      "path": "icons/profile.svg",
+      "bytes": 325
+    },
+    {
+      "path": "icons/quote.svg",
+      "bytes": 350
+    },
+    {
+      "path": "icons/scan.svg",
+      "bytes": 369
+    },
+    {
+      "path": "icons/search.svg",
+      "bytes": 314
+    },
+    {
+      "path": "icons/seed.svg",
+      "bytes": 350
+    },
+    {
+      "path": "icons/settings.svg",
+      "bytes": 410
+    },
+    {
+      "path": "icons/share-sheet.svg",
+      "bytes": 360
+    },
+    {
+      "path": "icons/warehouse.svg",
+      "bytes": 325
+    },
+    {
+      "path": "icons/water.svg",
+      "bytes": 350
+    },
+    {
+      "path": "illustrations/empty-availability.png",
+      "bytes": 12901
+    },
+    {
+      "path": "illustrations/empty-availability.svg",
+      "bytes": 1370
+    },
+    {
+      "path": "illustrations/empty-catalog.png",
+      "bytes": 12814
+    },
+    {
+      "path": "illustrations/empty-catalog.svg",
+      "bytes": 1696
+    },
+    {
+      "path": "illustrations/empty-customers.png",
+      "bytes": 13878
+    },
+    {
+      "path": "illustrations/empty-customers.svg",
+      "bytes": 1304
+    },
+    {
+      "path": "illustrations/empty-debt.png",
+      "bytes": 12419
+    },
+    {
+      "path": "illustrations/empty-debt.svg",
+      "bytes": 1273
+    },
+    {
+      "path": "illustrations/empty-no-results.png",
+      "bytes": 13449
+    },
+    {
+      "path": "illustrations/empty-no-results.svg",
+      "bytes": 1072
+    },
+    {
+      "path": "illustrations/empty-offline.png",
+      "bytes": 13934
+    },
+    {
+      "path": "illustrations/empty-offline.svg",
+      "bytes": 1686
+    },
+    {
+      "path": "illustrations/empty-orders.png",
+      "bytes": 20718
+    },
+    {
+      "path": "illustrations/empty-orders.svg",
+      "bytes": 1059
+    },
+    {
+      "path": "illustrations/empty-quotes.png",
+      "bytes": 11279
+    },
+    {
+      "path": "illustrations/empty-quotes.svg",
+      "bytes": 1309
+    },
+    {
+      "path": "marketing/hero-dashboard.png",
+      "bytes": 69451
+    },
+    {
+      "path": "marketing/hero-dashboard.svg",
+      "bytes": 6884
+    },
+    {
+      "path": "marketing/og-cover.png",
+      "bytes": 47839
+    },
+    {
+      "path": "marketing/og-cover.svg",
+      "bytes": 2912
+    },
+    {
+      "path": "onboarding/availability.png",
+      "bytes": 20653
+    },
+    {
+      "path": "onboarding/availability.svg",
+      "bytes": 3430
+    },
+    {
+      "path": "onboarding/inventory.png",
+      "bytes": 26413
+    },
+    {
+      "path": "onboarding/inventory.svg",
+      "bytes": 3262
+    },
+    {
+      "path": "onboarding/sales.png",
+      "bytes": 21727
+    },
+    {
+      "path": "onboarding/sales.svg",
+      "bytes": 1883
+    },
+    {
+      "path": "placeholders/flowers.png",
+      "bytes": 10510
+    },
+    {
+      "path": "placeholders/flowers.svg",
+      "bytes": 1991
+    },
+    {
+      "path": "placeholders/fruit-trees.png",
+      "bytes": 8848
+    },
+    {
+      "path": "placeholders/fruit-trees.svg",
+      "bytes": 1221
+    },
+    {
+      "path": "placeholders/ornamental.png",
+      "bytes": 7653
+    },
+    {
+      "path": "placeholders/ornamental.svg",
+      "bytes": 1069
+    },
+    {
+      "path": "placeholders/other.png",
+      "bytes": 7067
+    },
+    {
+      "path": "placeholders/other.svg",
+      "bytes": 1077
+    },
+    {
+      "path": "placeholders/seedlings.png",
+      "bytes": 9282
+    },
+    {
+      "path": "placeholders/seedlings.svg",
+      "bytes": 2298
+    },
+    {
+      "path": "placeholders/shade-trees.png",
+      "bytes": 8060
+    },
+    {
+      "path": "placeholders/shade-trees.svg",
+      "bytes": 1081
+    },
+    {
+      "path": "tokens/brand-tokens.css",
+      "bytes": 603
+    },
+    {
+      "path": "tokens/brand-tokens.json",
+      "bytes": 861
+    },
+    {
+      "path": "tokens/icon-map.ts",
+      "bytes": 1470
+    }
+  ]
+}

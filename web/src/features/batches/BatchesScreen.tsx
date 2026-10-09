@@ -152,6 +152,7 @@ export const BatchesScreen: React.FC = () => {
         ) : displayedBatches.length === 0 ? (
           <div className="my-auto">
             <EmptyState
+              illustration={filter === 'all' ? 'catalog' : 'noResults'}
               title={
                 filter === 'all'
                   ? 'Chưa có lô cây nào.'

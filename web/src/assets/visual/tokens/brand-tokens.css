@@ -1,0 +1,23 @@
+:root {
+  --vus-forest: #163E33;
+  --vus-pine: #246C4D;
+  --vus-leaf: #48A878;
+  --vus-mint: #BDE9C8;
+  --vus-lime: #CFE18F;
+  --vus-gold: #E6B967;
+  --vus-cream: #F8F7F0;
+  --vus-paper: #FFFFFF;
+  --vus-ink: #21342F;
+  --vus-slate: #667A72;
+  --vus-line: #DFE8DF;
+  --vus-soft: #EEF5EC;
+  --vus-sand: #F4E9D5;
+  --vus-coral: #D9825D;
+  --vus-danger: #B65A49;
+  --vus-font: Inter, "Noto Sans", system-ui, sans-serif;
+  --vus-radius-sm: 8px;
+  --vus-radius-md: 12px;
+  --vus-radius-lg: 18px;
+  --vus-radius-xl: 24px;
+}
+/* Tokens are proposals, not validated against the current app's existing styles. */

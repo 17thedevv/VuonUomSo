@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sprout, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { OrganizationCapability } from '../../domain/organization'
 import { organizationRepository, settingsRepository, eventRepository } from '../../data/repositories'
 import { resetDemoData } from '../../data/seed'
@@ -8,6 +8,7 @@ import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
 import { OfflineBadge } from '../../shared/components/OfflineBadge'
 import { validationTracker } from '../../validation/validationTracker'
+import { brandAssets } from '../../shared/visualAssets'
 
 interface CapabilityOption {
   key: OrganizationCapability
@@ -101,14 +102,15 @@ export const OnboardingScreen: React.FC = () => {
       <div className="pt-6 my-auto lg:grid lg:grid-cols-12 lg:gap-12 lg:items-center">
         {/* Branding (Left on Desktop, Top on Mobile) */}
         <div className="lg:col-span-5 text-center lg:text-left mb-8 lg:mb-0">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-800 mb-4 shadow-xs">
-            <Sprout className="w-9 h-9" />
-          </div>
+          <img src={brandAssets.mark} alt="" aria-hidden="true" width="64" height="64"
+            className="w-16 h-16 mb-4 mx-auto lg:mx-0" />
           <h1 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">Vườn Ươm</h1>
           <p className="text-base font-semibold text-emerald-800 mt-1">Sổ cây giống trên điện thoại</p>
           <p className="hidden lg:block text-sm text-slate-500 mt-4 leading-relaxed">
             Sổ tay quản lý lâm nghiệp thực tế: phân biệt rõ tồn kho vật lý, cây đủ chuẩn và số lượng còn bán; giữ cây và xuất xe an toàn, không lo bán khống.
           </p>
+          <img src={brandAssets.inventory} alt="" aria-hidden="true" width="880" height="620"
+            className="hidden lg:block w-full max-w-sm h-auto mt-6" />
         </div>
 
         {/* Form & Actions (Right on Desktop) */}
