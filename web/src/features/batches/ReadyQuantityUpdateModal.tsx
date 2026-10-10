@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Batch } from '../../domain/batch'
 import { updateBatchReadyQuantity } from '../../services/batchService'
 import { QuantityInput } from '../../shared/components/QuantityInput'
@@ -14,7 +14,11 @@ export interface ReadyQuantityUpdateModalProps {
   onSuccess: (updatedBatch: Batch) => void
 }
 
-export const ReadyQuantityUpdateModal: React.FC<ReadyQuantityUpdateModalProps> = ({
+// A draft belongs to one open session and batch identity, not to changing stock props.
+export const ReadyQuantityUpdateModal: React.FC<ReadyQuantityUpdateModalProps> = (props) =>
+  props.isOpen ? <ReadyQuantityUpdateSession key={props.batch.id} {...props} /> : null
+
+const ReadyQuantityUpdateSession: React.FC<ReadyQuantityUpdateModalProps> = ({
   batch,
   reservedQuantity,
   isOpen,
@@ -26,17 +30,14 @@ export const ReadyQuantityUpdateModal: React.FC<ReadyQuantityUpdateModalProps> =
   const [unit, setUnit] = useState<'cay' | 'van'>('cay')
   const [note, setNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setRawInput(batch.readyQuantity.toString())
-      setParsedQuantity(batch.readyQuantity)
-      setNote('')
-      setErrorMessage(null)
       void validationTracker.formStarted('inventory_updated')
     }
-  }, [isOpen, batch.readyQuantity])
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -57,13 +58,14 @@ export const ReadyQuantityUpdateModal: React.FC<ReadyQuantityUpdateModalProps> =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting || parsedQuantity === null || isInvalid) {
+    if (submitting.current || parsedQuantity === null || isInvalid) {
       if (isInvalid) {
         void validationTracker.actionFailed('inventory_updated', 'validation')
       }
       return
     }
 
+    submitting.current = true
     setIsSubmitting(true)
     setErrorMessage(null)
 
@@ -73,6 +75,7 @@ export const ReadyQuantityUpdateModal: React.FC<ReadyQuantityUpdateModalProps> =
       note: note.trim() || undefined
     })
 
+    submitting.current = false
     setIsSubmitting(false)
 
     if (result.success && result.batch) {
