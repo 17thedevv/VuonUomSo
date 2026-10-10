@@ -2,7 +2,7 @@
 
 Ngày quyết định: **09/10/2026**. **V2-0 — ROADMAP RESET + CONTRACT FREEZE**.
 
-Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 → FC6. Trạng thái task/merge xem tại [.agent/PROJECT_STATE.md](../../.agent/PROJECT_STATE.md). V2-A1–A4 và V2-B1/B2 đã merge/nghiệm thu trên main; V2-B DONE / CLOSED. Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng.
+Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 → FC6. Trạng thái task/merge xem tại [.agent/PROJECT_STATE.md](../../.agent/PROJECT_STATE.md). V2-A1–A4 và V2-B1/B2 đã merge/nghiệm thu trên main; V2-B DONE / CLOSED. Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng.
 
 ## 1. Baseline và quyết định supersede
 
@@ -26,7 +26,7 @@ Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 →
 - **V2-B2 main acceptance:** source tree trên merge commit khớp reviewed head; đọc trực tiếp customerQueryService/customer screens/helpers, router/More/OrderNew/OrderDetail. Native Edge + real IndexedDB chạy lại tại360/390/430/768/1024/1280px và reduced390×420px PASS: Thêm → Khách hàng → search name/phone → detail → hai đơn giống nhau có reference khác nhau và full ID links → quay lại đúng khách → Ghi đơn prefill exact contact ID/default quantity → hủy → completed shipment history/full shipment ID. Customer O120/S80, mỗi order O60/S40/shortage0; released historical F40 vẫn C40/O0 và shortage60; corrupt snapshot ẩn số cũ/retry, empty/missing phone/missing ID, long Unicode và unbroken names/phones/no overflow, keyboard/focus/control mới ≥44px, no business writes đều đạt. Invalid customer intent, async selection/input retention, refresh/Undo/races và G01/G02 regressions PASS. Evidence/harness/screenshots/JSON ghi đúng main merge SHA tại `D:/Project-17/artifacts/v2-b2-closure-2026-10-10/`. Không schema/domain/mutation service/dependency/frozen contract changes, payment/debt, public backend hoặc C/D/E. Physical IME, installed-PWA offline, native dial và real pilot vẫn **NOT VERIFIED**; explicit safe tel href đã kiểm tra.
 - **CI stability tracking — chưa giải quyết:** baseline main [CI #38038815749](https://github.com/17thedevv/VuonUomSo/actions/runs/38038815749) tại `32eff3287dcf466154bcabe2cd92464d3e6fe564`: attempt 1 FAIL ở QuickUpdateChooser, attempt 2 PASS trên cùng SHA; root cause chưa xác định. B2 [exact-head CI #38043076903](https://github.com/17thedevv/VuonUomSo/actions/runs/38043076903) tại reviewed head: attempt 1 SUCCESS, 1076 tests / 66 files. B2 router test từng timeout 5s; timeout riêng của test mới được nâng lên bounded15s, assertions giữ nguyên. Logs cũ và main merge CI logs được giữ tại evidence directory nêu trên (`BASELINE-CI-NOTE.md`, `B2-PR-targeted-timeout.log`, `B2-PR-CI-RESULT.md`, `merge46-ci.log`). Main merge CI xanh không chứng minh đã sửa flaky QuickUpdateChooser; kiểm tra ổn định là pilot readiness gate riêng.
 - **Issue #42 FIXED / CLOSED (#48)**: reviewed merge `81a3f4c8fed843de649642fe864dacbb0ed44fb8`; [main merge CI SUCCESS, attempt 1](https://github.com/17thedevv/VuonUomSo/actions/runs/38051953251), 1109 tests / 67 files. Correctness/browser/issue closure evidence ở §2.
-- **V2-A/V2-B DONE / CLOSED; ISSUE #42 FIXED / CLOSED; AUDIT COMPLETED / NO-GO; REM-01 FIXED / CLOSED.** **REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng**. REAL PILOT NOT APPROVED / NOT STARTED; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED; MCP AI CONTROL DESIGN PROPOSAL / DEFERRED.
+- **V2-A/V2-B DONE / CLOSED; ISSUE #42 FIXED / CLOSED; AUDIT COMPLETED / NO-GO; REM-01 FIXED / CLOSED.** **REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng**. REAL PILOT NOT APPROVED / NOT STARTED; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED; MCP AI CONTROL DESIGN PROPOSAL / DEFERRED.
 
 ```text
 V2-0: reset roadmap + freeze contract (MERGED / CLOSED, #30)
@@ -42,8 +42,9 @@ V2-0: reset roadmap + freeze contract (MERGED / CLOSED, #30)
   → Correctness issue #42 (FIXED / CLOSED, #48 merged + main CI/acceptance PASS)
   → PILOT READINESS AUDIT (COMPLETED / NO-GO)
   → REM-01 (FIXED / CLOSED, #50 merged + main CI/acceptance PASS)
-  → REM-02 (NEXT REMEDIATION CANDIDATE; separate task required / NOT AUTHORIZED)
-  → REM-03 / REM-04 / REM-05 (REQUIRED; no automatic implementation)
+  → REM-02 (FIXED / CLOSED, #52 actual merge + main CI/acceptance PASS)
+  → REM-03 (NEXT REMEDIATION CANDIDATE; separate task required / NOT AUTHORIZED)
+  → REM-04 / REM-05 (REQUIRED; no automatic implementation)
   → RE-AUDIT + REAL PILOT (NOT APPROVED / NOT STARTED; authorization riêng)
   → evidence decides C / D / E
 ```
@@ -58,7 +59,7 @@ Nguồn và cách tái hiện: [readiness audit](../architecture/GENERAL-COMMERC
 | **G02** | **DONE / CLOSED (#32)** | Validate create quantity/optional price tại service boundary | Quantity nguyên an toàn dương; price nếu có là số nguyên an toàn không âm, khớp edit boundary hiện có; NaN/Infinity/phân số/out-of-range reject trước write. Không tạo financial authority mới |
 | **G10** | **DONE / CLOSED (#33)** | Picker giống phản ánh common options + dữ liệu lô + intentional draft/custom value | Batch Monthong → Ghi đơn: label nhìn thấy = variety submitted; query prefill không bị select đổi ngầm sang giống khác; default/common flow giữ được |
 
-G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup, V2-A1–A4 và V2-B1/B2 đã hoàn tất; Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng. Không mở Product/Variant chỉ để sửa picker.
+G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup, V2-A1–A4 và V2-B1/B2 đã hoàn tất; Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng. Không mở Product/Variant chỉ để sửa picker.
 
 **Issue #42 integration closure (10/10/2026) — FIXED / CLOSED:** người dùng duyệt head `b82a273654aa70d24a8e6ca5f291550a7d0f760e`; [PR #48](https://github.com/17thedevv/VuonUomSo/pull/48) merged tại `81a3f4c8fed843de649642fe864dacbb0ed44fb8` lúc `2026-10-10T12:26:19Z`. [Main merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38051953251), đúng merge SHA / `main` / `push` / attempt 1: typecheck, lint, 67 files / 1109 tests và production build PASS. [Final issue closure comment](https://github.com/17thedevv/VuonUomSo/issues/42#issuecomment-6097511578); issue đóng `completed` lúc `2026-10-10T12:30:33Z`, chỉ sau merge CI và main acceptance PASS.
 
@@ -83,7 +84,7 @@ Không redesign Order Detail, làm delta mortality, move cây, condition buckets
 
 ## 4. V2-B — Local bảng hàng + Customer read
 
-V2-A và V2-B1/B2 đã merge/nghiệm thu. **V2-B DONE / CLOSED**; STOP FEATURE BUILD. Issue #42 **FIXED / CLOSED (#48)**. **PILOT READINESS AUDIT COMPLETED / NO-GO; REM-01 FIXED / CLOSED**; **REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng**. Không thêm schema hoặc feature mới.
+V2-A và V2-B1/B2 đã merge/nghiệm thu. **V2-B DONE / CLOSED**; STOP FEATURE BUILD. Issue #42 **FIXED / CLOSED (#48)**. **PILOT READINESS AUDIT COMPLETED / NO-GO; REM-01 FIXED / CLOSED**; **REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng**. Không thêm schema hoặc feature mới.
 
 | Slice | Routes / flow | Authority và giới hạn |
 |---|---|---|
@@ -96,16 +97,16 @@ Customer read phải phân biệt được hai đơn cùng khách có cùng số
 
 ## 5. Pilot Readiness Audit trước real pilot
 
-**STOP FEATURE BUILD** sau B. Issue [#42](https://github.com/17thedevv/VuonUomSo/issues/42) FIXED / CLOSED qua reviewed #48. **PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO**; REM-01 FIXED / CLOSED qua #50. **REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng**. **REAL PILOT = NOT APPROVED / NOT STARTED**. Readiness gate history và remediation evidence bên dưới; pilot chỉ xem xét sau re-audit + authorization riêng. Pilot không chờ C/D/E hoặc FC5/FC6; feature mới cần evidence/task riêng.
+**STOP FEATURE BUILD** sau B. Issue [#42](https://github.com/17thedevv/VuonUomSo/issues/42) FIXED / CLOSED qua reviewed #48. **PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO**; REM-01 FIXED / CLOSED qua #50. **REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng**. **REAL PILOT = NOT APPROVED / NOT STARTED**. Readiness gate history và remediation evidence bên dưới; pilot chỉ xem xét sau re-audit + authorization riêng. Pilot không chờ C/D/E hoặc FC5/FC6; feature mới cần evidence/task riêng.
 
-### Pilot audit và REM-01 integration closure (10/10/2026)
+### Pilot audit và REM-01/REM-02 integration closure (10/10/2026)
 
-**PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO.** Audit trên baseline `aacbc0f498c4cf046be126364709583e9004743d`; raw evidence: `D:/Project-17/artifacts/pilot-readiness-2026-10-10/` (`READINESS-AUDIT.md`, `GATE-MATRIX.json`, `FINDINGS.md`, `EVIDENCE-INDEX.md`). Bảng dưới giữ kết quả audit ban đầu; REM-01 đóng riêng finding reset F02, không đổi các gate thành PASS hoặc xóa lịch sử failure.
+**PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO.** Audit trên baseline `aacbc0f498c4cf046be126364709583e9004743d`; raw evidence: `D:/Project-17/artifacts/pilot-readiness-2026-10-10/` (`READINESS-AUDIT.md`, `GATE-MATRIX.json`, `FINDINGS.md`, `EVIDENCE-INDEX.md`). Bảng dưới giữ kết quả audit ban đầu; REM-01 đóng riêng finding reset F02; REM-02 đóng coherent export bằng evidence main bên dưới. Giữ nguyên các gate audit ban đầu, không hồi tố thành PASS hoặc xóa lịch sử failure.
 
 | Gate | Kết quả audit | Evidence / phần còn lại |
 |---|---|---|
 | R01 — CI stability | **FAIL** | Clean gates 1109/67 PASS; bounded QuickUpdateChooser 7/8 PASS, một lần expected ready10/service20; root UNKNOWN, REM-04 |
-| R02 — Backup export | **FAIL** | Normal exact 9-store export PASS; native concurrent writer tạo hybrid BEFORE/AFTER 3/3, self-validation vẫn PASS; REM-02 |
+| R02 — Backup export | **FAIL** | Normal exact 9-store export PASS; native concurrent writer tạo hybrid BEFORE/AFTER 3/3, self-validation vẫn PASS; independent REM-02 pre-fix 5/5. REM-02 nay fixed trên main; R02 overall re-audit PENDING |
 | R03 — Restore validation | **FAIL** | 4/15 malformed cases được chấp nhận: source shape, unsafe integer, aggregate overflow; REM-03. Normal round-trip/reopen và native mid-restore rollback PASS; restore engine không bị kết luận non-atomic |
 | R04 — Installed PWA | **NOT VERIFIED** | Desktop production SW/offline/reconnect PASS; Android/iOS install, airplane cold start, offline writes/update chưa xác minh; REM-05 |
 | R05 — Physical IME | **NOT VERIFIED** | Người dùng xác nhận chưa có thiết bị test; browser viewport không thay thế native keyboard; REM-05 |
@@ -117,15 +118,23 @@ Customer read phải phân biệt được hai đơn cùng khách có cùng số
 
 **Main correctness / acceptance:** trực tiếp đọc seed, repositories, validation repository và More trên merge SHA. Demo/pilot/clearBusinessData dùng một Dexie rw qua 9 business stores; factory reset qua 11 stores, nested validation transaction tham gia cùng db/parent. Demo/pilot giữ telemetry; factory xóa telemetry. UI await durable commit, synchronous latch chặn double/cross-reset và báo lỗi/retry đúng; không claim atomicity với sessionStorage/download. Chạy lại **25 tests / 2 files PASS** trên main: native DataCloneError sau clear/mid-seed/events/settings, exact 11-store snapshot rollback gồm dossiers/history/settings/telemetry, second connection/commit, explicit retry, factory failure và UI no false success/navigation/double reset. Native **Edge 155.0.4283.45 + actual IndexedDB**, production HTTPS synthetic workspace trên đúng merge SHA: **13 checks PASS**, demo native clone failure/original facts unchanged/second connection/reload/explicit retry; factory late native abort/clear failure và retry all11-empty/reload; pilot native failure/full snapshot và complete success/reload/telemetry; no false success/nav/page error, buttons usable after failure; no overflow tại360/390/430/768/1024/1280px. Evidence/build/head/harness/logs/screenshots: `D:/Project-17/artifacts/rem-01-closure-2026-10-10/`. Đây là desktop synthetic acceptance; physical device, installed PWA và real pilot **NOT VERIFIED**.
 
-| Remediation | Authority sau REM-01 | Gate tiếp theo |
+**REM-02 = FIXED / CLOSED:** [PR #52](https://github.com/17thedevv/VuonUomSo/pull/52), reviewed head `6c03698f7cdd1370353a47dc074a8ef1ea27ba3c`, reviewed tree `951c2499671f6375a26eac0426199d14e328628d`, [exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38060486121); actual merge `9b4c499a066f4b20cf3bd3e89aea5387912c272a` lúc `2026-10-10T14:56:20Z`. [Main merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38061599064), đúng actual merge SHA / `main` / `push` / attempt 1: typecheck, lint, **69 files / 1150 tests**, production build PASS. Merged tree khớp reviewed tree; chỉ hai file backup.export.ts và backupConcurrentExport.test.ts. Không nhầm synthetic PR test-merge SHA với actual merge.
+
+**REM-02 main correctness / acceptance:** đọc trực tiếp exporter trên actual merge: 9 business stores trong một Dexie readonly transaction, mọi real reads nằm trong transaction; validate/envelope/JSON sau successful snapshot. API và backup V1/schema4 giữ nguyên, telemetry excluded; không writes/cache/persisted snapshot/global lock/retry, validator/normalizer/restorer/schema/frozen contracts không đổi. Chạy lại **83 tests / 3 files PASS** trên main: real Dexie + fake-indexeddb hai connections, full record arrays/IDs/timestamps, reader-first BEFORE ×5, writer-first AFTER ×5, native read abort, writer rollback, demo/pilot atomic reset overlap, exact JSON/no writes/restore/reopen. Canonical M07 living45/ready30, Q10/F0 → available20; atomic writer đổi all-nine facts sang ready25/Q12 → available13; không HYBRID.
+
+Native **Edge 155.0.4283.45 + actual IndexedDB**, production HTTPS synthetic workspace trên đúng actual merge: **25 checks PASS**, gồm 10 two-connection probes chứng minh native transaction overlap/order và full BEFORE/AFTER equality; writer abort BEFORE; demo/pilot reset ở cả hai thứ tự (production shared db, independent transactions). Normal export và actual More UI download → chọn downloaded JSON qua restore UI → restore/reload đúng exact 9-store arrays; telemetry preserved và no unexpected 11-store writes. Native read abort không file/không successful-download message, toàn 11 stores unchanged. Sáu widths360/390/430/768/1024/1280 không horizontal overflow; zero page errors, một expected console.error từ intentional read abort được lưu. Existing green status container hiển thị error text chưa đổi, không claim sửa styling. Evidence/head/build/logs/harness/download/screenshots: `D:/Project-17/artifacts/rem-02-closure-2026-10-10/`. Desktop synthetic evidence không xác minh physical phone/native Files recovery hoặc real pilot.
+
+**R02 historical finding / re-audit:** original audit **FAIL**, native pre-fix HYBRID **3/3**; independent REM-02 pre-fix real Dexie/fake-indexeddb HYBRID **5/5**, self-validation vẫn PASS (`D:/Project-17/artifacts/rem-02-coherent-backup-2026-10-10/baseline-reproduction.log`). REM-02 corrected and verified on main; **R02 overall re-audit = PENDING**, không hồi tố audit thành PASS. REM-01/02 evidence không đổi overall pilot verdict NO-GO. Historical QuickUpdateChooser root **UNKNOWN / NOT FIXED**; CI xanh ở đây không claim fix stability.
+
+| Remediation | Authority sau REM-02 | Gate tiếp theo |
 |---|---|---|
 | REM-01 — Atomic reset | **FIXED / CLOSED (#50)** | Evidence merge/main CI/correctness/browser ở trên |
-| REM-02 — Coherent backup export | **NEXT REMEDIATION CANDIDATE** | Snapshot all-BEFORE hoặc all-AFTER; design/implementation cần task riêng, **NOT AUTHORIZED** tự động |
-| REM-03 — Strict restore validation | **REQUIRED** | Reject malformed source shape/unsafe integers/aggregate overflow trước clear/write; chưa sửa |
+| REM-02 — Coherent backup export | **FIXED / CLOSED (#52)** | Actual merge/main CI + full-array concurrency/browser PASS; R02 overall re-audit PENDING |
+| REM-03 — Strict restore validation | **NEXT REMEDIATION CANDIDATE** | Reject malformed source shape/unsafe integers/aggregate overflow trước clear/write; chưa sửa, **NOT AUTHORIZED** tự động, cần task riêng |
 | REM-04 — QuickUpdateChooser stability | **REQUIRED INVESTIGATION** | Root UNKNOWN / NOT FIXED; không tăng timeout hoặc rerun tới khi xanh để claim closure |
 | REM-05 — PWA assets/device gates | **REQUIRED DEVICE/INSTALLABILITY GATES** | Icon manifest192/512 thực tế1×1; native install impact NOT VERIFIED. Sửa riêng/review riêng, không adopt #31; physical IME/installed offline/file recovery còn thiếu |
 
-**REAL PILOT = NOT APPROVED / NOT STARTED.** Backup recoverability chưa đạt: normal round-trip và atomic restore rollback PASS nhưng coherent export/strict input rejection/native file recovery còn blocker. Chỉ re-audit sau remediation và device evidence mới xem xét authorization pilot riêng. **V2-C/D/E = EVIDENCE GATED / NOT AUTHORIZED; MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED.** Không tự bắt đầu REM-02/03/04/05 hoặc feature build.
+**REAL PILOT = NOT APPROVED / NOT STARTED.** Backup recoverability chưa đạt: normal round-trip và atomic restore rollback PASS; coherent export đã fixed/verified trên main qua REM-02, R02 overall re-audit PENDING. Strict input rejection/native file recovery vẫn còn blocker. Chỉ re-audit sau remediation và device evidence mới xem xét authorization pilot riêng. **V2-C/D/E = EVIDENCE GATED / NOT AUTHORIZED; MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED.** Không tự bắt đầu REM-03/04/05 hoặc feature build.
 
 Kịch bản pilot đã chuẩn bị; chỉ thực hiện sau NO-GO được giải quyết và authorization riêng. Khi được phép, thử trên điện thoại thật với số liệu vườn thật; ghi từng task, thiết bị/phiên bản, thành công độc lập hay cần trợ giúp:
 
@@ -158,6 +167,6 @@ E có boundary: owner IndexedDB → publish snapshot → public URL → customer
 
 ## 7. Handoff
 
-**Current authority / handoff:** G01/G02/G10 DONE / CLOSED (#32/#33); **V2-A = DONE / CLOSED** (#35/#37/#39/#41); **V2-B = DONE / CLOSED** (#44/#46); **ISSUE #42 = FIXED / CLOSED** (#48). **PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO**. **REM-01 = FIXED / CLOSED** (#50, evidence tại mục Pilot audit và REM-01 integration closure). **REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng**; REM-03 REQUIRED; REM-04 REQUIRED INVESTIGATION; REM-05 REQUIRED DEVICE/INSTALLABILITY GATES. **REAL PILOT = NOT APPROVED / NOT STARTED**. FC5/FC6 SUPERSEDED BY V2; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED; **MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED**. Dừng sau REM-01 closure; không tự triển khai remediation khác, feature, schema, MCP hoặc real pilot. Frozen contracts giữ nguyên. PR #29/#31 OPEN / UNMERGED / NOT ADOPTED. Authority này thay NEXT cũ trong snapshot lịch sử/tài liệu tham khảo/skills.
+**Current authority / handoff:** G01/G02/G10 DONE / CLOSED (#32/#33); **V2-A = DONE / CLOSED** (#35/#37/#39/#41); **V2-B = DONE / CLOSED** (#44/#46); **ISSUE #42 = FIXED / CLOSED** (#48). **PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO**. **REM-01 = FIXED / CLOSED** (#50, evidence tại mục Pilot audit và REM-01/REM-02 integration closure). **REM-02 = FIXED / CLOSED (#52); REM-03 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED tự động, cần task riêng**; REM-04 REQUIRED INVESTIGATION; REM-05 REQUIRED DEVICE/INSTALLABILITY GATES. **REAL PILOT = NOT APPROVED / NOT STARTED**. FC5/FC6 SUPERSEDED BY V2; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED; **MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED**. Dừng sau REM-02 closure; không tự triển khai remediation khác, feature, schema, MCP hoặc real pilot. Frozen contracts giữ nguyên. PR #29/#31 OPEN / UNMERGED / NOT ADOPTED. Authority này thay NEXT cũ trong snapshot lịch sử/tài liệu tham khảo/skills.
 
 Đọc cùng: [workflow audit](V2-WORKFLOW-AUDIT.md), [IA](V2-INFORMATION-ARCHITECTURE.md), [route/component map](V2-ROUTE-COMPONENT-MAP.md). Những đề xuất C/D/E trong các tài liệu này là hypotheses có gate, không mở rộng authorized scope của A/B. Trạng thái merge của reset phải được báo riêng, không lấy việc đã viết roadmap để claim main đã đổi.
