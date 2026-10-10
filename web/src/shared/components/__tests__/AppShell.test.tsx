@@ -11,13 +11,13 @@ describe('Responsive Navigation & AppShell', () => {
     expect(NAV_ITEMS).toHaveLength(4)
     expect(NAV_ITEMS.map((item) => item.label)).toEqual([
       'Hôm nay',
-      'Lô cây',
-      'Đơn hàng',
+      'Vườn',
+      'Đơn',
       'Thêm'
     ])
     expect(NAV_ITEMS.map((item) => item.to)).toEqual([
       '/today',
-      '/batches',
+      '/garden',
       '/orders',
       '/more'
     ])
@@ -25,7 +25,7 @@ describe('Responsive Navigation & AppShell', () => {
 
   it('DesktopNav renders all 4 canonical items with brand header and source link', () => {
     render(
-      <MemoryRouter initialEntries={['/batches']}>
+      <MemoryRouter initialEntries={['/garden']}>
         <DesktopNav />
       </MemoryRouter>
     )
@@ -41,8 +41,9 @@ describe('Responsive Navigation & AppShell', () => {
       expect(link).toHaveAttribute('href', item.to)
     }
 
-    // Active item on /batches
-    const activeLink = screen.getByRole('link', { name: /Lô cây/i })
+    // Active Garden item
+    const activeLink = screen.getByRole('link', { name: 'Vườn' })
+    expect(activeLink).toHaveAttribute('aria-current', 'page')
     expect(activeLink.className).toContain('bg-emerald-50')
     expect(activeLink.className).toContain('text-emerald-800')
 
@@ -51,9 +52,9 @@ describe('Responsive Navigation & AppShell', () => {
     expect(screen.getByText(/Mã nguồn dự án/)).toBeInTheDocument()
   })
 
-  it('BottomNav renders all 4 canonical items with proper accessibility', () => {
+  it.each(['/today', '/garden'])('BottomNav renders four items and the active route %s', (route) => {
     render(
-      <MemoryRouter initialEntries={['/today']}>
+      <MemoryRouter initialEntries={[route]}>
         <BottomNav />
       </MemoryRouter>
     )
@@ -68,8 +69,8 @@ describe('Responsive Navigation & AppShell', () => {
       expect(link).toHaveAttribute('href', item.to)
     }
 
-    // Active item on /today
-    const activeLink = screen.getByRole('link', { name: /Hôm nay/i })
+    const activeLink = screen.getByRole('link', { name: route === '/garden' ? 'Vườn' : 'Hôm nay' })
+    expect(activeLink).toHaveAttribute('aria-current', 'page')
     expect(activeLink.className).toContain('text-emerald-700')
   })
 

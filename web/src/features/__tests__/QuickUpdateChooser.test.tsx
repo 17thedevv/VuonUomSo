@@ -52,7 +52,10 @@ async function contextual(code = 'M06') {
 async function ready() {
   const choose = await contextual()
   fireEvent.click(choose.getByRole('button', { name: /Cập nhật cây đủ bán/ }))
-  return screen.findByRole('dialog', { name: 'Cập nhật cây đủ bán' })
+  // Flush StrictMode mount effects before editing the existing modal's initialized draft.
+  await screen.findByRole('dialog', { name: 'Cập nhật cây đủ bán' })
+  await act(async () => {})
+  return screen.getByRole('dialog', { name: 'Cập nhật cây đủ bán' })
 }
 const deferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -240,7 +243,9 @@ describe('V2-A3 quick update composition (real Dexie)', () => {
     const { router } = mount()
     const choose = await contextual()
     fireEvent.click(choose.getByRole('button', { name: kind === 'inventory' ? /Kiểm kê số sống/ : /Cập nhật cây đủ bán/ }))
-    const input = await screen.findByLabelText(kind === 'inventory' ? /Hiện còn bao nhiêu cây sống/ : /Tổng số cây đủ chuẩn hiện tại/)
+    await screen.findByLabelText(kind === 'inventory' ? /Hiện còn bao nhiêu cây sống/ : /Tổng số cây đủ chuẩn hiện tại/)
+    await act(async () => {})
+    const input = screen.getByLabelText(kind === 'inventory' ? /Hiện còn bao nhiêu cây sống/ : /Tổng số cây đủ chuẩn hiện tại/)
     fireEvent.change(input, { target: { value: '25' } })
     const before = await snapshot()
     const failure = () => { throw new Error('Injected event write failure') }

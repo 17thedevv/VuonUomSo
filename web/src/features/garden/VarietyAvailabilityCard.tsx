@@ -31,6 +31,8 @@ export function VarietyAvailabilityCard({ group, expanded, onToggle, returnTo, s
         </p>
       )}
       <p className="text-slate-600">Số lô: {group.batchIds.length}</p>
+      <Link to={`/orders/new?${new URLSearchParams({ variety: group.label })}`} state={{ gardenReturnTo: returnTo }}
+        aria-label={`Ghi đơn giống ${group.label}`} className="min-h-12 px-3 py-3 flex items-center justify-center rounded-xl bg-emerald-700 text-white font-bold break-words">Ghi đơn</Link>
       <button type="button" aria-expanded={expanded} aria-controls={listId} onClick={onToggle}
         className="w-full min-h-11 px-3 py-2 flex items-center justify-center gap-2 bg-slate-100 rounded-xl font-semibold text-slate-800">
         {expanded ? 'Ẩn các lô' : 'Xem các lô'}
@@ -57,6 +59,8 @@ export function VarietyAvailabilityCard({ group, expanded, onToggle, returnTo, s
                 <p className="text-emerald-800 font-semibold mt-3">Mở chi tiết lô →</p>
               </Link>
               <button type="button" data-update-batch-id={batch.id} aria-label={`Cập nhật lô ${batch.code}`} onClick={() => onQuickUpdate(batch)} className="min-h-11 w-full mt-2 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-800 font-semibold">Cập nhật lô</button>
+              <Link to={`/orders/new?${new URLSearchParams({ variety: batch.variety.trim() })}`} state={{ gardenReturnTo: returnTo }}
+                aria-label={`Ghi đơn từ lô ${batch.code}`} className="min-h-12 mt-2 px-3 py-3 flex items-center justify-center rounded-xl border border-emerald-700 text-emerald-800 font-semibold">Ghi đơn</Link>
             </li>
           ))}
         </ul>

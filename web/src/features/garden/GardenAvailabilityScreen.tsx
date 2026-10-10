@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, RotateCcw, Trees } from 'lucide-react'
 import { getGardenAvailability, type GardenAvailabilityView, type GardenBatchAvailability } from '../../services/gardenQueryService'
 import { undoService } from '../../services/undoService'
@@ -102,7 +102,10 @@ export function GardenAvailabilityScreen() {
       } />
       <div className="p-4 sm:p-6 w-full max-w-5xl mx-auto space-y-5">
         <p className="text-slate-600">Số cây theo dữ liệu đang lưu trên thiết bị</p>
-        <button ref={updateButton} type="button" onClick={() => setChooser({})} className="min-h-12 px-5 rounded-xl bg-emerald-700 text-white font-bold">Cập nhật</button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button ref={updateButton} type="button" onClick={() => setChooser({})} className="min-h-12 px-5 rounded-xl bg-emerald-700 text-white font-bold">Cập nhật</button>
+          <Link to="/batches" className="min-h-11 flex items-center px-3 text-emerald-800 font-semibold">Xem danh sách lô</Link>
+        </div>
         <GardenFilters search={search} view={view} onSearch={(value) => update('q', value)} onView={(value) => update('view', value)} />
         {current.status === 'loading' ? (
           <p role="status" className="py-10 text-center text-slate-600">Đang đọc dữ liệu vườn...</p>
