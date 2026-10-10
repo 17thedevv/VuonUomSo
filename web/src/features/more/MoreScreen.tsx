@@ -45,6 +45,8 @@ export const MoreScreen: React.FC = () => {
   const [orgName, setOrgName] = useState<string>('')
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const resetInFlight = useRef(false)
+  const [resetError, setResetError] = useState<string | null>(null)
 
   // Restore state
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -66,12 +68,18 @@ export const MoreScreen: React.FC = () => {
   }, [])
 
   const handleResetDemo = async () => {
+    if (resetInFlight.current || isProcessing || isRestoring) return
     if (!window.confirm('Cài đặt lại toàn bộ dữ liệu mẫu (Vườn Hồng Anh)? Dữ liệu hiện tại sẽ được thay thế.')) {
       return
     }
+    resetInFlight.current = true
     setIsProcessing(true)
+    setStatusMsg(null)
+    setResetError(null)
+    let committed = false
     try {
       await resetDemoData()
+      committed = true
       setStatusMsg('Đã khôi phục dữ liệu mẫu thành công.')
       setMode('demo')
       setOrgName('Vườn Hồng Anh')
@@ -80,25 +88,37 @@ export const MoreScreen: React.FC = () => {
       }, 700)
     } catch (err) {
       console.error(err)
-      setStatusMsg('Có lỗi xảy ra khi khôi phục.')
+      setResetError('Không thể đặt lại dữ liệu mẫu. Dữ liệu hiện tại được giữ nguyên. Hãy thử lại.')
     } finally {
-      setIsProcessing(false)
+      if (!committed) {
+        resetInFlight.current = false
+        setIsProcessing(false)
+      }
     }
   }
 
   const handleResetWorkspace = async () => {
+    if (resetInFlight.current || isProcessing || isRestoring) return
     if (!window.confirm('Xóa trắng dữ liệu và bắt đầu lại từ màn hình mở sổ?')) {
       return
     }
+    resetInFlight.current = true
     setIsProcessing(true)
+    setStatusMsg(null)
+    setResetError(null)
+    let committed = false
     try {
       await clearAllData()
+      committed = true
       navigate('/onboarding', { replace: true })
     } catch (err) {
       console.error(err)
-      setStatusMsg('Có lỗi khi xóa dữ liệu.')
+      setResetError('Không thể xóa dữ liệu. Dữ liệu hiện tại được giữ nguyên. Hãy thử lại.')
     } finally {
-      setIsProcessing(false)
+      if (!committed) {
+        resetInFlight.current = false
+        setIsProcessing(false)
+      }
     }
   }
 
@@ -123,7 +143,7 @@ export const MoreScreen: React.FC = () => {
       const { jsonString } = await exportWorkspaceBackup()
       const filename = `vuon-uom-phong-ngua-${generateBackupFilename()}`
       downloadBackupFile(jsonString, filename)
-      setStatusMsg(`Đã tải bản sao lưu phòng ngừa (${filename}).`)
+      setStatusMsg(`Đã yêu cầu tải bản sao phòng ngừa (${filename}). Hãy kiểm tra tệp trong mục tải xuống trước khi khôi phục.`)
     } catch (err) {
       console.error(err)
       setStatusMsg('Không thể xuất bản sao phòng ngừa.')
@@ -166,7 +186,7 @@ export const MoreScreen: React.FC = () => {
   }
 
   const handleConfirmRestore = async () => {
-    if (!backupJsonString) return
+    if (!backupJsonString || resetInFlight.current || isProcessing || isRestoring) return
     setIsRestoring(true)
     setRestoreError(null)
     try {
@@ -193,6 +213,12 @@ export const MoreScreen: React.FC = () => {
       <PageHeader title="Thêm" subtitle="Cài đặt & Quản lý dữ liệu" />
 
       <div className="p-4 sm:p-6 max-w-6xl mx-auto w-full pb-16 space-y-4 sm:space-y-6">
+        {resetError && (
+          <div role="alert" className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>{resetError}</span>
+          </div>
+        )}
         {/* Status notification */}
         {statusMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
@@ -427,7 +453,7 @@ export const MoreScreen: React.FC = () => {
               <button
                 type="button"
                 onClick={handleExportSafetyBackup}
-                disabled={isRestoring}
+                disabled={isProcessing || isRestoring}
                 className="w-full text-center text-xs text-emerald-700 font-semibold py-2 px-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors flex items-center justify-center gap-1.5"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -439,7 +465,7 @@ export const MoreScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleCancelRestore}
-                  disabled={isRestoring}
+                  disabled={isProcessing || isRestoring}
                   className="flex-1 min-h-[44px] py-2 px-3 border border-slate-300 text-slate-700 font-medium text-xs rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-50"
                 >
                   Hủy bỏ
@@ -447,7 +473,7 @@ export const MoreScreen: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleConfirmRestore}
-                  disabled={isRestoring}
+                  disabled={isProcessing || isRestoring}
                   className="flex-1 min-h-[44px] py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isRestoring ? 'Đang khôi phục...' : 'Khôi phục dữ liệu'}
