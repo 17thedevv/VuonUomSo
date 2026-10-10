@@ -11,27 +11,26 @@ export async function exportWorkspaceBackup(): Promise<{
   backup: VuonUomBackupV1
   jsonString: string
 }> {
-  const [
-    organizations,
-    settings,
-    contacts,
-    batches,
-    orders,
-    reservations,
-    shipments,
-    dossiers,
-    events
-  ] = await Promise.all([
-    db.organizations.toArray(),
-    db.settings.toArray(),
-    db.contacts.toArray(),
-    db.batches.toArray(),
-    db.orders.toArray(),
-    db.reservations.toArray(),
-    db.shipments.toArray(),
-    db.dossiers.toArray(),
-    db.events.toArray()
-  ])
+  // One committed business snapshot; research telemetry remains outside the backup.
+  const data = await db.transaction('r', [db.organizations, db.settings, db.contacts,
+    db.batches, db.orders, db.reservations, db.shipments, db.dossiers, db.events], async () => {
+    const [organizations, settings, contacts, batches, orders, reservations,
+      shipments, dossiers, events] = await Promise.all([
+      db.organizations.toArray(),
+      db.settings.toArray(),
+      db.contacts.toArray(),
+      db.batches.toArray(),
+      db.orders.toArray(),
+      db.reservations.toArray(),
+      db.shipments.toArray(),
+      db.dossiers.toArray(),
+      db.events.toArray()
+    ])
+    return { organizations, settings, contacts, batches, orders, reservations,
+      shipments, dossiers, events }
+  })
+  const { organizations, settings, contacts, batches, orders, reservations,
+    shipments, dossiers, events } = data
 
   const backup: VuonUomBackupV1 = {
     format: BACKUP_FORMAT,
@@ -49,17 +48,7 @@ export async function exportWorkspaceBackup(): Promise<{
       dossiers: dossiers.length,
       events: events.length
     },
-    data: {
-      organizations,
-      settings,
-      contacts,
-      batches,
-      orders,
-      reservations,
-      shipments,
-      dossiers,
-      events
-    }
+    data
   }
 
   // Self-validation check
