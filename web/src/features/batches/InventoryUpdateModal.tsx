@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Batch } from '../../domain/batch'
 import type { Reservation } from '../../domain/reservation'
 import { updateBatchInventory } from '../../services/batchService'
@@ -15,7 +15,11 @@ export interface InventoryUpdateModalProps {
   onSuccess: (updatedBatch: Batch) => void
 }
 
-export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
+// Closing or changing batch starts a new draft; refreshed facts keep the current edit.
+export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = (props) =>
+  props.isOpen ? <InventoryUpdateSession key={props.batch.id} {...props} /> : null
+
+const InventoryUpdateSession: React.FC<InventoryUpdateModalProps> = ({
   batch,
   reservations,
   isOpen,
@@ -30,20 +34,14 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
   const [readyUnit, setReadyUnit] = useState<'cay' | 'van'>('cay')
   const [note, setNote] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitting = useRef(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setRawInput(batch.currentQuantity.toString())
-      setParsedQuantity(batch.currentQuantity)
-      setUnit('cay')
-      setReadyInput('')
-      setParsedReadyQuantity(null)
-      setReadyUnit('cay')
-      setErrorMessage(null)
       void validationTracker.formStarted('inventory_updated')
     }
-  }, [isOpen, batch.currentQuantity])
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -84,13 +82,14 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSubmitting || parsedQuantity === null || isInvalid) {
+    if (submitting.current || parsedQuantity === null || isInvalid) {
       if (isInvalid) {
         void validationTracker.actionFailed('inventory_updated', 'validation')
       }
       return
     }
 
+    submitting.current = true
     setIsSubmitting(true)
     setErrorMessage(null)
 
@@ -101,6 +100,7 @@ export const InventoryUpdateModal: React.FC<InventoryUpdateModalProps> = ({
       note: note.trim() || undefined
     })
 
+    submitting.current = false
     setIsSubmitting(false)
 
     if (result.success && result.batch) {
