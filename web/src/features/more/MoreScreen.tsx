@@ -231,6 +231,12 @@ export const MoreScreen: React.FC = () => {
           </div>
         </div>
 
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 text-base">
+          <h2 className="font-bold text-slate-800">Khách hàng</h2>
+          <p className="text-slate-600">Xem đơn hàng, cây đang giữ chưa xuất và lịch sử xuất cây của khách.</p>
+          <SecondaryButton fullWidth onClick={() => navigate('/customers')}>Xem khách hàng</SecondaryButton>
+        </div>
+
         {/* Navigation to Shipments */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
           <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">

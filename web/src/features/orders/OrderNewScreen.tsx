@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { QuantityInput } from '../../shared/components/QuantityInput'
@@ -11,6 +11,8 @@ import { formatQuantity } from '../../domain/quantity'
 import { UserPlus, Calendar, Plus, AlertCircle, Info, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 import { gardenReturnPath } from '../garden/gardenNavigation'
+import { customerReturnPath } from '../customers/customerNavigation'
+import { isCustomerContact } from '../../services/customerQueryService'
 
 const COMMON_VARIETIES = [
   'Keo lai BV16',
@@ -23,7 +25,12 @@ const COMMON_VARIETIES = [
 export const OrderNewScreen: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = gardenReturnPath(location.state?.gardenReturnTo)
+  const gardenReturnTo = gardenReturnPath(location.state?.gardenReturnTo)
+  const customerIntent = useRef<unknown>(location.state?.customerIntentId)
+  const hasCustomerIntent = useRef(Object.hasOwn(location.state ?? {}, 'customerIntentId'))
+  const customerTouched = useRef(false)
+  const createdDuringLoad = useRef<Contact | null>(null)
+  const loadSequence = useRef(0)
   const [searchParams] = useSearchParams()
   const prefillVariety = searchParams.get('variety')?.trim() || COMMON_VARIETIES[0]
 
@@ -31,9 +38,14 @@ export const OrderNewScreen: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [batches, setBatches] = useState<Batch[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [prefillProblem, setPrefillProblem] = useState(false)
 
   // Form states
   const [customerId, setCustomerId] = useState<string>('')
+  const selectedCustomer = contacts.find(contact => contact.id === customerId && isCustomerContact(contact))
+  const returnTo = gardenReturnTo ?? (selectedCustomer && !loading && !loadError
+    ? customerReturnPath(location.state?.customerReturnTo, selectedCustomer.id) : undefined)
   const [variety, setVariety] = useState<string>(prefillVariety)
   const [rawQuantity, setRawQuantity] = useState('3')
   const [parsedQuantity, setParsedQuantity] = useState<number | null>(30000)
@@ -61,29 +73,44 @@ export const OrderNewScreen: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null)
 
   const loadBaseData = useCallback(async () => {
+    const ticket = ++loadSequence.current
+    setLoading(true)
+    setLoadError(false)
     try {
       const [allContacts, allBatches] = await Promise.all([
         contactRepository.getAll(),
         batchRepository.getAll()
       ])
-      const customerContacts = allContacts.filter(
-        (c) => c.roles.includes('customer') || !c.roles.includes('supplier')
-      )
+      if (ticket !== loadSequence.current) return
+      const customerContacts = allContacts.filter(isCustomerContact)
+      // A contact committed by the existing quick-create flow may postdate this initial read.
+      const created = createdDuringLoad.current
+      if (created && !customerContacts.some(contact => contact.id === created.id)) customerContacts.push(created)
+      createdDuringLoad.current = null
       setContacts(customerContacts)
       setBatches(allBatches)
 
-      if (customerContacts.length > 0 && !customerId) {
-        setCustomerId(customerContacts[0].id)
+      if (!customerTouched.current) {
+        if (hasCustomerIntent.current) {
+          const intended = customerContacts.find(contact => contact.id === customerIntent.current)
+          setCustomerId(intended?.id ?? '')
+          setPrefillProblem(!intended)
+        } else {
+          setCustomerId(customerContacts[0]?.id ?? '')
+        }
       }
     } catch (err) {
       console.error('Failed to load baseline data:', err)
+      if (ticket === loadSequence.current) setLoadError(true)
     } finally {
-      setLoading(false)
+      if (ticket === loadSequence.current) setLoading(false)
     }
-  }, [customerId])
+  }, [])
 
   useEffect(() => {
-    loadBaseData()
+    const requests = loadSequence
+    void loadBaseData()
+    return () => { ++requests.current }
   }, [loadBaseData])
 
   // Recalculate live availability when variety or quantity changes
@@ -126,7 +153,7 @@ export const OrderNewScreen: React.FC = () => {
     e.preventDefault()
     if (isSubmitting) return
 
-    if (!customerId) {
+    if (loading || loadError || !selectedCustomer) {
       setFormError('Vui lòng chọn hoặc thêm khách hàng.')
       void validationTracker.actionFailed('order_created', 'validation')
       return
@@ -162,7 +189,9 @@ export const OrderNewScreen: React.FC = () => {
 
     if (result.success && result.order) {
       void validationTracker.actionCompleted('order_created')
-      navigate(`/orders/${result.order.id}`, { replace: true })
+      const createdCustomer = contacts.find(contact => contact.id === result.order!.customerId && isCustomerContact(contact))
+      const customerBack = createdCustomer ? customerReturnPath(location.state?.customerReturnTo, createdCustomer.id) : undefined
+      navigate(`/orders/${result.order.id}`, { replace: true, state: customerBack ? { customerReturnTo: customerBack } : undefined })
     } else {
       void validationTracker.actionFailed('order_created', 'storage')
       setFormError(result.error || 'Chưa lưu được đơn hàng. Vui lòng thử lại.')
@@ -198,6 +227,11 @@ export const OrderNewScreen: React.FC = () => {
           {/* Main Form Column */}
           <div className="lg:col-span-2 min-w-0">
             <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-5">
+              {loadError && <div role="alert" className="bg-amber-50 p-4 rounded-xl space-y-2">
+                <p>Chưa đọc được danh bạ. Hãy đọc lại trước khi ghi đơn.</p>
+                <button type="button" className="min-h-12 px-4 text-emerald-800 font-semibold" onClick={() => { void loadBaseData() }}>Đọc lại danh bạ</button>
+              </div>}
+              {prefillProblem && <p role="alert" className="bg-amber-50 p-4 rounded-xl">Khách được yêu cầu không còn hợp lệ. Hãy chọn lại hoặc thêm khách; chưa thể ghi đơn cho khách khác tự động.</p>}
               {/* Customer selection */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
@@ -232,11 +266,14 @@ export const OrderNewScreen: React.FC = () => {
                     id="order-customer"
                     value={customerId}
                     onChange={(e) => {
+                      customerTouched.current = true
                       setCustomerId(e.target.value)
+                      setPrefillProblem(false)
                       setFormError(null)
                     }}
                     className="w-full px-3.5 py-3 text-base rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 bg-white text-slate-900 font-semibold min-h-[48px]"
                   >
+                    <option value="">Chọn khách hàng...</option>
                     {contacts.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} {c.phone ? `(${c.phone})` : ''}
@@ -427,7 +464,7 @@ export const OrderNewScreen: React.FC = () => {
               <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs pt-3 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 sm:pt-2 sm:pb-0 sm:bg-transparent sm:static border-t border-slate-100 sm:border-0 z-10 shadow-xs sm:shadow-none">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || loading || loadError || !selectedCustomer}
                   className="w-full min-h-[48px] py-3.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2"
                 >
                   <Plus className="w-5 h-5" />
@@ -492,6 +529,10 @@ export const OrderNewScreen: React.FC = () => {
         isOpen={isContactModalOpen}
         onClose={() => setIsContactModalOpen(false)}
         onSuccess={(newContact) => {
+          if (!isCustomerContact(newContact)) { setPrefillProblem(true); return }
+          customerTouched.current = true
+          if (loading) createdDuringLoad.current = newContact
+          setPrefillProblem(false)
           setContacts((prev) => [newContact, ...prev])
           setCustomerId(newContact.id)
         }}

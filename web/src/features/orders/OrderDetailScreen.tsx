@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   Calendar,
   Phone,
@@ -52,6 +52,8 @@ import { hasOrderShipmentHistory } from '../../domain/orderLifecycle'
 import { OrderEditModal } from './OrderEditModal'
 import { OrderCancelModal } from './OrderCancelModal'
 import { orderHistoryMessage } from './orderHistory'
+import { customerReturnPath } from '../customers/customerNavigation'
+import { isCustomerContact } from '../../services/customerQueryService'
 
 interface ReservationSourceDetail {
   reservation: Reservation
@@ -61,7 +63,13 @@ interface ReservationSourceDetail {
 
 export const OrderDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>()
+  return <OrderDetailContent key={id} />
+}
+
+const OrderDetailContent: React.FC = () => {
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const [order, setOrder] = useState<Order | null>(null)
   const [customer, setCustomer] = useState<Contact | null>(null)
@@ -75,6 +83,8 @@ export const OrderDetailScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [action, setAction] = useState<'edit' | 'cancel' | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const backTo = !loading && !error && order && customer && order.id === id && customer.id === order.customerId && isCustomerContact(customer)
+    ? customerReturnPath(location.state?.customerReturnTo, customer.id) ?? '/orders' : '/orders'
 
   const fetchData = useCallback(async () => {
     if (!id) return
@@ -240,7 +250,7 @@ export const OrderDetailScreen: React.FC = () => {
         title={customer?.name || 'Chi tiết đơn'}
         subtitle={`Đơn đặt ${order.variety}`}
         showBack
-        backTo="/orders"
+        backTo={backTo}
       />
 
       <div className="max-w-6xl mx-auto w-full p-4 sm:p-6 pb-16">
