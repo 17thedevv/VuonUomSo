@@ -27,6 +27,8 @@ import { PilotToolsScreen } from '../features/validation/PilotToolsScreen'
 import { ValidationRouteTracker } from '../validation/ValidationRouteTracker'
 import { GardenAvailabilityScreen } from '../features/garden/GardenAvailabilityScreen'
 import { AvailabilityShareScreen } from '../features/share/AvailabilityShareScreen'
+import { CustomersScreen } from '../features/customers/CustomersScreen'
+import { CustomerDetailScreen } from '../features/customers/CustomerDetailScreen'
 
 const RootLayout: React.FC = () => {
   return (
@@ -141,6 +143,14 @@ const router = createBrowserRouter([
           {
             path: '/garden/share',
             element: <AvailabilityShareScreen />
+          },
+          {
+            path: '/customers',
+            element: <CustomersScreen />
+          },
+          {
+            path: '/customers/:id',
+            element: <CustomerDetailScreen />
           },
           {
             path: '/batches',
