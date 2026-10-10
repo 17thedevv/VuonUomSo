@@ -2,7 +2,7 @@
 
 Ngày quyết định: **09/10/2026**. **V2-0 — ROADMAP RESET + CONTRACT FREEZE**.
 
-Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 → FC6. Trạng thái task/merge xem tại [.agent/PROJECT_STATE.md](../../.agent/PROJECT_STATE.md). V2-A1–A4 đã merge/nghiệm thu trên main; V2-B1 là NEXT duy nhất, chưa triển khai.
+Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 → FC6. Trạng thái task/merge xem tại [.agent/PROJECT_STATE.md](../../.agent/PROJECT_STATE.md). V2-A1–A4 và V2-B1 đã merge/nghiệm thu trên main; V2-B2 là NEXT duy nhất, chưa triển khai.
 
 ## 1. Baseline và quyết định supersede
 
@@ -20,7 +20,9 @@ Chỉ thị trực tiếp của người dùng thay thế delivery order FC5 →
 - **V2-A3 acceptance trên main**: source tree khớp reviewed head; native Edge + real IndexedDB chạy lại tại360/390/430/768/1024/1280px PASS cho global/contextual chooser và hai modal cũ. Living30→10 yêu cầu explicit ready8; ready31 reject; ready10/O18 cho shortage8; Garden giữ q/view/open sau commit/Undo, browser back/reload không replay intent, add-new/cancel context, focus/keyboard/Escape, long names/codes/no overflow/controls mới ≥44px và reduced390×420px submit đạt. Evidence/harness/screenshots: `C:/Users/84387/.codex/artifacts/v2-a3-closure-2026-10-10/`; JSON ghi đúng main merge SHA. Existing mutation/modal/domain/schema/Today/NAV_ITEMS/frozen contract giữ nguyên; không có A4/new stock command; PR #29/#31 preserved/unmerged/not adopted. Physical IME/offline installed-PWA/field pilot vẫn NOT VERIFIED.
 - **V2-A4 DONE / CLOSED** (10/10/2026): [PR #41](https://github.com/17thedevv/VuonUomSo/pull/41), approved head `766d336964df30f59d7ddae93137957f8d4cfdea`, merged `cf18af6fce9cc949f7b67860d2fe75b0f65979c4` lúc `2026-10-10T07:12:31Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38033627397) trên đúng merge commit, branch `main`, event `push`: typecheck/lint/58 files, 932 tests/build PASS. 25 regressions mới so với A3 giữ Today A1 own available/O, fixture15/shortage3/external exclusion, fail-closed/races/refresh/Undo, bốn tab/legacy routes, group/leaf variety prefill/default quantity/no auto-reserve/back q/view/open. Delta review `1cd5e4facc3ef03527c5d257df4270851365d7b2` → approved head đổi action thành “Xem đơn hàng” → unfiltered `/orders`; real Dexie partial order40/O23/shortage17 regression PASS.
 - **V2-A4 acceptance trên main**: source tree khớp approved head; native Edge + real IndexedDB chạy lại tại360/390/430/768/1024/1280px PASS. Today15 → Monthong/M06 → ready25 → Today22 → Undo15; M07 prefill Monthong/default30000/create không reserve hoặc stock write/back context; fail-closed/retry/legacy routes/long labels/keyboard/reduced390×420px đạt. Sáu kích thước đều xác minh O23 action tới unfiltered orders chứa partial order40/23/17, Đơn tab active, Enter/target ≥44px và không business writes. Evidence/harness/screenshots/JSON ghi đúng main merge SHA: `C:/Users/84387/.codex/artifacts/v2-a4-closure-2026-10-10/`. Không có B1 code/schema/domain/mutation service/frozen contract changes. Physical IME/offline installed-PWA/field pilot vẫn NOT VERIFIED.
-- **V2-B1 NEXT — DUY NHẤT / NOT STARTED**; V2-B2 PLANNED / QUEUED; REAL PILOT REQUIRED AFTER V2-B; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED.
+- **V2-B1 DONE / CLOSED** (10/10/2026): [PR #44](https://github.com/17thedevv/VuonUomSo/pull/44), reviewed head `b0debdc939d85a446b0acb2182c33e42022c9095`, merged `f4c9a4b7497f6cf52263f4ec09fb7f88268cd6f6` lúc `2026-10-10T08:33:42Z`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38038306649) trên đúng merge commit, branch `main`, event `push`: typecheck/lint/61 files, 977 tests/build PASS. 45 B1 regressions mới; trên main chạy lại 4 files / 136 tests PASS gồm B1 và 91 A1. Real Dexie bảo vệ available15/shortage3/external exclusion, selection theo batch ID/subset/không đếm trùng, fresh generation reject selected batch đã xóa/hết hàng, fail-closed/no writes/privacy; controlled promises/APIs bảo vệ races, immutable snapshot, exact Preview/Copy/Web Share parity, Clipboard fallback và cancel/reject.
+- **V2-B1 acceptance trên main**: source tree khớp reviewed head; trực tiếp đọc owner router/AppShell/onboarding, Garden/share screen/selection/formatter/A1. Native Edge + real IndexedDB chạy lại 14 checks PASS tại360/390/430/768/1024/1280px và reduced390×420px: Garden entry/back q/view/open, real ID selection/partial group/nhiều giống/optional codes, frozen preview/copy sau stock change và explicit regenerate15→13, native Clipboard exact argument parity/manual fallback, mocked Web Share resolve/cancel/reject/no writes, fail-closed/retry/zero-available/long Unicode/no overflow. Windows Clipboard readback đổi LF→CRLF, payload gửi API vẫn đúng preview. Evidence/harness/screenshots/JSON ghi đúng main merge SHA: `D:/Project-17/artifacts/v2-b1-closure-2026-10-10/`. Native Web Share sheet/actual Zalo delivery/physical IME/offline installed-PWA/real pilot vẫn **NOT VERIFIED**; không Customer Read Views, public publishing URL/backend/schema/domain/mutation service/dependency/frozen contract changes. PR #29/#31 preserved/unmerged/not adopted; issue #42 OPEN / NOT FIXED.
+- **V2-B2 NEXT — DUY NHẤT / NOT STARTED**; toàn V2-B chưa hoàn tất. REAL PILOT REQUIRED AFTER V2-B và sau khi issue #42 được sửa/review/merge CI PASS; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED.
 
 ```text
 V2-0: reset roadmap + freeze contract (MERGED / CLOSED, #30)
@@ -30,8 +32,9 @@ V2-0: reset roadmap + freeze contract (MERGED / CLOSED, #30)
   → V2-A2 (DONE / CLOSED, #37 merged)
   → V2-A3 (DONE / CLOSED, #39 merged)
   → V2-A4 (DONE / CLOSED, #41 merged)
-  → V2-B1 (NEXT duy nhất)
-  → V2-B2 (PLANNED / QUEUED)
+  → V2-B1 (DONE / CLOSED, #44 merged)
+  → V2-B2 (NEXT duy nhất / NOT STARTED)
+  → Correctness issue #42 (OPEN / NOT FIXED; required before pilot)
   → REAL PILOT / STOP FEATURE BUILD
   → evidence decides C / D / E
 ```
@@ -46,9 +49,9 @@ Nguồn và cách tái hiện: [readiness audit](../architecture/GENERAL-COMMERC
 | **G02** | **DONE / CLOSED (#32)** | Validate create quantity/optional price tại service boundary | Quantity nguyên an toàn dương; price nếu có là số nguyên an toàn không âm, khớp edit boundary hiện có; NaN/Infinity/phân số/out-of-range reject trước write. Không tạo financial authority mới |
 | **G10** | **DONE / CLOSED (#33)** | Picker giống phản ánh common options + dữ liệu lô + intentional draft/custom value | Batch Monthong → Ghi đơn: label nhìn thấy = variety submitted; query prefill không bị select đổi ngầm sang giống khác; default/common flow giữ được |
 
-G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup và V2-A1–A4 đã hoàn tất; V2-B1 là NEXT duy nhất. Không mở Product/Variant chỉ để sửa picker.
+G01/G02 đã đóng qua PR #32; G10 đã đóng qua PR #33 với regression và merge CI xanh. Correctness cleanup, V2-A1–A4 và V2-B1 đã hoàn tất; V2-B2 là NEXT duy nhất. Không mở Product/Variant chỉ để sửa picker.
 
-**Separate correctness follow-up — OPEN / NOT FIXED:** [Issue #42](https://github.com/17thedevv/VuonUomSo/issues/42) ghi nhận legacy `getVarietyAvailability()` tính external reservation có `batchId` collision vào own informational availability; OrderNew feedback và `order_created.availableAtGarden` khác A1. Acceptance: external không giảm own stock; real Dexie collision regression giữ per-batch available15/shortage3; feedback/persisted event nhất quán; reservation/fulfillment/release semantics và G01 atomicity/retry/Undo giữ nguyên, không schema/new command. Phải giải quyết/review/merge CI PASS trước real pilot. Không sửa hoặc đóng issue trong A4 closure.
+**Separate correctness follow-up — OPEN / NOT FIXED / REQUIRED BEFORE REAL PILOT:** [Issue #42](https://github.com/17thedevv/VuonUomSo/issues/42) ghi nhận legacy `getVarietyAvailability()` tính external reservation có `batchId` collision vào own informational availability; OrderNew feedback và `order_created.availableAtGarden` khác A1. Acceptance: external không giảm own stock; real Dexie collision regression giữ per-batch available15/shortage3; feedback/persisted event nhất quán; reservation/fulfillment/release semantics và G01 atomicity/retry/Undo giữ nguyên, không schema/new command. Phải giải quyết/review/merge CI PASS trước real pilot. Không sửa hoặc đóng issue trong A4/B1/closure; B1 A1 external exclusion không giải quyết legacy OrderNew/event availability.
 
 ## 3. V2-A — Availability & Quick Update
 
@@ -69,12 +72,12 @@ Không redesign Order Detail, làm delta mortality, move cây, condition buckets
 
 ## 4. V2-B — Local bảng hàng + Customer read
 
-V2-A đã merge/nghiệm thu; V2-B1 là NEXT duy nhất, chưa triển khai. B2 PLANNED / QUEUED; vẫn không thêm schema.
+V2-A và V2-B1 đã merge/nghiệm thu. **V2-B2 là NEXT — DUY NHẤT / NOT STARTED**; toàn V2-B chưa hoàn tất, vẫn không thêm schema. B2 cần task implementation riêng; closure B1 dừng trước B2.
 
 | Slice | Routes / flow | Authority và giới hạn |
 |---|---|---|
-| **V2-B1 — NEXT duy nhất** | `/garden/share`: availability hiện tại → chọn giống/lô → preview → text → Copy/Web Share → owner tự gửi Zalo | Owner-local snapshot, tên vườn + thời điểm tạo bảng; preview-copy parity. Không public URL/backend/inbox/auto-reserve; không export raw backup, contact/private history hoặc suy giá từ đơn cũ |
-| **V2-B2 — PLANNED / QUEUED** | `/customers`, `/customers/:id`: tên/phone → đơn → O chưa xuất → lịch sử đã xuất | Customer role + existing order/reservation/completed shipments; O không phải historical Q/C. Read views, links/gọi/entry Ghi đơn dùng flow cũ; không giá khách/đã trả/công nợ/thu tiền |
+| **V2-B1 — DONE / CLOSED (#44)** | `/garden/share`: availability hiện tại → chọn giống/lô → preview → text → Copy/Web Share → owner tự gửi Zalo | Owner-local snapshot, tên vườn + thời điểm tạo bảng; preview-copy-share parity/main acceptance/merge CI PASS. Không public URL/backend/inbox/auto-reserve; không export raw backup, contact/private history hoặc suy giá từ đơn cũ |
+| **V2-B2 — NEXT duy nhất / NOT STARTED** | `/customers`, `/customers/:id`: tên/phone → đơn → O chưa xuất → lịch sử đã xuất | Customer role + existing order/reservation/completed shipments; O không phải historical Q/C. Read views, links/gọi/entry Ghi đơn dùng flow cũ; không giá khách/đã trả/công nợ/thu tiền |
 
 Web Share không được hỗ trợ/hủy/chưa có Clipboard API phải có copy/manual fallback và không tạo write. Nội dung bảng là snapshot từ máy owner, không gọi live/synced hoặc bảo đảm giữ hàng cho người nhận. Quantity thay sau preview không làm nội dung đang copy lệch preview; muốn bảng mới phải refresh/preview lại. Tạo bảng/copy/share không thay order/reservation/stock/event nghiệp vụ.
 
@@ -115,6 +118,6 @@ E có boundary: owner IndexedDB → publish snapshot → public URL → customer
 
 ## 7. Handoff
 
-V2-0 đã merge qua #30. **G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1–A4 DONE / CLOSED (#35/#37/#39/#41); V2-B1 NEXT duy nhất / NOT STARTED**. B2 PLANNED / QUEUED; REAL PILOT REQUIRED AFTER V2-B; FC5/FC6 SUPERSEDED BY V2; C/D/E EVIDENCE GATED / NOT AUTHORIZED. Legacy correctness [#42](https://github.com/17thedevv/VuonUomSo/issues/42) OPEN / NOT FIXED, required trước pilot. Closure chỉ sửa PROJECT_STATE và roadmap, không có `web/` diff so với main đã chứa #41; contract V2-A giữ nguyên. Task integration dừng ở closure, không implement B1/B2 hoặc sửa mutation services/schema. Trạng thái hiện hành ở đây và PROJECT_STATE thay các snapshot NEXT cũ trong tài liệu tham khảo/skills.
+V2-0 đã merge qua #30. **G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1–A4 DONE / CLOSED (#35/#37/#39/#41); V2-B1 DONE / CLOSED (#44); V2-B2 NEXT — DUY NHẤT / NOT STARTED**. Toàn V2-B chưa hoàn tất. Delivery order: B1 closure → B2 Customer Read Views → correctness [#42](https://github.com/17thedevv/VuonUomSo/issues/42) (OPEN / NOT FIXED / REQUIRED BEFORE REAL PILOT) → REAL PILOT REQUIRED AFTER V2-B. FC5/FC6 SUPERSEDED BY V2; C/D/E EVIDENCE GATED / NOT AUTHORIZED. Closure chỉ sửa PROJECT_STATE và roadmap, không có `web/` diff so với main đã chứa #44; frozen contracts giữ nguyên. Task integration dừng sau closure, không implement B2 hoặc sửa issue #42/mutation services/schema. PR #29/#31 preserved/unmerged/not adopted. Native Web Share/physical IME/offline installed-PWA/real pilot vẫn NOT VERIFIED. Trạng thái hiện hành ở đây và PROJECT_STATE thay các snapshot NEXT cũ trong tài liệu tham khảo/skills.
 
 Đọc cùng: [workflow audit](V2-WORKFLOW-AUDIT.md), [IA](V2-INFORMATION-ARCHITECTURE.md), [route/component map](V2-ROUTE-COMPONENT-MAP.md). Những đề xuất C/D/E trong các tài liệu này là hypotheses có gate, không mở rộng authorized scope của A/B. Trạng thái merge của reset phải được báo riêng, không lấy việc đã viết roadmap để claim main đã đổi.
