@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { ContactQuickCreateModal } from './ContactQuickCreateModal'
@@ -10,6 +10,7 @@ import type { Batch } from '../../domain/batch'
 import { formatQuantity } from '../../domain/quantity'
 import { UserPlus, Calendar, Plus, AlertCircle, Info, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
+import { gardenReturnPath } from '../garden/gardenNavigation'
 
 const COMMON_VARIETIES = [
   'Keo lai BV16',
@@ -21,6 +22,8 @@ const COMMON_VARIETIES = [
 
 export const OrderNewScreen: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = gardenReturnPath(location.state?.gardenReturnTo)
   const [searchParams] = useSearchParams()
   const prefillVariety = searchParams.get('variety')?.trim() || COMMON_VARIETIES[0]
 
@@ -188,12 +191,12 @@ export const OrderNewScreen: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50">
-      <PageHeader title="Ghi đơn mới" subtitle="Tiếp nhận nhu cầu đặt cây" showBack backTo="/orders" />
+      <PageHeader title="Ghi đơn mới" subtitle="Tiếp nhận nhu cầu đặt cây" showBack backTo={returnTo ?? '/orders'} />
 
       <div className="p-4 sm:p-6 max-w-4xl mx-auto w-full flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Form Column */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <form onSubmit={handleSubmit} className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-5">
               {/* Customer selection */}
               <div>
@@ -435,11 +438,11 @@ export const OrderNewScreen: React.FC = () => {
           </div>
 
           {/* Desktop/Tablet Context Panel: TỒN HIỆN TẠI */}
-          <div className="hidden lg:block lg:col-span-1 space-y-4">
+          <div className="hidden lg:block lg:col-span-1 space-y-4 min-w-0 break-words">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3.5 text-xs">
               <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 pb-2 border-b border-slate-100">
-                <Info className="w-4 h-4 text-emerald-700" />
-                <span>Tồn hiện tại: {variety}</span>
+                <Info className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="min-w-0 break-words">Tồn hiện tại: {variety}</span>
               </h3>
 
               <div className="space-y-2">
@@ -473,8 +476,8 @@ export const OrderNewScreen: React.FC = () => {
                 ) : (
                   matchingBatches.map((b) => (
                     <div key={b.id} className="p-2 bg-slate-50 rounded-lg flex justify-between items-center">
-                      <span className="font-bold text-slate-800">{b.code}</span>
-                      <span className="text-slate-600 font-semibold">{formatQuantity(b.readyQuantity)} đủ bán</span>
+                      <span className="font-bold text-slate-800 min-w-0 break-all">{b.code}</span>
+                      <span className="text-slate-600 font-semibold shrink-0 ml-2">{formatQuantity(b.readyQuantity)} đủ bán</span>
                     </div>
                   ))
                 )}

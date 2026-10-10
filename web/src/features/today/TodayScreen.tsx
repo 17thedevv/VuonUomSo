@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, ChevronRight, AlertTriangle, Clock, RotateCcw, Sprout, Truck } from 'lucide-react'
 import type { Organization } from '../../domain/organization'
-import type { BatchWithAvailability } from '../../domain/batch'
+import type { Batch } from '../../domain/batch'
 import type { OrderWithDerived } from '../../domain/order'
 import type { Contact } from '../../domain/contact'
 import type { Shipment } from '../../domain/shipment'
@@ -15,12 +15,8 @@ import {
   shipmentRepository,
   settingsRepository
 } from '../../data/repositories'
-import {
-  availableQuantityForBatch,
-  reservedQuantityForBatch,
-  formatQuantity
-} from '../../domain/quantity'
-import { isBatchAttention, deriveBatchStatus } from '../../domain/batch'
+import { formatQuantity } from '../../domain/quantity'
+import { isBatchAttention } from '../../domain/batch'
 import {
   reservedQuantityForOrder,
   orderShortage,
@@ -29,19 +25,40 @@ import {
 import { formatHeaderDate, formatShortDate } from '../../domain/date'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { undoService } from '../../services/undoService'
+import { getGardenAvailability, type GardenAvailabilityView } from '../../services/gardenQueryService'
+
+type AvailabilityState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ready'; data: GardenAvailabilityView }
 
 export const TodayScreen: React.FC = () => {
   const navigate = useNavigate()
   const [org, setOrg] = useState<Organization | null>(null)
-  const [batches, setBatches] = useState<BatchWithAvailability[]>([])
+  const [batches, setBatches] = useState<Batch[]>([])
   const [orders, setOrders] = useState<OrderWithDerived[]>([])
   const [plannedShipments, setPlannedShipments] = useState<Shipment[]>([])
   const [appMode, setAppMode] = useState<string>('pilot')
   const [todayDate, setTodayDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [availability, setAvailability] = useState<AvailabilityState>({ status: 'loading' })
+  const availabilitySequence = useRef(0)
+  const taskSequence = useRef(0)
+
+  const loadAvailability = useCallback(async () => {
+    const ticket = ++availabilitySequence.current
+    setAvailability({ status: 'loading' })
+    try {
+      const data = await getGardenAvailability()
+      if (ticket === availabilitySequence.current) setAvailability({ status: 'ready', data })
+    } catch {
+      if (ticket === availabilitySequence.current) setAvailability({ status: 'error' })
+    }
+  }, [])
 
   const fetchData = useCallback(async () => {
+    const ticket = ++taskSequence.current
     try {
       const [
         loadedOrg,
@@ -60,19 +77,6 @@ export const TodayScreen: React.FC = () => {
         shipmentRepository.getAll(),
         settingsRepository.get('app_mode')
       ])
-
-      // Map batches with derived numbers
-      const mappedBatches: BatchWithAvailability[] = loadedBatches.map((b) => {
-        const reserved = reservedQuantityForBatch(b.id, loadedReservations)
-        const available = availableQuantityForBatch(b, loadedReservations)
-        const attention = isBatchAttention(b)
-        return {
-          ...b,
-          reservedQuantity: reserved,
-          availableQuantity: available,
-          isAttention: attention
-        }
-      })
 
       // Map contacts lookup
       const contactMap = new Map<string, Contact>(loadedContacts.map((c) => [c.id, c]))
@@ -95,42 +99,48 @@ export const TodayScreen: React.FC = () => {
 
       const plannedList = loadedShipments.filter((s) => s.status === 'planned')
 
+      if (ticket !== taskSequence.current) return
       setOrg(loadedOrg)
-      setBatches(mappedBatches)
+      setBatches(loadedBatches)
       setOrders(mappedOrders)
       setPlannedShipments(plannedList)
       setAppMode(mode || 'pilot')
       setTodayDate(formatHeaderDate(new Date()))
       setError(null)
     } catch (err) {
+      if (ticket !== taskSequence.current) return
       console.error('Error loading today data:', err)
       setError('Chưa đọc được dữ liệu trên thiết bị.')
     } finally {
-      setLoading(false)
+      if (ticket === taskSequence.current) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchData()
-    const unsubscribe = undoService.subscribe(() => {
-      fetchData()
-    })
-    return unsubscribe
-  }, [fetchData])
+    const availabilityRequests = availabilitySequence
+    const taskRequests = taskSequence
+    const refresh = () => { void fetchData(); void loadAvailability() }
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh() }
+    refresh()
+    const unsubscribe = undoService.subscribe(refresh)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      ++availabilityRequests.current
+      ++taskRequests.current
+      unsubscribe()
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [fetchData, loadAvailability])
 
   const handleRetry = () => {
     setLoading(true)
     fetchData()
+    void loadAvailability()
   }
 
-  // Derived aggregates for CÂY HÔM NAY
-  const totalAvailable = batches
-    .filter((b) => deriveBatchStatus(b) === 'ready')
-    .reduce((sum, b) => sum + b.availableQuantity, 0)
-
-  const totalReserved = batches.reduce((sum, b) => sum + b.reservedQuantity, 0)
-
-  const attentionBatches = batches.filter((b) => b.isAttention)
+  const attentionBatches = batches.filter((batch) => isBatchAttention(batch))
 
   // Orders needing attention: shortage > 0 and active (not shipped, not cancelled)
   const attentionOrders = orders.filter(
@@ -222,34 +232,29 @@ export const TodayScreen: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            {/* Available stock -> tap navigates to /batches?filter=ready */}
-            <div
-              onClick={() => navigate('/batches?filter=ready')}
-              role="button"
-              tabIndex={0}
-              className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs active:bg-emerald-50 transition-colors cursor-pointer"
-            >
-              <span className="text-xs text-slate-500 font-medium block">Cây còn bán</span>
-              <span className="text-lg font-black text-emerald-700 tracking-tight block mt-0.5">
-                {formatQuantity(totalAvailable)}
-              </span>
-              <span className="text-[10px] text-slate-400">cây</span>
-            </div>
+          <section aria-label="Cây trong vườn" className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs mb-3 space-y-3">
+            <h3 className="font-semibold text-slate-700">Cây còn bán</h3>
+            <p className="text-xs text-slate-500">Cây trong vườn theo dữ liệu đang lưu trên thiết bị</p>
+            {availability.status === 'loading' ? (
+              <p role="status" className="text-slate-600">Đang đọc số cây còn bán...</p>
+            ) : availability.status === 'error' ? (
+              <div role="alert" className="space-y-2 text-amber-900">
+                <p>Chưa đọc được số cây trong vườn. Dữ liệu trên thiết bị có thể cần kiểm tra.</p>
+                <button type="button" onClick={() => { void loadAvailability() }} className="min-h-12 px-4 rounded-xl bg-emerald-700 text-white font-semibold">Thử đọc lại</button>
+              </div>
+            ) : (
+              <>
+                <p className="text-3xl font-black text-emerald-700">{formatQuantity(availability.data.ownTotals.available)} <span className="text-base font-semibold">cây</span></p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-700">
+                  <p><span>Đã giữ chưa xuất:</span> <strong>{formatQuantity(availability.data.ownTotals.outstanding)} cây</strong></p>
+                  <Link to="/orders" className="min-h-11 inline-flex items-center gap-1 font-semibold text-emerald-800">Xem đơn hàng<ChevronRight aria-hidden="true" className="w-4 h-4" /></Link>
+                </div>
+              </>
+            )}
+            <Link to="/garden" className="min-h-12 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 font-bold text-emerald-800">Xem cây còn bán<ChevronRight aria-hidden="true" className="w-4 h-4" /></Link>
+          </section>
 
-            {/* Đã giữ */}
-            <div
-              onClick={() => navigate('/orders?filter=ready_pickup')}
-              role="button"
-              tabIndex={0}
-              className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs active:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <span className="text-xs text-slate-500 font-medium block">Đã giữ</span>
-              <span className="text-lg font-black text-slate-800 tracking-tight block mt-0.5">
-                {formatQuantity(totalReserved)}
-              </span>
-              <span className="text-[10px] text-slate-400">chờ giao</span>
-            </div>
+          <div className="grid grid-cols-1 gap-2">
 
             {/* Sắp quá lứa -> tap navigates to /batches?filter=attention */}
             <div

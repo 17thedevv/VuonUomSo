@@ -9,7 +9,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/today', label: 'Hôm nay', icon: CalendarDays },
-  { to: '/batches', label: 'Lô cây', icon: Trees },
-  { to: '/orders', label: 'Đơn hàng', icon: ClipboardList },
+  { to: '/garden', label: 'Vườn', icon: Trees },
+  { to: '/orders', label: 'Đơn', icon: ClipboardList },
   { to: '/more', label: 'Thêm', icon: MoreHorizontal }
 ]
