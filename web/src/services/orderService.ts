@@ -2,11 +2,10 @@ import type { Order } from '../domain/order'
 import {
   orderRepository,
   contactRepository,
-  batchRepository,
-  reservationRepository,
   eventRepository
 } from '../data/repositories'
-import { availableQuantityForBatch, reservedQuantityForBatch, formatQuantity } from '../domain/quantity'
+import { formatQuantity } from '../domain/quantity'
+import { getGardenAvailability } from './gardenQueryService'
 import { undoService } from './undoService'
 import { db } from '../data/db'
 import { createDomainEvent } from '../analytics/events'
@@ -24,6 +23,7 @@ export interface CreateOrderInput {
 export interface VarietyAvailabilityInfo {
   variety: string
   readyQuantity: number
+  /** Current own outstanding O (active Q−F), not historical reserved Q or order coverage C. */
   reservedQuantity: number
   availableQuantity: number
   isShortage: boolean
@@ -45,26 +45,16 @@ export async function getVarietyAvailability(
   variety: string,
   requestedQuantity: number = 0
 ): Promise<VarietyAvailabilityInfo> {
-  const [allBatches, allReservations] = await Promise.all([
-    batchRepository.getAll(),
-    reservationRepository.getAll()
-  ])
-
-  const matchingBatches = allBatches.filter(
-    (b) => b.variety.toLowerCase().trim() === variety.toLowerCase().trim()
-  )
-
-  let totalReady = 0
-  let totalReserved = 0
-  let totalAvailable = 0
-
-  for (const b of matchingBatches) {
-    const res = reservedQuantityForBatch(b.id, allReservations)
-    const avail = availableQuantityForBatch(b, allReservations)
-    totalReady += b.readyQuantity
-    totalReserved += res
-    totalAvailable += avail
+  if (!Number.isSafeInteger(requestedQuantity) || requestedQuantity < 0) {
+    throw new Error('Số lượng cần kiểm tra phải là số nguyên an toàn không âm.')
   }
+  // A1's nested r transaction joins createOrder's rw transaction on these same tables.
+  // Propagate read/projection errors so order + required event roll back together.
+  const view = await getGardenAvailability({ view: 'all' })
+  const totals = view.groups.find(group => group.key === variety.trim().toLowerCase())?.totals
+  const totalReady = totals?.ready ?? 0
+  const totalReserved = totals?.outstanding ?? 0
+  const totalAvailable = totals?.available ?? 0
 
   const shortageAmount = Math.max(requestedQuantity - totalAvailable, 0)
 
