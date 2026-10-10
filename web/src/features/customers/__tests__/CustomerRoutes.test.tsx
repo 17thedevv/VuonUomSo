@@ -27,4 +27,6 @@ it('B201/B202 real router guards customer routes, permits owner list/detail and 
   await db.contacts.update('customer-a', { name: 'Khách sau reload' })
   render(<AppRouter />)
   await screen.findByRole('heading', { name: 'Khách sau reload' })
-})
+// Loading the complete production router also transforms every existing feature module.
+// Keep a bounded integration-test timeout without weakening any route/identity assertion.
+}, 15000)
