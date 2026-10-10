@@ -105,6 +105,7 @@ export function GardenAvailabilityScreen() {
         <div className="flex flex-wrap items-center gap-3">
           <button ref={updateButton} type="button" onClick={() => setChooser({})} className="min-h-12 px-5 rounded-xl bg-emerald-700 text-white font-bold">Cập nhật</button>
           <Link to="/batches" className="min-h-11 flex items-center px-3 text-emerald-800 font-semibold">Xem danh sách lô</Link>
+          <Link to="/garden/share" state={{ gardenReturnTo: returnTo }} className="min-h-11 flex items-center px-3 rounded-xl border border-slate-300 text-emerald-800 font-semibold">Tạo bảng chia sẻ</Link>
         </div>
         <GardenFilters search={search} view={view} onSearch={(value) => update('q', value)} onView={(value) => update('view', value)} />
         {current.status === 'loading' ? (
