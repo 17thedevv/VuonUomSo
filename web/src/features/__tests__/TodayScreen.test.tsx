@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom'
 import { TodayScreen } from '../today/TodayScreen'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import { db } from '../../data/db'
 import * as garden from '../../services/gardenQueryService'
 import { undoService } from '../../services/undoService'
 import { updateBatchReadyQuantity } from '../../services/batchService'
+import { OrdersScreen } from '../orders/OrdersScreen'
+import { orderShortage } from '../../domain/order'
 
 describe('TodayScreen', () => {
   beforeEach(async () => {
@@ -82,6 +84,31 @@ describe('Today canonical availability (real Dexie)', () => {
     expect(data.ownTotals.commitmentShortage).toBe(3)
     expect(hero().queryByText('12')).not.toBeInTheDocument()
     expect(screen.getByText('M07 · Sắp quá lứa')).toBeInTheDocument()
+    expect(await snapshot()).toEqual(before)
+  })
+
+  it('includes own outstanding for a partially reserved order and opens the unfiltered list containing it', async () => {
+    await db.reservations.delete('external')
+    await db.contacts.put({ id: 'customer', name: 'Khách giữ một phần', roles: ['customer'] })
+    const order = { id: 'o', customerId: 'customer', variety: 'Monthong', requestedQuantity: 40, status: 'partially_reserved' as const }
+    await db.orders.put(order)
+    expect(orderShortage(order, await db.reservations.toArray())).toBe(17)
+    const before = await snapshot()
+    const router = createMemoryRouter([
+      { path: '/today', element: <TodayScreen /> },
+      { path: '/orders', element: <OrdersScreen /> }
+    ], { initialEntries: ['/today'] })
+    render(<RouterProvider router={router} />)
+    await waitFor(() => expect(hero().getByText('23 cây')).toBeInTheDocument())
+    expect((await garden.getGardenAvailability()).ownTotals.outstanding).toBe(23)
+    const action = hero().getByRole('link', { name: 'Xem đơn hàng' })
+    expect(action).toHaveAttribute('href', '/orders')
+    fireEvent.click(action)
+    await screen.findByRole('heading', { name: 'Đơn hàng' })
+    await screen.findByText('Khách giữ một phần')
+    expect(screen.getByText('Còn thiếu 17 cây')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/orders')
+    expect(router.state.location.search).toBe('')
     expect(await snapshot()).toEqual(before)
   })
 

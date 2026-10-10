@@ -245,9 +245,10 @@ export const TodayScreen: React.FC = () => {
             ) : (
               <>
                 <p className="text-3xl font-black text-emerald-700">{formatQuantity(availability.data.ownTotals.available)} <span className="text-base font-semibold">cây</span></p>
-                <Link to="/orders?filter=ready_pickup" className="min-h-11 flex items-center gap-2 text-slate-700">
-                  <span>Đã giữ chưa xuất:</span><strong>{formatQuantity(availability.data.ownTotals.outstanding)} cây</strong>
-                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-700">
+                  <p><span>Đã giữ chưa xuất:</span> <strong>{formatQuantity(availability.data.ownTotals.outstanding)} cây</strong></p>
+                  <Link to="/orders" className="min-h-11 inline-flex items-center gap-1 font-semibold text-emerald-800">Xem đơn hàng<ChevronRight aria-hidden="true" className="w-4 h-4" /></Link>
+                </div>
               </>
             )}
             <Link to="/garden" className="min-h-12 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 font-bold text-emerald-800">Xem cây còn bán<ChevronRight aria-hidden="true" className="w-4 h-4" /></Link>
