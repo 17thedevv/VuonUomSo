@@ -1,0 +1,217 @@
+{
+  "format": "vuonuom-backup",
+  "formatVersion": 1,
+  "exportedAt": "2026-10-10T13:18:09.012Z",
+  "dbSchemaVersion": 4,
+  "recordCounts": {
+    "organizations": 1,
+    "settings": 3,
+    "contacts": 2,
+    "batches": 3,
+    "orders": 2,
+    "reservations": 4,
+    "shipments": 2,
+    "dossiers": 1,
+    "events": 1
+  },
+  "data": {
+    "organizations": [
+      {
+        "id": "audit_org",
+        "name": "Vườn AUDIT SYNTHETIC",
+        "capabilities": [
+          "produce",
+          "sell"
+        ]
+      }
+    ],
+    "settings": [
+      {
+        "key": "app_mode",
+        "value": "demo"
+      },
+      {
+        "key": "currentOrganizationId",
+        "value": "audit_org"
+      },
+      {
+        "key": "onboarding_completed",
+        "value": "true"
+      }
+    ],
+    "contacts": [
+      {
+        "id": "audit_customer",
+        "name": "Khách TEST ONLY",
+        "phone": "0000000000",
+        "roles": [
+          "customer"
+        ]
+      },
+      {
+        "id": "audit_supplier",
+        "name": "Nguồn TEST ONLY",
+        "phone": "0000000001",
+        "roles": [
+          "supplier"
+        ]
+      }
+    ],
+    "batches": [
+      {
+        "id": "M06",
+        "code": "M06",
+        "variety": "Monthong",
+        "initialQuantity": 120,
+        "currentQuantity": 100,
+        "readyQuantity": 15,
+        "status": "ready",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "M07",
+        "code": "M07",
+        "variety": "Monthong",
+        "initialQuantity": 120,
+        "currentQuantity": 100,
+        "readyQuantity": 20,
+        "status": "ready",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "Ri6",
+        "code": "R01",
+        "variety": "Ri6",
+        "initialQuantity": 30,
+        "currentQuantity": 26,
+        "readyQuantity": 8,
+        "status": "ready",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      }
+    ],
+    "orders": [
+      {
+        "id": "existing",
+        "customerId": "audit_customer",
+        "variety": "Monthong",
+        "requestedQuantity": 100,
+        "status": "partially_reserved"
+      },
+      {
+        "id": "historical",
+        "customerId": "audit_customer",
+        "variety": "Ri6",
+        "requestedQuantity": 10,
+        "status": "partially_shipped"
+      }
+    ],
+    "reservations": [
+      {
+        "id": "external",
+        "orderId": "existing",
+        "sourceType": "external_supplier",
+        "supplierId": "audit_supplier",
+        "quantity": 9,
+        "fulfilledQuantity": 0,
+        "status": "active",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "own_0",
+        "orderId": "existing",
+        "sourceType": "own_batch",
+        "batchId": "M06",
+        "quantity": 18,
+        "fulfilledQuantity": 0,
+        "status": "active",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "own_1",
+        "orderId": "existing",
+        "sourceType": "own_batch",
+        "batchId": "M07",
+        "quantity": 5,
+        "fulfilledQuantity": 0,
+        "status": "active",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "released",
+        "orderId": "historical",
+        "sourceType": "own_batch",
+        "batchId": "Ri6",
+        "quantity": 10,
+        "fulfilledQuantity": 4,
+        "status": "released",
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      }
+    ],
+    "shipments": [
+      {
+        "id": "completed",
+        "orderId": "historical",
+        "lines": [
+          {
+            "reservationId": "released",
+            "sourceType": "own_batch",
+            "batchId": "Ri6",
+            "quantity": 4
+          }
+        ],
+        "plannedQuantity": 4,
+        "shippedQuantity": 4,
+        "status": "completed",
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "shippedAt": "2026-10-01T00:00:00.000Z"
+      },
+      {
+        "id": "planned",
+        "orderId": "existing",
+        "lines": [
+          {
+            "reservationId": "own_1",
+            "sourceType": "own_batch",
+            "batchId": "M07",
+            "quantity": 2
+          }
+        ],
+        "plannedQuantity": 2,
+        "shippedQuantity": 0,
+        "status": "planned",
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "plannedDate": "2026-10-20"
+      }
+    ],
+    "dossiers": [
+      {
+        "id": "dossier",
+        "batchId": "M06",
+        "materialType": "cutting",
+        "sourceName": "Nguồn SYNTHETIC",
+        "supplierContactId": "audit_supplier",
+        "documents": [
+          {
+            "id": "doc",
+            "title": "Tài liệu TEST ONLY",
+            "number": "TEST-001"
+          }
+        ],
+        "createdAt": "2026-10-01T00:00:00.000Z",
+        "updatedAt": "2026-10-01T00:00:00.000Z"
+      }
+    ],
+    "events": [
+      {
+        "id": "initial",
+        "type": "batch_created",
+        "entityType": "batch",
+        "entityId": "M06",
+        "payload": {
+          "auditSynthetic": true
+        },
+        "createdAt": "2026-10-01T00:00:00.000Z"
+      }
+    ]
+  }
+}

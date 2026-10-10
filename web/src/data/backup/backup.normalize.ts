@@ -10,22 +10,10 @@ import type { Shipment } from '../../domain/shipment'
 import type { BatchDossier } from '../../domain/dossier'
 import type { DomainEvent } from '../../analytics/events'
 
-const VALID_CAPABILITIES: ReadonlySet<OrganizationCapability> = new Set([
-  'produce',
-  'sell',
-  'buy',
-  'aggregate',
-  'transport'
-])
-
 function normalizeCapabilities(raw: unknown): OrganizationCapability[] {
-  if (!Array.isArray(raw)) {
-    return ['produce', 'sell']
-  }
-  const filtered = raw.filter((c): c is OrganizationCapability =>
-    typeof c === 'string' && VALID_CAPABILITIES.has(c as OrganizationCapability)
-  )
-  return filtered.length > 0 ? filtered : ['produce', 'sell']
+  // Only missing legacy facts are backfilled. Explicit invalid values must
+  // reach validation, rather than being filtered/defaulted into valid records.
+  return raw === undefined ? ['produce', 'sell'] : raw as OrganizationCapability[]
 }
 
 /**
@@ -95,7 +83,7 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
       exportedAt: obj.exportedAt,
       appVersion: typeof obj.appVersion === 'string' ? obj.appVersion : undefined,
       dbSchemaVersion: obj.dbSchemaVersion,
-      recordCounts: {
+      recordCounts: obj.recordCounts === undefined ? {
         organizations: orgs.length,
         settings: settings.length,
         contacts: contacts.length,
@@ -105,7 +93,7 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
         shipments: shipments.length,
         dossiers: dossiers.length,
         events: events.length
-      },
+      } : obj.recordCounts as VuonUomBackupV1['recordCounts'],
       data: {
         organizations: orgs,
         settings,
@@ -133,41 +121,38 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
   if (!isLegacyShape) {
     throw new Error('File không phải bản sao lưu hợp lệ của Vườn Ươm.')
   }
+  if (obj.format !== undefined) throw new Error('Định dạng bản sao lưu không hợp lệ.')
+
+  const legacyTable = (name: string): unknown[] => {
+    const value = obj[name]
+    if (value === undefined) return []
+    if (!Array.isArray(value)) throw new Error(`Bản sao lưu cũ: bảng "${name}" phải là mảng.`)
+    return value
+  }
+  const legacyRecord = (value: unknown, context: string): Record<string, unknown> => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error(`Bản sao lưu cũ: ${context} phải là một đối tượng.`)
+    }
+    return value as Record<string, unknown>
+  }
 
   // Normalize legacy organization
   const organizations: Organization[] = []
   const settings: AppSetting[] = []
 
-  if (obj.organization && typeof obj.organization === 'object' && 'id' in (obj.organization as object)) {
-    const rawOrg = obj.organization as Record<string, unknown>
-    const org: Organization = {
-      id: String(rawOrg.id),
-      name: String(rawOrg.name || 'Vườn Ươm'),
-      capabilities: normalizeCapabilities(rawOrg.capabilities)
-    }
-    organizations.push(org)
-    settings.push({ key: 'currentOrganizationId', value: org.id })
-  } else if (Array.isArray(obj.organizations)) {
-    for (const rawOrg of obj.organizations) {
-      if (rawOrg && typeof rawOrg === 'object' && 'id' in rawOrg) {
-        const o = rawOrg as Record<string, unknown>
-        organizations.push({
-          id: String(o.id),
-          name: String(o.name || 'Vườn Ươm'),
-          capabilities: normalizeCapabilities(o.capabilities)
-        })
-      }
-    }
+  const rawOrganizations = obj.organization === undefined ? legacyTable('organizations') : [obj.organization]
+  for (const value of rawOrganizations) {
+    const o = legacyRecord(value, 'cơ sở')
+    organizations.push({
+      ...(o as unknown as Organization),
+      id: o.id as string,
+      name: (o.name === undefined ? 'Vườn Ươm' : o.name) as string,
+      capabilities: normalizeCapabilities(o.capabilities)
+    })
   }
 
-  if (Array.isArray(obj.settings)) {
-    for (const s of obj.settings) {
-      if (s && typeof s === 'object' && 'key' in s && 'value' in s) {
-        if (!settings.some((existing) => existing.key === s.key)) {
-          settings.push(s as AppSetting)
-        }
-      }
-    }
+  for (const value of legacyTable('settings')) {
+    settings.push(legacyRecord(value, 'cài đặt') as unknown as AppSetting)
   }
 
   // Ensure single legacy organization gets currentOrganizationId setting if missing
@@ -175,46 +160,45 @@ export function normalizeBackup(raw: unknown): VuonUomBackupV1 {
     settings.push({ key: 'currentOrganizationId', value: organizations[0].id })
   }
 
-  const contacts = (Array.isArray(obj.contacts) ? obj.contacts : []) as Contact[]
-  const batches = (Array.isArray(obj.batches) ? obj.batches : []) as Batch[]
-  const orders = (Array.isArray(obj.orders) ? obj.orders : []) as Order[]
+  const contacts = legacyTable('contacts') as Contact[]
+  const batches = legacyTable('batches') as Batch[]
+  const orders = legacyTable('orders') as Order[]
 
   // Normalize legacy reservations: backfill fulfilledQuantity
-  const rawReservations = Array.isArray(obj.reservations) ? obj.reservations : []
-  const reservations: Reservation[] = rawReservations.map((r: Record<string, unknown>) => {
+  const reservations: Reservation[] = legacyTable('reservations').map(value => {
+    const r = legacyRecord(value, 'khoản giữ cây')
     const fulfilledQuantity =
-      typeof r.fulfilledQuantity === 'number'
+      r.fulfilledQuantity !== undefined
         ? r.fulfilledQuantity
         : r.status === 'fulfilled'
-        ? (Number(r.quantity) || 0)
+        ? r.quantity
         : 0
 
     return {
       ...(r as unknown as Reservation),
-      fulfilledQuantity
+      fulfilledQuantity: fulfilledQuantity as number
     }
   })
 
   // Normalize legacy shipments: backfill lines, plannedQuantity, createdAt
-  const rawShipments = Array.isArray(obj.shipments) ? obj.shipments : []
-  const shipments: Shipment[] = rawShipments.map((s: Record<string, unknown>) => {
-    const shippedQty = Number(s.shippedQuantity) || 0
+  const shipments: Shipment[] = legacyTable('shipments').map(value => {
+    const s = legacyRecord(value, 'chuyến giao')
     return {
       ...(s as unknown as Shipment),
-      lines: Array.isArray(s.lines) ? s.lines : [],
-      plannedQuantity: typeof s.plannedQuantity === 'number' ? s.plannedQuantity : shippedQty,
-      createdAt: typeof s.createdAt === 'string' ? s.createdAt : (typeof s.shippedAt === 'string' ? s.shippedAt : new Date().toISOString())
+      lines: (s.lines === undefined ? [] : s.lines) as Shipment['lines'],
+      plannedQuantity: (s.plannedQuantity === undefined ? s.shippedQuantity : s.plannedQuantity) as number,
+      createdAt: (s.createdAt === undefined ? (s.shippedAt ?? new Date().toISOString()) : s.createdAt) as string
     }
   })
 
   // Normalize dossiers: legacy had none
-  const dossiers: BatchDossier[] = Array.isArray(obj.dossiers) ? (obj.dossiers as BatchDossier[]) : []
-  const events: DomainEvent[] = Array.isArray(obj.events) ? (obj.events as DomainEvent[]) : []
+  const dossiers = legacyTable('dossiers') as BatchDossier[]
+  const events = legacyTable('events') as DomainEvent[]
 
   return {
     format: BACKUP_FORMAT,
     formatVersion: BACKUP_FORMAT_VERSION,
-    exportedAt: typeof obj.exportedAt === 'string' ? obj.exportedAt : new Date().toISOString(),
+    exportedAt: (obj.exportedAt === undefined ? new Date().toISOString() : obj.exportedAt) as string,
     dbSchemaVersion: 4,
     recordCounts: {
       organizations: organizations.length,
