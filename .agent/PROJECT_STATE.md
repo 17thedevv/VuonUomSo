@@ -21,7 +21,7 @@
 
 **Chỉ thị người dùng: FC5 / FC6 SUPERSEDED BY V2.** Đây là quyết định đổi roadmap rõ ràng, thay các NEXT/prerequisite trong snapshot cũ bên dưới. FC0–FC4 vẫn DONE / CLOSED. Base merged khi tạo reset: `0d8d97a7254998ac84c7fedc087724f8ccc44da2`.
 
-- [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 MERGED / CLOSED** qua [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30), merge `85415ceaaff3b152e53c4a8df5552af3d335e0ee`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37935872623). Roadmap đã có hiệu lực trên main; V2-A1–A4 đã merge/nghiệm thu qua #35/#37/#39/#41; V2-B1 đã merge/nghiệm thu qua #44. V2-B2 đã merge/nghiệm thu qua #46; V2-B COMPLETE / CLOSED. Issue #42 đã FIXED / CLOSED qua #48. NEXT duy nhất là PILOT READINESS AUDIT.
+- [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 MERGED / CLOSED** qua [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30), merge `85415ceaaff3b152e53c4a8df5552af3d335e0ee`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37935872623). Roadmap đã có hiệu lực trên main; V2-A1–A4 đã merge/nghiệm thu qua #35/#37/#39/#41; V2-B1 đã merge/nghiệm thu qua #44. V2-B2 đã merge/nghiệm thu qua #46; V2-B DONE / CLOSED. Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng.
 - [V2-A Functional Contract](../docs/product/V2-A-FUNCTIONAL-CONTRACT.md): frozen legacy grouping + coherent read snapshot + available labels/sum per-batch.
 - **FC5-1 PRESERVED / NOT ADOPTED / OUT OF ACTIVE ROADMAP**: branch `feat/fc5-close-remaining-domain`, head `ac68325b8deab6445e833b6f7c78c28fa97f9484`, [PR #29](https://github.com/17thedevv/VuonUomSo/pull/29). Không merge/xóa/đóng PR bằng reset này; không phụ thuộc service hoặc enum chưa merge. Muốn tiếp nhận lại cần task/review riêng.
 
@@ -33,12 +33,19 @@
 | V2-A2 | **DONE / CLOSED (#37)** | Garden UI/search, URL/back context, freshness/Undo/error/race acceptance đã đạt trên main; evidence bên dưới |
 | V2-A3 | **DONE / CLOSED (#39)** | QuickUpdateChooser composition dùng mutation hiện có; main code/browser và merge CI PASS, evidence bên dưới |
 | V2-A4 | **DONE / CLOSED (#41)** | Today A1 availability, bốn tab, Garden → Ghi đơn/back context; main browser và merge CI PASS, evidence bên dưới |
+| V2-A | **DONE / CLOSED** | A1–A4 đã merge/nghiệm thu; frozen contract giữ nguyên |
 | V2-B1 | **DONE / CLOSED (#44)** | Local bảng hàng: A1 selection → frozen preview → Copy/Web Share; real Dexie/main browser/merge CI PASS, evidence bên dưới |
 | V2-B2 | **DONE / CLOSED (#46)** | Customer read views trên main, không giá/thu tiền/công nợ; coherent facts/full ID/navigation/no writes, evidence bên dưới |
-| V2-B | **COMPLETE / CLOSED** | B1 và B2 đã merge/nghiệm thu; STOP FEATURE BUILD |
+| V2-B | **DONE / CLOSED** | B1 và B2 đã merge/nghiệm thu; STOP FEATURE BUILD |
 | Correctness issue #42 | **FIXED / CLOSED (#48)** | Reviewed merge + main merge CI / real Dexie / persisted event parity / main browser PASS; evidence bên dưới |
-| PILOT READINESS AUDIT | **NEXT — DUY NHẤT** | CI stability + native device / IME / installed-PWA offline / backup-restore readiness; chưa thực hiện |
-| REAL PILOT / STOP FEATURE BUILD | **NOT STARTED / NOT YET APPROVED** | Sau readiness audit và authorization riêng; năm task/metrics trong roadmap |
+| PILOT READINESS AUDIT | **COMPLETED / NO-GO** | Historical gates R01–R08 và remaining remediation ở dưới |
+| REM-01 | **FIXED / CLOSED (#50)** | Atomic reset + exact main merge CI / native failure rollback / browser PASS |
+| REM-02 | **NEXT REMEDIATION CANDIDATE** | Coherent backup export; implementation NOT AUTHORIZED tự động, cần task riêng |
+| REM-03 | **REQUIRED** | Strict restore validation; chưa sửa |
+| REM-04 | **REQUIRED INVESTIGATION** | QuickUpdateChooser root UNKNOWN / NOT FIXED |
+| REM-05 | **REQUIRED DEVICE/INSTALLABILITY GATES** | PWA assets + physical IME / installed offline / recovery evidence |
+| MCP AI CONTROL | **DESIGN PROPOSAL / DEFERRED** | Không implementation authorization |
+| REAL PILOT / STOP FEATURE BUILD | **NOT APPROVED / NOT STARTED** | NO-GO; remediation + re-audit + authorization riêng trước pilot |
 | V2-C / V2-D / V2-E | **EVIDENCE GATED / NOT AUTHORIZED** | Không mặc định xây; pilot + contract/scope riêng trước implementation |
 
 **G01/G02 closure evidence:** reviewed head `e57cf29c5ed4da550048c7efae1b4e36c9dfda34`; PR #32 merged vào main tại `9c29fa2beea57bd82eb74a4b88c5b79987acefb1`, lúc `2026-10-09T13:09:03Z`. [Merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37934810940): typecheck, lint, full tests và production build PASS. Code và regressions của #32 được giữ nguyên khi tích hợp reset.
@@ -73,7 +80,36 @@
 
 **Issue #42 correctness / main acceptance:** `getVarietyAvailability()` dùng A1 `view: 'all'` và exact `trim + lowercase` key; không duplicate arithmetic. Real Dexie fixture M06 ready15/O18 + M07 ready20/O5 + external999 colliding M07: A1 ready35/O23/available15/commitmentShortage3; OrderNew requested20/available15/requestShortage5; CreateOrderResult và persisted `order_created.availableAtGarden` đều15. Source write validators, external-exclusion policy, schema/stock commands giữ nguyên. Nested A1 r tham gia create rw; batch/reservation read, malformed/overflow projection và required-event failure rollback order/event; explicit retry không duplicate; Undo chỉ sau durable commit, giữ audit history hiện có. Hai Dexie connections xác minh all-BEFORE/all-AFTER, không hybrid. Chạy lại trên merge main 6 files / 191 relevant tests PASS (A1, service, G01/G02, OrderNew/G10, Garden entry). Native Edge + real IndexedDB: 13 checks PASS tại360/390/430/768/1024/1280px và390×420, Garden15 → Ghi đơn20/15/5 → actual OrderDetail/DB event15; back q/view/open, stale/loading/error/retry/rapid variety, focus/keyboard/no overflow, no auto-reserve/stock writes. JSON exact merge SHA, screenshots, harness và logs: `D:/Project-17/artifacts/issue42-closure-2026-10-10/`. Browser là test fixture, không phải real pilot.
 
-**Current authority / handoff:** G01/G02/G10 DONE / CLOSED (#32/#33); V2-A1–A4 DONE / CLOSED (#35/#37/#39/#41); V2-B1/B2 DONE / CLOSED (#44/#46); **V2-B COMPLETE / CLOSED**; **ISSUE #42 FIXED / CLOSED (#48)**. **NEXT — DUY NHẤT: PILOT READINESS AUDIT**. **REAL PILOT = NOT STARTED / NOT YET APPROVED**. FC5/FC6 SUPERSEDED BY V2; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED. Audit phải kiểm tra CI stability, thiết bị thật, physical IME, installed-PWA offline và backup/restore trên thiết bị/số liệu thật; native Web Share/actual Zalo delivery và field validation vẫn NOT VERIFIED. Known QuickUpdateChooser flakiness root cause UNKNOWN / NOT FIXED; CI xanh của #48 không đóng finding này. Closure chỉ sửa PROJECT_STATE và roadmap so với main đã chứa #48; frozen contracts giữ nguyên. Dừng sau closure, không thực hiện audit/pilot, thêm feature, schema hoặc C/D/E. PR #29/#31 OPEN / UNMERGED / NOT ADOPTED. Authority này thay NEXT cũ trong snapshot lịch sử/tài liệu tham khảo/skills.
+### Pilot audit và REM-01 integration closure (10/10/2026)
+
+**PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO.** Audit trên baseline `aacbc0f498c4cf046be126364709583e9004743d`; raw evidence: `D:/Project-17/artifacts/pilot-readiness-2026-10-10/` (`READINESS-AUDIT.md`, `GATE-MATRIX.json`, `FINDINGS.md`, `EVIDENCE-INDEX.md`). Bảng dưới giữ kết quả audit ban đầu; REM-01 đóng riêng finding reset F02, không đổi các gate thành PASS hoặc xóa lịch sử failure.
+
+| Gate | Kết quả audit | Evidence / phần còn lại |
+|---|---|---|
+| R01 — CI stability | **FAIL** | Clean gates 1109/67 PASS; bounded QuickUpdateChooser 7/8 PASS, một lần expected ready10/service20; root UNKNOWN, REM-04 |
+| R02 — Backup export | **FAIL** | Normal exact 9-store export PASS; native concurrent writer tạo hybrid BEFORE/AFTER 3/3, self-validation vẫn PASS; REM-02 |
+| R03 — Restore validation | **FAIL** | 4/15 malformed cases được chấp nhận: source shape, unsafe integer, aggregate overflow; REM-03. Normal round-trip/reopen và native mid-restore rollback PASS; restore engine không bị kết luận non-atomic |
+| R04 — Installed PWA | **NOT VERIFIED** | Desktop production SW/offline/reconnect PASS; Android/iOS install, airplane cold start, offline writes/update chưa xác minh; REM-05 |
+| R05 — Physical IME | **NOT VERIFIED** | Người dùng xác nhận chưa có thiết bị test; browser viewport không thay thế native keyboard; REM-05 |
+| R06 — Synthetic domain rehearsal | **PASS** | Available15/shortage3, own/external Q/F/O, shipment/Undo/frozen snapshot/reopen; không phải real pilot |
+| R07 — Privacy/data-loss | **FAIL** | Share/telemetry/PII-warning checks PASS; audit có F02 reset data loss và F06 recovery copy. F02 nay đóng qua REM-01; gate vẫn cần re-audit, không tự chuyển PASS |
+| R08 — Pilot script preparation | **PASS** | Năm task/metrics đã chuẩn bị; chưa tuyển người dùng, đo performance hoặc gửi Zalo thực tế |
+
+**REM-01 = FIXED / CLOSED:** [PR #50](https://github.com/17thedevv/VuonUomSo/pull/50), reviewed head `3bdaaea6a9d81d1582674b9545df587a8d975e5e`, [exact-head CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38057530603); merged `00500b2d98ac128105ea78dabdb3d9f446f82464` lúc `2026-10-10T14:09:25Z`. [Main merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/38058496384), đúng merge SHA / `main` / `push` / attempt 1: typecheck, lint, **68 files / 1129 tests**, production build PASS. PR đúng 4 file reset/More/regressions, không backup exporter/validator, domain/mutation/schema/dependency/PWA assets hoặc frozen contract changes.
+
+**Main correctness / acceptance:** trực tiếp đọc seed, repositories, validation repository và More trên merge SHA. Demo/pilot/clearBusinessData dùng một Dexie rw qua 9 business stores; factory reset qua 11 stores, nested validation transaction tham gia cùng db/parent. Demo/pilot giữ telemetry; factory xóa telemetry. UI await durable commit, synchronous latch chặn double/cross-reset và báo lỗi/retry đúng; không claim atomicity với sessionStorage/download. Chạy lại **25 tests / 2 files PASS** trên main: native DataCloneError sau clear/mid-seed/events/settings, exact 11-store snapshot rollback gồm dossiers/history/settings/telemetry, second connection/commit, explicit retry, factory failure và UI no false success/navigation/double reset. Native **Edge 155.0.4283.45 + actual IndexedDB**, production HTTPS synthetic workspace trên đúng merge SHA: **13 checks PASS**, demo native clone failure/original facts unchanged/second connection/reload/explicit retry; factory late native abort/clear failure và retry all11-empty/reload; pilot native failure/full snapshot và complete success/reload/telemetry; no false success/nav/page error, buttons usable after failure; no overflow tại360/390/430/768/1024/1280px. Evidence/build/head/harness/logs/screenshots: `D:/Project-17/artifacts/rem-01-closure-2026-10-10/`. Đây là desktop synthetic acceptance; physical device, installed PWA và real pilot **NOT VERIFIED**.
+
+| Remediation | Authority sau REM-01 | Gate tiếp theo |
+|---|---|---|
+| REM-01 — Atomic reset | **FIXED / CLOSED (#50)** | Evidence merge/main CI/correctness/browser ở trên |
+| REM-02 — Coherent backup export | **NEXT REMEDIATION CANDIDATE** | Snapshot all-BEFORE hoặc all-AFTER; design/implementation cần task riêng, **NOT AUTHORIZED** tự động |
+| REM-03 — Strict restore validation | **REQUIRED** | Reject malformed source shape/unsafe integers/aggregate overflow trước clear/write; chưa sửa |
+| REM-04 — QuickUpdateChooser stability | **REQUIRED INVESTIGATION** | Root UNKNOWN / NOT FIXED; không tăng timeout hoặc rerun tới khi xanh để claim closure |
+| REM-05 — PWA assets/device gates | **REQUIRED DEVICE/INSTALLABILITY GATES** | Icon manifest192/512 thực tế1×1; native install impact NOT VERIFIED. Sửa riêng/review riêng, không adopt #31; physical IME/installed offline/file recovery còn thiếu |
+
+**REAL PILOT = NOT APPROVED / NOT STARTED.** Backup recoverability chưa đạt: normal round-trip và atomic restore rollback PASS nhưng coherent export/strict input rejection/native file recovery còn blocker. Chỉ re-audit sau remediation và device evidence mới xem xét authorization pilot riêng. **V2-C/D/E = EVIDENCE GATED / NOT AUTHORIZED; MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED.** Không tự bắt đầu REM-02/03/04/05 hoặc feature build.
+
+**Current authority / handoff:** G01/G02/G10 DONE / CLOSED (#32/#33); **V2-A = DONE / CLOSED** (#35/#37/#39/#41); **V2-B = DONE / CLOSED** (#44/#46); **ISSUE #42 = FIXED / CLOSED** (#48). **PILOT READINESS AUDIT = COMPLETED; PILOT VERDICT = NO-GO**. **REM-01 = FIXED / CLOSED** (#50, evidence tại mục Pilot audit và REM-01 integration closure). **REM-02 = NEXT REMEDIATION CANDIDATE; implementation NOT AUTHORIZED, cần task riêng**; REM-03 REQUIRED; REM-04 REQUIRED INVESTIGATION; REM-05 REQUIRED DEVICE/INSTALLABILITY GATES. **REAL PILOT = NOT APPROVED / NOT STARTED**. FC5/FC6 SUPERSEDED BY V2; V2-C/D/E EVIDENCE GATED / NOT AUTHORIZED; **MCP AI CONTROL = DESIGN PROPOSAL / DEFERRED**. Dừng sau REM-01 closure; không tự triển khai remediation khác, feature, schema, MCP hoặc real pilot. Frozen contracts giữ nguyên. PR #29/#31 OPEN / UNMERGED / NOT ADOPTED. Authority này thay NEXT cũ trong snapshot lịch sử/tài liệu tham khảo/skills.
 
 
 ### Giai đoạn kỹ thuật nền tảng (Foundation Phases):
@@ -97,7 +133,7 @@
 | **FC4** | **External Supply Truthfulness** | **DONE** | FC4-0/FC4-1 CLOSED; PR #24/#25 merged, correction main `f812162`, merge-CI SUCCESS. Final Acceptance trên main 09/10/2026 PASS; H/M, create/edit/cancel/backup đạt |
 | **FC5** | **Fulfillment & Completion Semantics** | **SUPERSEDED BY V2** | FC5-0 contract merge được giữ là lịch sử; FC5-1 preserved/not adopted, không phải prerequisite |
 | **FC6** | **Pilot Hardening & Telemetry** | **SUPERSEDED BY V2** | Không tiếp tục phase cũ; giữ instrumentation đã có cho pilot sau V2-B |
-| **STOP** | **REAL PILOT** | **NOT STARTED / NOT YET APPROVED** | NEXT là PILOT READINESS AUDIT; không chờ FC5/FC6 hoặc C/D/E |
+| **STOP** | **REAL PILOT** | **NOT APPROVED / NOT STARTED** | Audit NO-GO; REM-02 candidate cần task riêng; không chờ FC5/FC6 hoặc C/D/E |
 
 ### Lịch sử FC1–FC3 (08/10/2026)
 
