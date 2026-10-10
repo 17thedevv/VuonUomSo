@@ -63,7 +63,16 @@ export const OrderNewScreen: React.FC = () => {
   const [note, setNote] = useState('')
 
   // Live availability feedback
-  const [availabilityInfo, setAvailabilityInfo] = useState<VarietyAvailabilityInfo | null>(null)
+  const [availabilityRead, setAvailabilityRead] = useState<{
+    variety: string; requestedQuantity: number; info: VarietyAvailabilityInfo | null; failed: boolean
+  } | null>(null)
+  const [availabilityRetry, setAvailabilityRetry] = useState(0)
+  const availabilityQuantity = parsedQuantity ?? 0
+  // Hide a previous input's facts immediately, including before the next effect runs.
+  const currentAvailability = availabilityRead?.variety === variety &&
+    availabilityRead.requestedQuantity === availabilityQuantity ? availabilityRead : null
+  const availabilityInfo = currentAvailability?.info ?? null
+  const availabilityError = currentAvailability?.failed ?? false
 
   // Contact quick-create modal
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
@@ -116,17 +125,20 @@ export const OrderNewScreen: React.FC = () => {
   // Recalculate live availability when variety or quantity changes
   useEffect(() => {
     let ignore = false
+    setAvailabilityRead(null)
     const fetchAvail = async () => {
-      const info = await getVarietyAvailability(variety, parsedQuantity || 0)
-      if (!ignore) {
-        setAvailabilityInfo(info)
+      try {
+        const info = await getVarietyAvailability(variety, availabilityQuantity)
+        if (!ignore) setAvailabilityRead({ variety, requestedQuantity: availabilityQuantity, info, failed: false })
+      } catch {
+        if (!ignore) setAvailabilityRead({ variety, requestedQuantity: availabilityQuantity, info: null, failed: true })
       }
     }
-    fetchAvail()
+    void fetchAvail()
     return () => {
       ignore = true
     }
-  }, [variety, parsedQuantity])
+  }, [variety, availabilityQuantity, availabilityRetry])
 
   // Calculate actual requested date from shortcut
   const getRequestedDateIso = (): string => {
@@ -325,6 +337,13 @@ export const OrderNewScreen: React.FC = () => {
               </div>
 
               {/* Live Informational Availability Feedback Banner */}
+              {availabilityError ? (
+                <div role="alert" className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl">
+                  <p>Chưa đọc được số cây còn bán. Hãy đọc lại trước khi lưu đơn.</p>
+                  <button type="button" className="min-h-12 px-3 font-semibold focus-visible:outline-2 focus-visible:outline-emerald-700"
+                    onClick={() => setAvailabilityRetry(value => value + 1)}>Đọc lại số cây còn bán</button>
+                </div>
+              ) : !availabilityInfo && <p role="status" className="text-slate-600">Đang đọc số cây còn bán…</p>}
               {availabilityInfo && (
                 <div className="text-xs">
                   {availabilityInfo.availableQuantity > 0 ? (
@@ -482,26 +501,26 @@ export const OrderNewScreen: React.FC = () => {
                 <span className="min-w-0 break-words">Tồn hiện tại: {variety}</span>
               </h3>
 
-              <div className="space-y-2">
+              {availabilityInfo ? <div className="space-y-2">
                 <div className="flex justify-between items-center py-1">
                   <span className="text-slate-500">Cây còn bán:</span>
                   <strong className="text-emerald-700 text-base font-black">
-                    {formatQuantity(availabilityInfo?.availableQuantity || 0)} cây
+                    {formatQuantity(availabilityInfo.availableQuantity)} cây
                   </strong>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100">
                   <span className="text-slate-500">Đã giữ cho khách:</span>
                   <span className="font-bold text-amber-800">
-                    {formatQuantity(availabilityInfo?.reservedQuantity || 0)} cây
+                    {formatQuantity(availabilityInfo.reservedQuantity)} cây
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-slate-100">
                   <span className="text-slate-500">Tổng cây đủ chuẩn:</span>
                   <span className="font-bold text-slate-800">
-                    {formatQuantity(availabilityInfo?.readyQuantity || 0)} cây
+                    {formatQuantity(availabilityInfo.readyQuantity)} cây
                   </span>
                 </div>
-              </div>
+              </div> : <p>{availabilityError ? 'Chưa đọc được số cây còn bán.' : 'Đang đọc số cây còn bán…'}</p>}
 
               {/* List of batches containing this variety */}
               <div className="pt-2 border-t border-slate-100 space-y-1.5">
