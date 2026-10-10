@@ -17,6 +17,10 @@ import {
   settingsRepository
 } from './repositories'
 import { validationRepository } from '../validation/validation.repository'
+import { db } from './db'
+
+const businessTables = [db.organizations, db.settings, db.contacts, db.batches,
+  db.orders, db.reservations, db.shipments, db.dossiers, db.events]
 
 export const DEMO_ORGANIZATION: Organization = {
   id: 'org_hong_anh',
@@ -257,7 +261,7 @@ export const DEMO_EVENTS: DomainEvent[] = [
  * Clears only business data tables (organizations, contacts, batches, orders, reservations, shipments, dossiers, events, settings).
  * Preserves validation research telemetry (pilotSessions, validationEvents).
  */
-export async function clearBusinessData(): Promise<void> {
+async function clearBusinessRecords(): Promise<void> {
   await organizationRepository.clear()
   await contactRepository.clear()
   await batchRepository.clear()
@@ -269,42 +273,63 @@ export async function clearBusinessData(): Promise<void> {
   await settingsRepository.clear()
 }
 
+export async function clearBusinessData(): Promise<void> {
+  await db.transaction('rw', businessTables, clearBusinessRecords)
+}
+
+async function verifyResetWorkspace(organization: Organization, mode: 'demo' | 'pilot', expectedCounts: number[]) {
+  const counts = await Promise.all(businessTables.map(table => table.count()))
+  const persistedOrganization = await organizationRepository.getCurrent()
+  if (counts.some((count, index) => count !== expectedCounts[index]) ||
+    persistedOrganization?.id !== organization.id || persistedOrganization.name !== organization.name ||
+    JSON.stringify(persistedOrganization.capabilities) !== JSON.stringify(organization.capabilities) ||
+    await settingsRepository.get('onboarding_completed') !== 'true' ||
+    await settingsRepository.get('app_mode') !== mode) {
+    throw new Error('Dữ liệu sau khi đặt lại không đầy đủ.')
+  }
+}
+
 /**
  * Resets the database and seeds the standard demo dataset.
  * Preserves validation history (pilot sessions and validation telemetry).
  */
 export async function resetDemoData(): Promise<void> {
-  // Clear business data while preserving validation history
-  await clearBusinessData()
+  // Repository calls share db and join this transaction; telemetry is outside its scope.
+  await db.transaction('rw', businessTables, async () => {
+    await clearBusinessRecords()
 
-  // Populate demo data
-  await organizationRepository.save(DEMO_ORGANIZATION)
-  await contactRepository.saveMany(DEMO_CONTACTS)
-  await batchRepository.saveMany(DEMO_BATCHES)
-  await orderRepository.saveMany(DEMO_ORDERS)
-  await reservationRepository.saveMany(DEMO_RESERVATIONS)
-  await shipmentRepository.saveMany(DEMO_SHIPMENTS)
+    // Populate demo data
+    await organizationRepository.save(DEMO_ORGANIZATION)
+    await contactRepository.saveMany(DEMO_CONTACTS)
+    await batchRepository.saveMany(DEMO_BATCHES)
+    await orderRepository.saveMany(DEMO_ORDERS)
+    await reservationRepository.saveMany(DEMO_RESERVATIONS)
+    await shipmentRepository.saveMany(DEMO_SHIPMENTS)
 
-  // Seed events
-  for (const evt of DEMO_EVENTS) {
+    // Seed events
+    for (const evt of DEMO_EVENTS) {
+      await eventRepository.record({
+        type: evt.type,
+        entityType: evt.entityType,
+        entityId: evt.entityId,
+        payload: evt.payload
+      })
+    }
+
+    // Configure settings
+    await settingsRepository.set('onboarding_completed', 'true')
+    await settingsRepository.set('app_mode', 'demo')
+
+    // Record domain event
     await eventRepository.record({
-      type: evt.type,
-      entityType: evt.entityType,
-      entityId: evt.entityId,
-      payload: evt.payload
+      type: 'demo_data_reset',
+      entityType: 'system',
+      entityId: 'demo',
+      payload: { timestamp: new Date().toISOString() }
     })
-  }
-
-  // Configure settings
-  await settingsRepository.set('onboarding_completed', 'true')
-  await settingsRepository.set('app_mode', 'demo')
-
-  // Record domain event
-  await eventRepository.record({
-    type: 'demo_data_reset',
-    entityType: 'system',
-    entityId: 'demo',
-    payload: { timestamp: new Date().toISOString() }
+    await verifyResetWorkspace(DEMO_ORGANIZATION, 'demo', [1, 2, DEMO_CONTACTS.length,
+      DEMO_BATCHES.length, DEMO_ORDERS.length, DEMO_RESERVATIONS.length, DEMO_SHIPMENTS.length,
+      0, DEMO_EVENTS.length + 1])
   })
 }
 
@@ -313,23 +338,26 @@ export async function resetDemoData(): Promise<void> {
  * Preserves validation history.
  */
 export async function resetToPilotWorkspace(orgName = 'Vườn của tôi'): Promise<void> {
-  await clearBusinessData()
+  await db.transaction('rw', businessTables, async () => {
+    await clearBusinessRecords()
 
-  const pilotOrg: Organization = {
-    id: `org_${Date.now()}`,
-    name: orgName,
-    capabilities: ['produce', 'sell']
-  }
+    const pilotOrg: Organization = {
+      id: `org_${Date.now()}`,
+      name: orgName,
+      capabilities: ['produce', 'sell']
+    }
 
-  await organizationRepository.save(pilotOrg)
-  await settingsRepository.set('onboarding_completed', 'true')
-  await settingsRepository.set('app_mode', 'pilot')
+    await organizationRepository.save(pilotOrg)
+    await settingsRepository.set('onboarding_completed', 'true')
+    await settingsRepository.set('app_mode', 'pilot')
 
-  await eventRepository.record({
-    type: 'pilot_workspace_initialized',
-    entityType: 'organization',
-    entityId: pilotOrg.id,
-    payload: { name: orgName }
+    await eventRepository.record({
+      type: 'pilot_workspace_initialized',
+      entityType: 'organization',
+      entityId: pilotOrg.id,
+      payload: { name: orgName }
+    })
+    await verifyResetWorkspace(pilotOrg, 'pilot', [1, 2, 0, 0, 0, 0, 0, 0, 1])
   })
 }
 
@@ -338,6 +366,13 @@ export async function resetToPilotWorkspace(orgName = 'Vườn của tôi'): Pro
  * Factory reset: clears both business data and validation research telemetry.
  */
 export async function clearAllData(): Promise<void> {
-  await clearBusinessData()
-  await validationRepository.clearValidationData()
+  const allTables = [...businessTables, db.pilotSessions, db.validationEvents]
+  await db.transaction('rw', allTables, async () => {
+    await clearBusinessRecords()
+    // The repository's nested transaction joins this same db/parent transaction.
+    await validationRepository.clearValidationData()
+    if ((await Promise.all(allTables.map(table => table.count()))).some(count => count !== 0)) {
+      throw new Error('Không thể xóa đầy đủ dữ liệu.')
+    }
+  })
 }
