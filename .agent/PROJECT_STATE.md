@@ -7,14 +7,14 @@
 
 ## V3-0 authorization addendum — 2026-10-12 (DESIGN ONLY)
 
-**Owner-approved direction:** Vườn Ươm moves toward a cloud-backed PWA using NestJS (Express), PostgreSQL, Prisma, Supabase Auth and tenant-scoped Dexie offline cache/outbox. One person may join many organizations/gardens with independently scoped permissions. Render is for optional test staging, not an architecture constraint.
+**Owner-approved direction:** Vườn Ươm moves toward a cloud-backed PWA using NestJS (Express), PostgreSQL, Prisma, Supabase Auth and tenant-scoped Dexie offline cache/outbox. One person may join many organizations/gardens with independently scoped permissions. Render is for optional test staging, not an architecture constraint. **This is a product roadmap decision, independent of the Cloud Computing mini-project; coursework may present a stable product snapshot but must not drive product requirements, architecture, provider choice, or implementation deadlines.**
 
 **Actual authorization:** start and review **V3-0 architecture documents only**, not executable backend, service provisioning, live migrations, deployment, account creation or collection of real tenant data. The earlier "Production Architecture / Cloud Backend: NOT AUTHORIZED" below continues to mean **implementation is NOT AUTHORIZED**. This addendum does not bypass any pre-existing feature or pilot gate.
 
-- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). **Main push CI #38232017795 was IN PROGRESS when the docs branch was created; inspect outcome separately.**
+- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). **Main push CI #38232017795 completed SUCCESS, attempt 1.**
 - REM-05 PR [#58](https://github.com/17thedevv/VuonUomSo/pull/58) remains DRAFT / UNMERGED; do not conflate local mobile impressions or staging deploy with signed R04/R05 acceptance.
 - **REAL PILOT remains NO-GO / NOT APPROVED / NOT STARTED**. R01–R08 historical records are preserved, re-audit remains pending; V2-C/D/E and MCP AI Control are not silently adopted.
-- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md).
+- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
 - Stop at a docs-only Draft PR and independent review; no automatic implementation or merge.
 
 ## 1. Project Identity
@@ -22,16 +22,32 @@
 - **Tên chính thức**: `Vườn Ươm`
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
-- **Giai đoạn dự án**: `Validation Prototype` (Bản mẫu xác thực hành vi người dùng)
-- **Production Architecture / Cloud Backend**: `NOT AUTHORIZED` (Chưa được phép triển khai)
+- **Giai đoạn dự án**: `V3-0 — Architecture & Product Foundation` (docs/design only)
+- **Production Architecture direction**: `APPROVED FOR V3 DESIGN`
+- **Cloud Backend implementation / live migration / real tenant data**: `NOT YET AUTHORIZED`
 
 ---
 
 ## 2. Roadmap Matrix & Current Phase
 
-### Roadmap hiện hành — V2 reset (09/10/2026)
+### Roadmap hiện hành — V3 transition (12/10/2026)
 
-**Chỉ thị người dùng: FC5 / FC6 SUPERSEDED BY V2.** Đây là quyết định đổi roadmap rõ ràng, thay các NEXT/prerequisite trong snapshot cũ bên dưới. FC0–FC4 vẫn DONE / CLOSED. Base merged khi tạo reset: `0d8d97a7254998ac84c7fedc087724f8ccc44da2`.
+**V3 là roadmap sản phẩm hiện hành ở cấp direction/design.** V3-0 chỉ cho phép kiến trúc/tài liệu và independent review; implementation của V3-1+ cần authorization riêng theo phase. Mini-project môn Cloud là presentation layer và không tạo product requirements.
+
+| V3 phase | Trạng thái | Gate / scope |
+|---|---|---|
+| V3-0 | **NOW / DOCS-DESIGN ONLY** | ADR, tenancy/roles, schema draft, sync, migration, roadmap, product/course boundary; no live services/data |
+| V3-1 | **PENDING AUTHORIZATION** | Identity, auth, org/garden onboarding, membership/invite/revoke |
+| V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
+| V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
+| V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |
+| V3-5 | **PENDING DISCOVERY/AUTHORIZATION** | Reports, notifications, photos, workload and scoped operational expansion |
+
+See [V3 Roadmap](../docs/product/V3-ROADMAP.md) and [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md).
+
+### Historical roadmap — V2 reset (09/10/2026)
+
+**Historical directive: FC5 / FC6 SUPERSEDED BY V2.** This section is retained as audit/history, not as the current NEXT pointer. FC0–FC4 remain DONE / CLOSED. Base merged when V2 reset was created: `0d8d97a7254998ac84c7fedc087724f8ccc44da2`.
 
 - [V2 Roadmap](../docs/product/V2-ROADMAP.md): **V2-0 MERGED / CLOSED** qua [PR #30](https://github.com/17thedevv/VuonUomSo/pull/30), merge `85415ceaaff3b152e53c4a8df5552af3d335e0ee`; [merge CI SUCCESS](https://github.com/17thedevv/VuonUomSo/actions/runs/37935872623). Roadmap đã có hiệu lực trên main; V2-A1–A4 đã merge/nghiệm thu qua #35/#37/#39/#41; V2-B1 đã merge/nghiệm thu qua #44. V2-B2 đã merge/nghiệm thu qua #46; V2-B DONE / CLOSED. Issue #42 đã FIXED / CLOSED qua #48. Pilot readiness audit đã COMPLETED / NO-GO; REM-01 FIXED / CLOSED. REM-02 = FIXED / CLOSED (#52); REM-02 INTEGRATION = RECONCILED ON NEW MAIN; REM-04 = FIXED / CLOSED (#54); REM-03 = FIXED / CLOSED (#56); REM-05 = REQUIRED DEVICE/INSTALLABILITY GATES.
 - [V2-A Functional Contract](../docs/product/V2-A-FUNCTIONAL-CONTRACT.md): frozen legacy grouping + coherent read snapshot + available labels/sum per-batch.
@@ -211,17 +227,23 @@ FC5-0 đã merge; các yêu cầu implementation bên dưới là contract tham 
 
 ## 3. Scope Boundaries & Out-Of-Scope
 
-### Tuyệt đối KHÔNG triển khai trong bất kỳ giai đoạn prototype nào:
-- Real Authentication (Supabase, Firebase, JWT, OAuth, v.v.)
-- Cloud database sync hoặc multi-device realtime trước khi có validation
-- Hệ thống thanh toán / cổng ngân hàng (Payment gateway)
-- Kế toán công nợ phức tạp (Debt / Accounting system)
-- Trí tuệ nhân tạo / AI tư vấn cây giống trong app
-- Sàn thương mại điện tử công cộng (Public Marketplace)
-- Chat nội bộ (giao dịch đã diễn ra trên Zalo/gọi điện)
-- Quản lý nhân sự / chấm công / phân quyền nhân viên
-- Tối ưu hóa định tuyến xe phức tạp (Route optimization engine)
-- Native mobile wrappers (React Native, Capacitor) nếu chưa có yêu cầu trực tiếp
+### V3 scope boundary
+
+Các cấm đoán prototype V2 về auth/cloud **không còn là product-level prohibition**, nhưng chỉ được mở theo phase V3 đã được duyệt:
+
+- **V3-0 hiện tại:** không viết backend executable, không provisioning auth/database, không migration thật, không deploy cloud production, không thu thập real tenant data.
+- **V3-1+ chỉ được làm khi có authorization riêng:** authentication, organization/garden membership và cloud persistence không được tự động suy ra từ việc V3 direction đã được chốt.
+- **Academic boundary:** yêu cầu mini-project môn Cloud không được mở phase, thêm feature, chọn provider hoặc ép deadline implementation. Demo dùng stable snapshot của sản phẩm.
+
+Vẫn deferred/out-of-scope nếu chưa có product decision riêng:
+- Hệ thống thanh toán / cổng ngân hàng.
+- Kế toán công nợ phức tạp hoặc tự suy luận debt/payment.
+- AI/MCP automation hoặc AI tư vấn cây giống.
+- Public marketplace.
+- Chat nội bộ.
+- Chấm công/HR suite; **garden membership và authorization roles của V3 không bị coi là HR feature**.
+- Route optimization engine.
+- Native mobile wrappers nếu chưa có requirement trực tiếp.
 
 ---
 
