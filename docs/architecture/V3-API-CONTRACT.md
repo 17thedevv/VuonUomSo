@@ -2,7 +2,7 @@
 
 **Status: DESIGN FROZEN FOR IMPLEMENTATION HANDOFF. Runtime implementation/deployment still requires the corresponding V3 phase to be explicitly authorized in PROJECT_STATE.**
 
-This document is the canonical narrative frontend/backend API design for Vườn Ươm V3. The machine-readable design contract is [`docs/api/v3.openapi.json`](../api/v3.openapi.json). They must stay semantically aligned so 17thedev and Tráng A Thư can implement separate server/client slices without inventing incompatible DTOs.
+This document is the canonical narrative frontend/backend API design for Vườn Ươm V3. The machine-readable design contract is [`docs/api/v3.openapi.json`](../api/v3.openapi.json). They must stay semantically aligned so implementation slices can be completed sequentially without inventing incompatible DTOs.
 
 Read with:
 
@@ -317,7 +317,7 @@ Example:
 {
   "id": "uuid",
   "email": "athu@example.com",
-  "displayName": "A Thư",
+  "displayName": "Người dùng",
   "version": 2,
   "organizations": [
     {
@@ -345,7 +345,7 @@ Request:
 
 ```json
 {
-  "displayName": "A Thư",
+  "displayName": "Người dùng",
   "expectedVersion": 1
 }
 ```
@@ -1147,40 +1147,28 @@ Pinned toolchain and package boundaries are in [V3-IMPLEMENTATION-FOUNDATION.md]
 
 ---
 
-# 16. Frontend/backend ownership handoff
+# 16. Solo frontend/backend implementation discipline
 
-## 17thedev — server-side primary
+Project is developed by **17thedev alone**.
 
-Before backend implementation:
+Before implementing a server/client slice:
 
-- freeze endpoint/action DTO with reviewer;
-- implement auth verification + server membership authorization;
-- implement domain transaction;
-- expose exact OpenAPI;
-- provide canonical error/fixture examples.
+- freeze the affected endpoint/action DTO;
+- update narrative API + machine OpenAPI together when the contract changes;
+- implement the dependency-producing slice first;
+- merge it before starting a dependent slice that consumes the changed contract;
+- preserve token/re-auth, stable error-code, idempotency, pending/committed and domain semantics exactly as defined here.
 
-## Tráng A Thư — client-side primary
-
-Before client integration:
-
-- consume only frozen contract;
-- implement token attachment/re-auth;
-- map stable error codes to UX;
-- preserve idempotency key on retry;
-- keep local pending vs server committed distinct;
-- do not compensate for missing server fields by inventing alternate domain math.
-
-## Shared zone
-
-Both must review changes to:
+High-conflict files must be changed sequentially:
 
 - this API contract;
 - OpenAPI spec/generated types;
-- auth context;
-- error taxonomy;
+- auth context and permission/error taxonomy;
 - quantity representation;
 - sync command envelope;
 - root env/config needed by both packages.
+
+Do not keep parallel branches that redefine the same contract differently.
 
 ---
 
