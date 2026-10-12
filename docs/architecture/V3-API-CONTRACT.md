@@ -283,11 +283,31 @@ Rules:
 
 These endpoints are **design-frozen for V3-1 handoff**, but V3-1 runtime implementation still requires explicit phase authorization.
 
-## 7.1 Current user
+## 7.1 Current user bootstrap/profile
+
+### POST `/v3/me/bootstrap`
+
+Idempotently ensures an `AppUser` row exists for the verified Supabase `sub`.
+
+- no tenant membership is invented;
+- repeated calls for the same subject return the same canonical user;
+- this is the only automatic identity-provisioning endpoint;
+- `GET /me` remains side-effect free.
+
+Response `200`:
+
+```json
+{
+  "id": "uuid",
+  "displayName": null,
+  "authSubject": "verified-subject",
+  "version": 1
+}
+```
 
 ### GET `/v3/me`
 
-Returns server profile mapped from authenticated subject.
+Read-only current profile plus caller-visible memberships.
 
 Example:
 
@@ -296,21 +316,44 @@ Example:
   "id": "uuid",
   "displayName": "A Thư",
   "authSubject": "verified-subject",
+  "version": 2,
   "organizations": [
     {
       "organizationId": "uuid",
-      "role": "MEMBER"
+      "role": "MEMBER",
+      "version": 1
     }
   ],
   "gardens": [
     {
       "organizationId": "uuid",
       "gardenId": "uuid",
-      "role": "WORKER"
+      "role": "WORKER",
+      "version": 1
     }
   ]
 }
 ```
+
+### PATCH `/v3/me`
+
+Updates self-owned profile fields only.
+
+Request:
+
+```json
+{
+  "displayName": "A Thư",
+  "expectedVersion": 1
+}
+```
+
+Rules:
+
+- `displayName` is trimmed Unicode text; final length validation is 1–120 when non-null;
+- profile update never changes organization/garden role;
+- stale expectedVersion → `409 VERSION_CONFLICT`;
+- successful update increments AppUser.version.
 
 Do not return credential/session secrets.
 
