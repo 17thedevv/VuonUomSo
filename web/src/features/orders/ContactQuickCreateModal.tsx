@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { Contact } from '../../domain/contact'
 import { validatePhone } from '../../domain/phone'
-import { createContact } from '../../services/contactService'
+import { createContact, MAX_CONTACT_NAME_LENGTH } from '../../services/contactService'
 import { X, UserPlus, AlertCircle, Phone, Check } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 
@@ -39,6 +39,10 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
     const trimmedName = name.trim()
     if (!trimmedName) {
       setError(isSupplier ? 'Vui lòng nhập tên nhà vườn.' : 'Vui lòng nhập tên khách hàng.')
+      return
+    }
+    if (trimmedName.length > MAX_CONTACT_NAME_LENGTH) {
+      setError('Tên liên hệ không được vượt quá 100 ký tự.')
       return
     }
 

@@ -91,24 +91,18 @@ export function arePhonesEqual(
   phone1: string | undefined | null,
   phone2: string | undefined | null
 ): boolean {
-  if (!phone1?.trim() || !phone2?.trim()) return false
+  const p1 = phone1?.trim()
+  const p2 = phone2?.trim()
+  if (!p1 || !p2) return false
 
-  const norm1 = normalizePhone(phone1)
-  const norm2 = normalizePhone(phone2)
+  const norm1 = normalizePhone(p1)
+  const norm2 = normalizePhone(p2)
 
   if (norm1 && norm2) {
     return norm1 === norm2
   }
 
-  // Graceful fallback for comparing with legacy un-normalized data in DB
-  const rawDigits1 = phone1.replace(/\D/g, '')
-  const rawDigits2 = phone2.replace(/\D/g, '')
-  if (rawDigits1 && rawDigits2) {
-    // Normalize 84 prefix if present
-    const d1 = rawDigits1.startsWith('84') ? '0' + rawDigits1.slice(2) : rawDigits1
-    const d2 = rawDigits2.startsWith('84') ? '0' + rawDigits2.slice(2) : rawDigits2
-    return d1 === d2
-  }
-
-  return false
+  // If one or both are not valid phone formats, do NOT strip arbitrary characters.
+  // Only exact trimmed equality matches, preventing invalid numbers (e.g. "0912abc" and "0912") from false-matching.
+  return p1 === p2
 }

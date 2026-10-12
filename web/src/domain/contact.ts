@@ -1,3 +1,5 @@
+export const MAX_CONTACT_NAME_LENGTH = 100
+
 export type ContactRole =
   | 'customer'
   | 'supplier'

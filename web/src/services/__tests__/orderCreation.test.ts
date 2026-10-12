@@ -5,6 +5,7 @@ import { clearAllData, resetDemoData } from '../../data/seed'
 import { createOrder, updateOrder, type CreateOrderInput } from '../orderService'
 import { undoService } from '../undoService'
 import type { DomainEvent } from '../../analytics/events'
+import { MAX_UNIT_PRICE } from '../../domain/price'
 
 const input: CreateOrderInput = {
   customerId: 'contact_hung', variety: 'Keo lai BV16', requestedQuantity: 30000
@@ -168,14 +169,14 @@ describe('G01/G02 create-order correctness (real Dexie)', () => {
     }
   )
 
-  it.each([undefined, 0, 1, 35000, Number.MAX_SAFE_INTEGER])('preserves valid optional price %s', async unitPrice => {
+  it.each([undefined, 0, 1, 35000, MAX_UNIT_PRICE])('preserves valid optional price %s', async unitPrice => {
     const result = await createOrder({ ...input, unitPrice })
     expect(result.success).toBe(true)
     expect((await db.orders.get(result.order!.id))?.unitPrice).toBe(unitPrice)
     expect((await updateOrder({ orderId: result.order!.id, unitPrice })).success).toBe(true)
   })
 
-  it.each([-1, 1.1, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1])(
+  it.each([-1, 1.1, NaN, Infinity, -Infinity, MAX_UNIT_PRICE + 1, Number.MAX_SAFE_INTEGER])(
     'rejects price %s before writes or Undo', async unitPrice => {
       const before = await snapshot()
       expect(await createOrder({ ...input, unitPrice })).toMatchObject({ success: false })

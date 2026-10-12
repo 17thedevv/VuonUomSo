@@ -87,4 +87,15 @@ describe('Quick contact customer/supplier roles (real Dexie)', () => {
     expect(success).not.toHaveBeenCalled()
     expect(await db.contacts.count()).toBe(0)
   })
+
+  it('rejects contact name exceeding 100 characters in UI form', async () => {
+    const success = setup('customer')
+    const longName = 'A'.repeat(101)
+    fireEvent.change(screen.getByLabelText(/Tên khách hàng/), { target: { value: longName } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu khách' }))
+
+    await screen.findByText('Tên liên hệ không được vượt quá 100 ký tự.')
+    expect(success).not.toHaveBeenCalled()
+    expect(await db.contacts.count()).toBe(0)
+  })
 })

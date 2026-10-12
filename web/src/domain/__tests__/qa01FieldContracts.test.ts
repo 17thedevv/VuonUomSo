@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { normalizePhone, validatePhone, arePhonesEqual } from '../phone'
 import { parseUnitPrice, MAX_UNIT_PRICE } from '../price'
 import { parseQuantity } from '../quantity'
-import { isValidCalendarDate, parseDateToIso } from '../date'
+import { isValidCalendarDate, parseDateToIso, isValidRequestedDate, MIN_SUPPORTED_YEAR, MAX_SUPPORTED_YEAR } from '../date'
+import { MAX_CONTACT_NAME_LENGTH } from '../contact'
 
 describe('QA-01B: Pure Unit Tests — Field Contracts', () => {
   describe('Phone Contract & Normalization', () => {
@@ -97,6 +98,14 @@ describe('QA-01B: Pure Unit Tests — Field Contracts', () => {
       expect(arePhonesEqual('0912345678', '0987654321')).toBe(false)
       expect(arePhonesEqual('', '0912345678')).toBe(false)
       expect(arePhonesEqual('', '')).toBe(false)
+    })
+
+    it('does not falsely match invalid phone strings by stripping letters (strict comparison)', () => {
+      expect(arePhonesEqual('0912abc', '0912')).toBe(false)
+      expect(arePhonesEqual('0912345678abc', '0912345678')).toBe(false)
+      expect(arePhonesEqual('0912345678', '0912345678')).toBe(true)
+      expect(arePhonesEqual('invalid', 'invalid')).toBe(true)
+      expect(arePhonesEqual('invalid1', 'invalid2')).toBe(false)
     })
   })
 
@@ -221,6 +230,37 @@ describe('QA-01B: Pure Unit Tests — Field Contracts', () => {
       expect(parseDateToIso(undefined)).toBeNull()
       expect(parseDateToIso(null)).toBeNull()
       expect(parseDateToIso('not-a-date')).toBeNull()
+    })
+
+    it('enforces supported calendar era bounds (1970 - 2099)', () => {
+      expect(MIN_SUPPORTED_YEAR).toBe(1970)
+      expect(MAX_SUPPORTED_YEAR).toBe(2099)
+      expect(isValidCalendarDate('1970-01-01')).toBe(true)
+      expect(isValidCalendarDate('2099-12-31')).toBe(true)
+      expect(isValidCalendarDate('1969-12-31')).toBe(false)
+      expect(isValidCalendarDate('2100-01-01')).toBe(false)
+      expect(isValidCalendarDate('0000-01-01')).toBe(false)
+      expect(isValidCalendarDate('0026-10-12')).toBe(false)
+      expect(isValidCalendarDate('0099-12-31')).toBe(false)
+    })
+
+    it('strictly validates requested dates (YYYY-MM-DD or exact ISO timestamp)', () => {
+      expect(isValidRequestedDate('2026-10-12')).toBe(true)
+      expect(isValidRequestedDate('2026-10-12T00:00:00.000Z')).toBe(true)
+      expect(isValidRequestedDate('2026-10-12T14:30:00Z')).toBe(true)
+      expect(isValidRequestedDate('2026-10-12abc')).toBe(false)
+      expect(isValidRequestedDate('2026-10-12 10:00:00')).toBe(false)
+      expect(isValidRequestedDate('0026-10-12')).toBe(false)
+      expect(isValidRequestedDate('2026-02-31')).toBe(false)
+      expect(isValidRequestedDate('')).toBe(false)
+      expect(isValidRequestedDate(undefined)).toBe(false)
+      expect(isValidRequestedDate(null)).toBe(false)
+    })
+  })
+
+  describe('Contact Contract (Name & Boundaries)', () => {
+    it('defines maximum contact name length of 100 characters', () => {
+      expect(MAX_CONTACT_NAME_LENGTH).toBe(100)
     })
   })
 })

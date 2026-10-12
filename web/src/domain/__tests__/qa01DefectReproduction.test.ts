@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { parseQuantity } from '../quantity'
-import { parseUnitPrice } from '../price'
-import { isValidCalendarDate, parseDateToIso } from '../date'
+import { parseUnitPrice, MAX_UNIT_PRICE } from '../price'
+import { isValidCalendarDate, parseDateToIso, isValidRequestedDate } from '../date'
+import { arePhonesEqual } from '../phone'
+import { MAX_CONTACT_NAME_LENGTH } from '../contact'
 import { DexieContactRepository } from '../../data/repositories/contact.repository'
 import { VuonUomDatabase } from '../../data/db'
 import 'fake-indexeddb/auto'
@@ -81,6 +83,46 @@ describe('QA-01 Defect Reproduction & Proof of Fix', () => {
 
       // Contract-driven parseDateToIso safely returns null without throwing
       expect(parseDateToIso('')).toBeNull()
+    })
+  })
+
+  describe('Defect 5: Naive replace(/\\D/g, "") in phone equality falsely matched "0912abc" with "0912"', () => {
+    it('verifies arePhonesEqual does not strip letters and falsely match', () => {
+      const naiveStripEqual = (a: string, b: string) => a.replace(/\D/g, '') === b.replace(/\D/g, '')
+
+      // Naive implementation falsely considers "0912abc" and "0912" equal
+      expect(naiveStripEqual('0912abc', '0912')).toBe(true)
+
+      // Strict arePhonesEqual rejects false match
+      expect(arePhonesEqual('0912abc', '0912')).toBe(false)
+    })
+  })
+
+  describe('Defect 6: Slicing date prefix .slice(0, 10) silently accepts trailing malformed characters', () => {
+    it('verifies isValidRequestedDate strictly rejects dates with trailing characters like "2026-10-12abc"', () => {
+      const naiveSlice = (str: string) => str.slice(0, 10)
+
+      // Naive slice truncates "2026-10-12abc" to "2026-10-12"
+      expect(naiveSlice('2026-10-12abc')).toBe('2026-10-12')
+
+      // Strict isValidRequestedDate rejects trailing garbage
+      expect(isValidRequestedDate('2026-10-12abc')).toBe(false)
+      expect(isValidRequestedDate('2026-10-12')).toBe(true)
+      expect(isValidRequestedDate('2026-10-12T00:00:00.000Z')).toBe(true)
+    })
+  })
+
+  describe('Defect 7: Unbounded price without cap allows unrealistic billions per seedling', () => {
+    it('verifies MAX_UNIT_PRICE cap of 1,000,000,000 VNĐ is enforced', () => {
+      expect(MAX_UNIT_PRICE).toBe(1_000_000_000)
+      expect(parseUnitPrice(1_000_000_000).valid).toBe(true)
+      expect(parseUnitPrice(1_000_000_001).valid).toBe(false)
+    })
+  })
+
+  describe('Defect 8: Unbounded contact name allows arbitrary long strings', () => {
+    it('verifies MAX_CONTACT_NAME_LENGTH is set to 100 characters', () => {
+      expect(MAX_CONTACT_NAME_LENGTH).toBe(100)
     })
   })
 })

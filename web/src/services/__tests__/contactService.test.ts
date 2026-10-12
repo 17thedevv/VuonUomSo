@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '../../data/db'
-import { createContact } from '../contactService'
+import { createContact, MAX_CONTACT_NAME_LENGTH } from '../contactService'
 import { contactRepository, eventRepository } from '../../data/repositories'
 import { clearAllData } from '../../data/seed'
 
@@ -135,5 +135,24 @@ describe('contactService', () => {
     expect(second.success).toBe(false)
     expect(second.duplicateWarning).toBe(true)
     expect(second.existingContact?.name).toBe('Bác Ba')
+  })
+
+  it('enforces contact name length limit (<= 100 characters) and fails closed', async () => {
+    const valid100Name = 'A'.repeat(MAX_CONTACT_NAME_LENGTH)
+    const resValid = await createContact({ name: valid100Name })
+    expect(resValid.success).toBe(true)
+    expect(resValid.contact?.name).toBe(valid100Name)
+
+    const invalid101Name = 'B'.repeat(MAX_CONTACT_NAME_LENGTH + 1)
+    const contactsBefore = await db.contacts.count()
+    const eventsBefore = await db.events.count()
+
+    const resInvalid = await createContact({ name: invalid101Name })
+    expect(resInvalid.success).toBe(false)
+    expect(resInvalid.error).toContain('không được vượt quá 100 ký tự')
+
+    // Assert fail-closed: zero extra writes
+    expect(await db.contacts.count()).toBe(contactsBefore)
+    expect(await db.events.count()).toBe(eventsBefore)
   })
 })

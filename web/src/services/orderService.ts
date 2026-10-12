@@ -5,7 +5,8 @@ import {
   eventRepository
 } from '../data/repositories'
 import { formatQuantity } from '../domain/quantity'
-import { isValidCalendarDate } from '../domain/date'
+import { MAX_UNIT_PRICE } from '../domain/price'
+import { isValidRequestedDate } from '../domain/date'
 import { getGardenAvailability } from './gardenQueryService'
 import { undoService } from './undoService'
 import { db } from '../data/db'
@@ -91,13 +92,12 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
     return { success: false, error: 'Số lượng cây đặt phải lớn hơn 0 và là số nguyên an toàn hợp lệ.' }
   }
 
-  if (input.unitPrice !== undefined && (!Number.isSafeInteger(input.unitPrice) || input.unitPrice < 0)) {
-    return { success: false, error: 'Giá mỗi cây phải là số nguyên không âm hợp lệ.' }
+  if (input.unitPrice !== undefined && (!Number.isSafeInteger(input.unitPrice) || input.unitPrice < 0 || input.unitPrice > MAX_UNIT_PRICE)) {
+    return { success: false, error: `Giá mỗi cây phải là số nguyên không âm và không vượt quá ${MAX_UNIT_PRICE.toLocaleString('vi-VN')} đ.` }
   }
 
   if (input.requestedDate !== undefined && input.requestedDate.trim() !== '') {
-    const datePart = input.requestedDate.trim().slice(0, 10)
-    if (!isValidCalendarDate(datePart)) {
+    if (!isValidRequestedDate(input.requestedDate)) {
       return { success: false, error: 'Ngày hẹn lấy không hợp lệ theo lịch.' }
     }
   }
