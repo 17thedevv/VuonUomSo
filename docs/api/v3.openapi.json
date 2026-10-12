@@ -1645,7 +1645,6 @@
         "type": "object",
         "required": [
           "id",
-          "authSubject",
           "organizations",
           "gardens",
           "version"
@@ -1660,9 +1659,6 @@
               "string",
               "null"
             ]
-          },
-          "authSubject": {
-            "type": "string"
           },
           "organizations": {
             "type": "array",
@@ -2128,7 +2124,7 @@
         ],
         "properties": {
           "directoryVersion": {
-            "$ref": "#/components/schemas/QuantityString"
+            "$ref": "#/components/schemas/BigIntString"
           },
           "items": {
             "type": "array",
@@ -2689,7 +2685,7 @@
         ],
         "properties": {
           "revision": {
-            "$ref": "#/components/schemas/QuantityString"
+            "$ref": "#/components/schemas/BigIntString"
           },
           "ordinal": {
             "type": "integer",
@@ -2739,7 +2735,7 @@
             "type": "boolean"
           },
           "organizationContactDirectoryVersion": {
-            "$ref": "#/components/schemas/QuantityString"
+            "$ref": "#/components/schemas/BigIntString"
           }
         }
       },
@@ -2810,7 +2806,7 @@
             }
           },
           "organizationContactDirectoryVersion": {
-            "$ref": "#/components/schemas/QuantityString"
+            "$ref": "#/components/schemas/BigIntString"
           }
         }
       },
@@ -2882,7 +2878,6 @@
         "type": "object",
         "required": [
           "id",
-          "authSubject",
           "displayName",
           "version"
         ],
@@ -2897,9 +2892,6 @@
               "null"
             ],
             "maxLength": 120
-          },
-          "authSubject": {
-            "type": "string"
           },
           "version": {
             "$ref": "#/components/schemas/Version"
@@ -2926,6 +2918,13 @@
             "$ref": "#/components/schemas/Version"
           }
         }
+      },
+      "BigIntString": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$",
+        "examples": [
+          "42"
+        ]
       }
     }
   }
