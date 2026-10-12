@@ -1,5 +1,8 @@
 import type { VuonUomBackupV1 } from './backup.types'
 import { BACKUP_FORMAT, BACKUP_FORMAT_VERSION } from './backup.types'
+import { safeSum } from '../../domain/reconciliation'
+import { coveredQuantityForReservation, remainingReservationQuantity } from '../../domain/reservation'
+import { availableQuantityForBatch, commitmentShortageForBatch } from '../../domain/quantity'
 
 export interface ValidationResult {
   valid: boolean
@@ -15,11 +18,11 @@ function isNonEmptyString(val: unknown): val is string {
 }
 
 function isPositiveInteger(val: unknown): boolean {
-  return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val > 0
+  return typeof val === 'number' && Number.isSafeInteger(val) && val > 0
 }
 
 function isNonNegativeInteger(val: unknown): boolean {
-  return typeof val === 'number' && Number.isFinite(val) && Number.isInteger(val) && val >= 0
+  return typeof val === 'number' && Number.isSafeInteger(val) && val >= 0
 }
 
 // Whitelisted enum values according to domain models
@@ -65,24 +68,51 @@ const KNOWN_ORG_CAPABILITIES = new Set([
  *    order reservation coverage <= requestedQuantity, one planned shipment per order,
  *    planned line allocation <= reservation remaining, shipment fulfillment reconciliation).
  */
-export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
+export function validateBackup(input: unknown): ValidationResult {
+  // The public API also receives runtime values outside JSON (e.g. Symbols or
+  // objects without toString). Conversion/comparison must still fail closed.
+  try {
+    return validateBackupFacts(input)
+  } catch {
+    return { valid: false, errors: ['Cấu trúc bản sao lưu không hợp lệ.'] }
+  }
+}
+
+function validateBackupFacts(input: unknown): ValidationResult {
   const errors: string[] = []
+  if (!isRecord(input)) return { valid: false, errors: ['Bản sao lưu phải là một đối tượng.'] }
 
   // 1. Envelope validation
-  if (backup.format !== BACKUP_FORMAT) {
-    errors.push(`Định dạng bản sao không hợp lệ (nhận được: ${String(backup.format)}).`)
+  if (input.format !== BACKUP_FORMAT) {
+    errors.push('Định dạng bản sao không hợp lệ.')
     return { valid: false, errors }
   }
 
-  if (backup.formatVersion > BACKUP_FORMAT_VERSION) {
+  if (typeof input.formatVersion === 'number' && input.formatVersion > BACKUP_FORMAT_VERSION) {
     errors.push('Bản sao này được tạo bởi phiên bản Vườn Ươm mới hơn. Hãy cập nhật ứng dụng trước khi khôi phục.')
     return { valid: false, errors }
   }
 
-  if (!backup.data || !isRecord(backup.data)) {
+  if (input.formatVersion !== BACKUP_FORMAT_VERSION || !isNonEmptyString(input.exportedAt) ||
+    !isPositiveInteger(input.dbSchemaVersion)) {
+    return { valid: false, errors: ['Phiên bản hoặc thời điểm xuất bản sao lưu không hợp lệ.'] }
+  }
+  if (!isRecord(input.data)) {
     errors.push('Mục dữ liệu "data" trong bản sao không hợp lệ.')
     return { valid: false, errors }
   }
+
+  const tableNames = ['organizations', 'settings', 'contacts', 'batches', 'orders',
+    'reservations', 'shipments', 'dossiers', 'events'] as const
+  for (const table of tableNames) {
+    if (!Array.isArray(input.data[table])) errors.push(`Bảng "${table}" phải là một danh sách (mảng).`)
+  }
+  if (errors.length) return { valid: false, errors }
+  if (!isRecord(input.recordCounts)) {
+    return { valid: false, errors: ['Số lượng bản ghi (recordCounts) phải là một đối tượng.'] }
+  }
+  // The following entity guards validate the records before cross-entity reads.
+  const backup = input as unknown as VuonUomBackupV1
 
   const {
     organizations = [],
@@ -140,7 +170,39 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     if (settingKeys.has(s.key)) {
       errors.push(`Trùng lặp khóa cài đặt "${s.key}".`)
     }
+    if (typeof s.value !== 'string') errors.push(`Cài đặt "${s.key}": Giá trị phải là chuỗi ký tự.`)
     settingKeys.add(s.key)
+  }
+
+  // Reject malformed containers/entries before any filter, arithmetic or nested
+  // dereference. Missing historical lines/documents are still allowed.
+  for (const s of shipments) {
+    if (!isRecord(s)) continue
+    for (const field of ['createdAt', 'shippedAt', 'plannedDate'] as const) {
+      if (s[field] !== undefined && !isNonEmptyString(s[field])) {
+        errors.push(`Chuyến giao "${s.id}": ${field} phải là chuỗi ký tự không trống.`)
+      }
+    }
+    if (s.lines !== undefined && !Array.isArray(s.lines)) {
+      errors.push(`Chuyến giao "${s.id}": Dòng phân bổ (lines) phải là mảng.`)
+    } else if (s.lines?.some(line => !isRecord(line))) {
+      errors.push(`Chuyến giao "${s.id}": Dòng phân bổ không phải đối tượng hợp lệ.`)
+    }
+  }
+  if (errors.length) return { valid: false, errors }
+
+  for (const table of tableNames) {
+    if (!isNonNegativeInteger(input.recordCounts[table]) ||
+      input.recordCounts[table] !== (input.data[table] as unknown[]).length) {
+      errors.push(`Số lượng bản ghi "${table}" không hợp lệ hoặc không khớp dữ liệu.`)
+    }
+  }
+  if (errors.length) return { valid: false, errors }
+
+  const checkedSum = (values: number[], context: string): number | undefined => {
+    const total = safeSum(values)
+    if (total === undefined) errors.push(`${context}: Tổng số lượng vượt giới hạn số nguyên an toàn hoặc chứa số lượng không hợp lệ.`)
+    return total
   }
 
   // Check currentOrganizationId in settings
@@ -152,7 +214,7 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
   )
   const currentOrgSetting = settings.find((s) => isRecord(s) && s.key === 'currentOrganizationId')
   if (currentOrgSetting && isRecord(currentOrgSetting)) {
-    const orgIdVal = String(currentOrgSetting.value)
+    const orgIdVal = currentOrgSetting.value as string
     if (!orgMap.has(orgIdVal)) {
       errors.push(`Cài đặt cơ sở hiện tại (currentOrganizationId: "${orgIdVal}") trỏ đến cơ sở không tồn tại trong danh sách.`)
     }
@@ -302,7 +364,7 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     if (!isPositiveInteger(r.quantity)) {
       errors.push(`Bản ghi giữ cây "${r.id}": Số lượng giữ phải là số nguyên lớn hơn 0.`)
     }
-    const fulfilled = r.fulfilledQuantity ?? 0
+    const fulfilled = r.fulfilledQuantity === undefined ? 0 : r.fulfilledQuantity
     if (!isNonNegativeInteger(fulfilled)) {
       errors.push(`Bản ghi giữ cây "${r.id}": Số lượng đã giao phải là số nguyên không âm.`)
     }
@@ -327,13 +389,19 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
 
     if (r.sourceType === 'own_batch') {
-      if (!r.batchId) {
+      if (r.supplierId !== undefined) {
+        errors.push(`Bản ghi giữ cây "${r.id}": Nguồn lô nội bộ không được có supplierId.`)
+      }
+      if (!isNonEmptyString(r.batchId)) {
         errors.push(`Bản ghi giữ cây "${r.id}": Giữ từ lô nội bộ thiếu mã lô cây.`)
       } else if (!batchMap.has(r.batchId as string)) {
         errors.push(`Bản ghi giữ cây "${r.id}": Lô cây "${r.batchId}" không tồn tại.`)
       }
     } else if (r.sourceType === 'external_supplier') {
-      if (!r.supplierId) {
+      if (r.batchId !== undefined) {
+        errors.push(`Bản ghi giữ cây "${r.id}": Nguồn liên kết không được có batchId.`)
+      }
+      if (!isNonEmptyString(r.supplierId)) {
         errors.push(`Bản ghi giữ cây "${r.id}": Giữ từ vườn liên kết thiếu mã nhà cung cấp.`)
       } else {
         const sup = contactMap.get(r.supplierId as string)
@@ -346,21 +414,17 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
   }
 
+  // Safe operands and canonical statuses are established before coverage or
+  // Garden arithmetic. No coercion or repair of an explicit malformed F.
+  if (errors.length) return { valid: false, errors }
+
   // 8. Order reservation coverage check (P3 over-reservation prevention)
   for (const o of orders) {
     if (!isRecord(o)) continue
     const orderReservations = reservations.filter((r) => r.orderId === o.id)
-    const coveredQuantity = orderReservations.reduce((sum, r) => {
-      if (r.status === 'active' || r.status === 'fulfilled') {
-        return sum + (Number(r.quantity) || 0)
-      }
-      if (r.status === 'released') {
-        return sum + (Number(r.fulfilledQuantity) || 0)
-      }
-      return sum
-    }, 0)
+    const coveredQuantity = checkedSum(orderReservations.map(coveredQuantityForReservation), `Đơn hàng "${o.id}": Coverage`)
 
-    if (coveredQuantity > o.requestedQuantity) {
+    if (coveredQuantity !== undefined && coveredQuantity > o.requestedQuantity) {
       errors.push(
         `Đơn hàng "${o.id}": Tổng số lượng giữ (${coveredQuantity}) vượt quá số lượng khách đặt (${o.requestedQuantity}).`
       )
@@ -426,6 +490,10 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
       if (res.sourceType === 'own_batch' && line.batchId !== res.batchId) {
         errors.push(`Chuyến giao "${s.id}": Mã lô cây của dòng không khớp với bản ghi giữ cây.`)
       }
+      if ((line.sourceType === 'own_batch' && line.supplierId !== undefined) ||
+        (line.sourceType === 'external_supplier' && line.batchId !== undefined)) {
+        errors.push(`Chuyến giao "${s.id}": Dòng phân bổ không được chứa identity của nguồn khác.`)
+      }
       if (res.sourceType === 'external_supplier' && line.supplierId !== res.supplierId) {
         errors.push(`Chuyến giao "${s.id}": Nhà cung cấp của dòng không khớp với bản ghi giữ cây.`)
       }
@@ -447,8 +515,8 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     }
 
     if (lines.length > 0) {
-      const sumLines = lines.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0)
-      if (sumLines !== s.plannedQuantity) {
+      const sumLines = checkedSum(lines.map(l => l.quantity), `Chuyến giao "${s.id}": Dòng phân bổ`)
+      if (sumLines !== undefined && sumLines !== s.plannedQuantity) {
         errors.push(
           `Chuyến giao "${s.id}": Tổng số lượng các dòng (${sumLines}) không khớp với số lượng dự kiến (${s.plannedQuantity}).`
         )
@@ -479,9 +547,10 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
     if (s.status === 'planned') {
       const targetOrder = orderMap.get(s.orderId as string)
       if (targetOrder) {
-        const completedShippedForOrder = shipments
+        const completedShippedForOrder = checkedSum(shipments
           .filter((other) => other.orderId === s.orderId && other.status === 'completed')
-          .reduce((sum, other) => sum + other.shippedQuantity, 0)
+          .map(other => other.shippedQuantity), `Đơn hàng "${s.orderId}": Đã xuất`)
+        if (completedShippedForOrder === undefined) continue
         const remainingOrder = targetOrder.requestedQuantity - completedShippedForOrder
         if (s.plannedQuantity > remainingOrder) {
           errors.push(
@@ -495,7 +564,7 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
   // 10. Cross-entity: Completed Shipment Lines vs Reservation Fulfillment Reconciliation
   for (const r of reservations) {
     if (!isRecord(r)) continue
-    let completedAllocatedToRes = 0
+    const completedQuantities: number[] = []
     let hasCompletedLines = false
 
     for (const s of shipments) {
@@ -503,12 +572,14 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
         for (const line of s.lines) {
           if (line.reservationId === r.id) {
             hasCompletedLines = true
-            completedAllocatedToRes += Number(line.quantity) || 0
+            completedQuantities.push(line.quantity)
           }
         }
       }
     }
 
+    const completedAllocatedToRes = checkedSum(completedQuantities, `Bản ghi giữ cây "${r.id}": Đã xuất`)
+    if (completedAllocatedToRes === undefined) continue
     const resFulfilled = r.fulfilledQuantity ?? 0
     if (completedAllocatedToRes > resFulfilled) {
       errors.push(
@@ -582,15 +653,32 @@ export function validateBackup(backup: VuonUomBackupV1): ValidationResult {
 
   // FC0/FC3: outstanding > readyQuantity is legitimate commitment shortage.
   // Preserve it unchanged; reservation, stock and shipment integrity remain validated.
+  // Validate the same Garden aggregates using existing domain authorities,
+  // deriving per batch before summing. External sources never enter own totals.
+  const ownReservations = reservations.filter(r => r.sourceType === 'own_batch')
+  const available: number[] = [], shortages: number[] = [], outstanding: number[] = []
+  for (const b of batches) {
+    const related = ownReservations.filter(r => r.batchId === b.id)
+    const total = checkedSum(related.map(remainingReservationQuantity), `Lô "${b.id}": Còn giữ`)
+    if (total === undefined) continue
+    outstanding.push(total)
+    available.push(availableQuantityForBatch(b, related))
+    shortages.push(commitmentShortageForBatch(b, related))
+  }
+  checkedSum(batches.map(b => b.currentQuantity), 'Vườn: Cây còn sống')
+  checkedSum(batches.map(b => b.readyQuantity), 'Vườn: Cây đủ bán')
+  checkedSum(outstanding, 'Vườn: Còn giữ')
+  checkedSum(available, 'Vườn: Còn bán')
+  checkedSum(shortages, 'Vườn: Thiếu cây đã giữ')
 
   // 13. Order total completed shipped <= requestedQuantity
   for (const o of orders) {
     if (!isRecord(o)) continue
-    const totalShipped = shipments
+    const totalShipped = checkedSum(shipments
       .filter((s) => s.orderId === o.id && s.status === 'completed')
-      .reduce((sum, s) => sum + s.shippedQuantity, 0)
+      .map(s => s.shippedQuantity), `Đơn hàng "${o.id}": Tổng đã xuất`)
 
-    if (totalShipped > o.requestedQuantity) {
+    if (totalShipped !== undefined && totalShipped > o.requestedQuantity) {
       errors.push(
         `Đơn hàng "${o.id}": Tổng số cây đã xuất giao (${totalShipped}) vượt quá số cây khách đặt (${o.requestedQuantity}).`
       )
