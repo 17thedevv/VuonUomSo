@@ -1,6 +1,6 @@
 # V3-0 — REST / OpenAPI Contract
 
-**Status: DESIGN FROZEN FOR IMPLEMENTATION HANDOFF. Runtime implementation/deployment still requires the corresponding V3 phase to be explicitly authorized in PROJECT_STATE.**
+**Status: DESIGN FROZEN / IMPLEMENTATION-READY. Runtime implementation/deployment still requires the corresponding V3 phase to be explicitly authorized in PROJECT_STATE.**
 
 This document is the canonical narrative frontend/backend API design for Vườn Ươm V3. The machine-readable design contract is [`docs/api/v3.openapi.json`](../api/v3.openapi.json). They must stay semantically aligned so implementation slices can be completed sequentially without inventing incompatible DTOs.
 
