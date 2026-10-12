@@ -262,7 +262,7 @@ Executable checked-in spec:
 docs/api/v3.openapi.json
 ```
 
-Server generates deterministic OpenAPI from Nest decorators/DTO metadata.
+This file already exists as the reviewed V3-0 design seed. The first server foundation PR must make Nest decorators/DTO metadata generate a semantically equivalent deterministic document; from then on generated output is checked for drift.
 
 Required scripts once server exists:
 
@@ -273,7 +273,7 @@ npm run openapi:check
 
 `openapi:check` regenerates to a temporary file and fails if checked-in spec differs.
 
-Frontend generated types:
+Frontend generated types after V3-1 bootstrap:
 
 ```text
 web/src/api/generated/v3.d.ts
