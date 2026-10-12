@@ -74,7 +74,7 @@ Normal API uses JSON. Legacy import upload is frozen as authenticated `multipart
 
 ### 3.1 Supabase Auth responsibility
 
-Signup, login, logout, refresh, email verification and password recovery are handled by Supabase Auth client flows.
+Signup, login, logout, refresh, email verification and password recovery are handled by Supabase Auth client flows. The V3 email/password configuration keeps **Confirm Email enabled** before a new signup can obtain a sign-in session.
 
 They are **not duplicated as NestJS password endpoints**.
 
@@ -400,7 +400,7 @@ Authenticated body:
 { "token": "opaque" }
 ```
 
-Authenticated verified email must match invite target.
+Authenticated non-anonymous JWT email must match the invite target. Do not require or trust a non-standard/editable `email_verified` metadata field; the confirmation guarantee comes from the Supabase Confirm Email project policy.
 
 ### POST `/v3/invitations/accept`
 
