@@ -56,7 +56,9 @@ Version snapshot for implementation bootstrap:
 | Tool/package | Frozen initial version |
 |---|---:|
 | Node.js | `22.22.2` |
+| `@types/node` | `22.20.5` |
 | TypeScript | `6.0.2` |
+| `@nestjs/cli` | `12.0.8` |
 | `@nestjs/core` | `12.1.2` |
 | `@nestjs/common` | `12.1.2` |
 | `@nestjs/platform-express` | `12.1.2` |
@@ -76,8 +78,30 @@ Version snapshot for implementation bootstrap:
 | `reflect-metadata` | `0.2.2` |
 | `rxjs` | `7.8.2` |
 | `supertest` | `7.3.1` |
+| `@types/supertest` | `7.2.1` |
+| `vitest` | `5.0.3` |
+| `oxlint` | `1.81.0` |
+| `tsx` | `4.23.15` |
 | `openapi-typescript` | `7.13.0` |
 | `@supabase/supabase-js` | `2.117.3` |
+
+Server test/lint baseline is also frozen: **Vitest + Supertest + Oxlint**, matching the repository's current fast-test/lint direction rather than introducing Jest/ESLint only for the backend.
+
+Initial server scripts:
+
+```json
+{
+  "dev": "nest start --watch",
+  "build": "nest build",
+  "typecheck": "tsc --noEmit -p tsconfig.json",
+  "lint": "oxlint src test scripts prisma.config.ts",
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "prisma:validate": "prisma validate",
+  "openapi:generate": "tsx scripts/generate-openapi.ts",
+  "openapi:check": "tsx scripts/check-openapi.ts"
+}
+```
 
 Pin exact versions in the first backend/bootstrap PR. Prisma 7 requires a database driver adapter for direct PostgreSQL connections, so `@prisma/adapter-pg` + `pg` are mandatory, not optional. `dotenv` is required by the frozen `prisma.config.ts` pattern. Upgrade separately after baseline CI is green.
 
