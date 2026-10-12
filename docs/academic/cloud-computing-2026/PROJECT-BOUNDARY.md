@@ -58,7 +58,7 @@ The report can be produced from real product evidence:
 |---|---|
 | 1. Problem | nursery operations, batches, availability, reservations, orders, fulfillment/shipment |
 | 2. Selected cloud service | actual approved services used by the snapshot; explain why they fit the workload |
-| 3. Team assignment | real workstreams: frontend, backend/domain, cloud/deployment, QA/docs |
+| 3. Work allocation | **Solo project:** 17thedev is the only member and is responsible for frontend, backend/domain, cloud/deployment, QA and documentation; report the work by workstream rather than inventing a team split. |
 | 4. Plan | relevant V3 phases/milestones, without pretending the course owns the roadmap |
 | 5. Deployment steps | exact deployment procedure for the pinned snapshot, with screenshots |
 | 6. Result | actual product UI/features and deployed behavior |
