@@ -2,7 +2,7 @@
 
 **Status: DESIGN FROZEN. This document makes V3-1/V3-2 code-ready, but does not itself authorize runtime implementation.**
 
-Purpose: remove tooling/repository/config ambiguity before 17thedev and Tráng A Thư split into backend/frontend branches.
+Purpose: remove tooling/repository/config ambiguity before 17thedev implements V3 through small sequential backend/frontend slices.
 
 ---
 
@@ -806,56 +806,29 @@ Frontend CI also checks generated OpenAPI types are up to date after contract ge
 
 ---
 
-# 23. First implementation split for two developers
+# 23. First implementation sequence for solo development
 
-Once V3-1 is explicitly authorized:
-
-## 17thedev — branch A
-
-Suggested first slice:
+Once V3-1 is explicitly authorized, 17thedev implements sequential slices:
 
 ```text
-feat/v3-1-server-foundation
+V3-1A server foundation
+→ V3-1B auth client foundation
+→ V3-1C tenancy/device server
+→ V3-1D tenant onboarding client
+→ V3-1E membership/invitation server + client
+→ final integration acceptance
 ```
 
-Own:
+Rules:
 
-- server bootstrap;
-- env validation;
-- request ID/error envelope;
-- JWT/JWKS verification;
-- Prisma baseline;
-- AppUser/Organization/Garden membership read path;
-- generated OpenAPI.
+- create one short branch per slice;
+- merge each dependency-producing slice before the dependent slice starts;
+- do not keep separate long-lived backend/frontend branches that both change the API contract;
+- shared contract files, generated API types, env examples and auth/error taxonomy are updated in the slice that owns the contract change;
+- Prisma/schema/runtime changes remain isolated from unrelated frontend work;
+- every slice passes its own exact-head gate before merge.
 
-## Tráng A Thư — branch B
-
-Suggested first slice:
-
-```text
-feat/v3-1-auth-client
-```
-
-Own:
-
-- Supabase client bootstrap;
-- login/signup/logout/recovery screens;
-- token attachment API client;
-- generated API types consumption;
-- auth error/re-auth UX;
-- clientInstallationId creation.
-
-### Shared contract files
-
-Only coordinate/review changes to:
-
-- `docs/architecture/V3-API-CONTRACT.md`;
-- `docs/api/v3.openapi.json`;
-- generated API type workflow;
-- env example files;
-- auth/permission error taxonomy.
-
-Do not have both branches independently change the same contract shape.
+Canonical detailed task order is in [V3-1 Solo Implementation Plan](../development/V3-1-SOLO-IMPLEMENTATION-PLAN.md).
 
 ---
 
