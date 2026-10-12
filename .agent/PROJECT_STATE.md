@@ -5,6 +5,18 @@
 
 ---
 
+## V3-0 authorization addendum — 2026-10-12 (DESIGN ONLY)
+
+**Owner-approved direction:** Vườn Ươm moves toward a cloud-backed PWA using NestJS (Express), PostgreSQL, Prisma, Supabase Auth and tenant-scoped Dexie offline cache/outbox. One person may join many organizations/gardens with independently scoped permissions. Render is for optional test staging, not an architecture constraint.
+
+**Actual authorization:** start and review **V3-0 architecture documents only**, not executable backend, service provisioning, live migrations, deployment, account creation or collection of real tenant data. The earlier "Production Architecture / Cloud Backend: NOT AUTHORIZED" below continues to mean **implementation is NOT AUTHORIZED**. This addendum does not bypass any pre-existing feature or pilot gate.
+
+- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). **Main push CI #38232017795 was IN PROGRESS when the docs branch was created; inspect outcome separately.**
+- REM-05 PR [#58](https://github.com/17thedevv/VuonUomSo/pull/58) remains DRAFT / UNMERGED; do not conflate local mobile impressions or staging deploy with signed R04/R05 acceptance.
+- **REAL PILOT remains NO-GO / NOT APPROVED / NOT STARTED**. R01–R08 historical records are preserved, re-audit remains pending; V2-C/D/E and MCP AI Control are not silently adopted.
+- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md).
+- Stop at a docs-only Draft PR and independent review; no automatic implementation or merge.
+
 ## 1. Project Identity
 
 - **Tên chính thức**: `Vườn Ươm`
