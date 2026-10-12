@@ -263,12 +263,12 @@ Implement:
 - invite form;
 - role choices limited by server permissions;
 - copy/share invitation URL;
-- `/invite?token=...` flow;
+- `/invite?token=...` bootstrap that immediately scrubs the raw token from browser URL/history into in-memory state;
 - login-before-preview/accept;
 - expired/revoked/mismatch UX;
 - role update/revoke UI.
 
-Do not log raw invite token to analytics.
+Do not log or persist raw invite token to analytics, IndexedDB or localStorage.
 
 ---
 
