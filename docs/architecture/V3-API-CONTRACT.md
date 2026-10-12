@@ -292,6 +292,7 @@ Idempotently ensures an `AppUser` row exists for the verified Supabase `sub`.
 - no tenant membership is invented;
 - repeated calls for the same subject return the same canonical user;
 - normalized lowercase email is refreshed from the authenticated JWT when it changes;
+- same subject + same normalized email is a no-op; an actual email change increments AppUser.version;
 - this is the only automatic identity-provisioning endpoint;
 - `GET /me` remains side-effect free.
 
@@ -431,7 +432,7 @@ Garden OWNER/MANAGER only. Each row returns userId, normalized email, displayNam
 
 ### GET `/v3/gardens/{gardenId}/invitations`
 
-Garden OWNER/MANAGER only. Lists safe invitation metadata for PENDING/expired/revoked/accepted records according to retention policy; **never returns raw token/shareUrl**.
+Garden OWNER/MANAGER only. Lists **currently PENDING and non-expired** invitation metadata needed for member-management UI; **never returns raw token/shareUrl**. Historical accepted/revoked/expired records remain audit data but are not part of this initial UI list.
 
 ### POST `/v3/gardens/{gardenId}/invitations`
 
