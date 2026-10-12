@@ -4,7 +4,7 @@
 
 ## Architecture target
 
-React + TypeScript Vite PWA; NestJS modular monolith + Express; PostgreSQL + Prisma; Supabase Auth. Dexie IndexedDB is a **tenant-scoped offline cache and durable pending outbox** after explicit cutover. Render is optional for synthetic staging, never the hosting constraint. References: ADR-003, V3 schema draft, sync and migration docs.
+React + TypeScript Vite PWA; NestJS modular monolith + Express; PostgreSQL + Prisma; Supabase Auth. Dexie IndexedDB is a **tenant-scoped offline cache and durable pending outbox** after explicit cutover. Render is optional for synthetic staging, never the hosting constraint. References: ADR-003, V3 schema draft, REST/OpenAPI contract, sync and migration docs.
 
 ## Product roadmap vs academic presentation
 
@@ -21,7 +21,7 @@ V3 is the roadmap of the **real Vườn Ươm product**. The Cloud Computing min
 
 | Phase | Features | Entry / exit / authorization |
 |---|---|---|
-| V3-0 (NOW, docs only) | ADR, tenancy/roles, relational schema draft, sync protocol, safe migration design, feature inventory, staged rollout and product/course boundary | Draft docs-only PR; independent architectural/security review; no package changes, services, live data or new DB |
+| V3-0 (NOW, docs only) | ADR, tenancy/roles, relational schema draft, REST/OpenAPI contract, sync protocol, safe migration design, V3-aware agent skills, feature inventory, staged rollout and product/course boundary | Draft docs-only PR; independent architectural/security review; no package changes, services, live data or new DB |
 | V3-1 (PENDING) | Login/signup, email verification/recovery, user profile, organization onboarding, garden membership invites and revocation | Explicit auth/privacy/role contract and sandbox credentials; anonymous and denied tenant tests |
 | V3-2 (PENDING) | Server CRUD + immutable audit for garden, batches, contacts, orders, reservation, shipment, dossier; backup staging/import & explicit cutover | Exact test parity with current domain; atomic transactions; reconciliation; read-only migration preview and server restore drill |
 | V3-3 (PENDING) | Multi-device online sync, offline cache/outbox, re-auth, conflict/duplicate handling, data versioning, retries | Two-device native concurrency; idempotency; no overselling; revoke/switch tenant/failed sync evidence |
@@ -30,7 +30,7 @@ V3 is the roadmap of the **real Vườn Ươm product**. The Cloud Computing min
 
 ## Priority feature inventory (proposal only)
 
-- **P0 foundation:** identity, tenant/org/garden switch, permission matrix, audit, backups, migrations, offline correctness and REST/OpenAPI contract.
+- **P0 foundation:** identity, tenant/org/garden switch, permission matrix, audit, backups, migrations, offline correctness, contract-first REST/OpenAPI and shared frontend/backend DTO/error/idempotency rules.
 - **P1 high-value:** member invitation, garden assignment, tutorial checklist, explicit pending/offline banner, conflict inbox and device sync status, secure share/export.
 - **P2 discovery candidates:** crop photographs, task reminders, notifications, dashboards, richer filtering, printable reports, Zalo-friendly sharing.
 - **DEFER:** AI automation, MCP control, payment/debt inference, autonomous stock decisions, cross-garden pooled reservations, platform superuser impersonation without auditable reason.
