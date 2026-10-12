@@ -22,8 +22,8 @@ Status: **DESIGN ONLY / NOT APPROVED FOR DEPLOYMENT**. All quantities and reserv
 - Protocol/schema versions are explicit; no unknown action execution; canonical IDs returned by server, not inferred from client timestamps.
 - Idempotency receipt uniqueness: (gardenId, idempotencyKey). Same key + identical canonical payload hash returns the original durable response, even on retries or server restarts. Reuse with different payload is 409 and **never executes**. Do not rely on UUID randomness alone as validation.
 - Atomically commit mutation + version increments + immutable DomainEvent + ChangeLog + AppliedMutation receipt. After commit, re-pull canonical server state; the client may not infer success from a timeout.
-- API examples: POST /v3/gardens/{gardenId}/commands; GET /v3/gardens/{gardenId}/changes?cursor=opaque; GET /v3/gardens/{gardenId}/snapshot. Pagination and cursor continuity are required.
-- Response has status APPLIED, CONFLICT, VALIDATION_REJECTED or FORBIDDEN; error codes are stable, no cross-tenant metadata leaks. A 401 pauses the outbox until explicit reauthentication.
+- Canonical route/DTO/error definitions live in [V3-API-CONTRACT.md](./V3-API-CONTRACT.md): POST /v3/gardens/{gardenId}/commands; GET /v3/gardens/{gardenId}/changes?cursor=opaque; GET /v3/gardens/{gardenId}/snapshot. Pagination and cursor continuity are required.
+- Command responses use APPLIED, CONFLICT, VALIDATION_REJECTED or FORBIDDEN with the HTTP/error mapping defined by the API contract; error codes are stable and cannot leak cross-tenant metadata. A 401 pauses the outbox until explicit reauthentication.
 
 ## Client durable state
 
