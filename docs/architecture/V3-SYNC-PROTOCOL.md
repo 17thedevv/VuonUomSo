@@ -208,11 +208,12 @@ Example:
     }
   ],
   "nextCursor": "opaque",
-  "hasMore": false
+  "hasMore": false,
+  "organizationContactDirectoryVersion": "42"
 }
 ```
 
-Client applies a complete page atomically in IndexedDB.
+Client applies a complete page atomically in IndexedDB. Every changefeed response also returns the current organization `contactDirectoryVersion`; if it differs from the locally committed contact-cache version, schedule a version-bound contact snapshot refresh.
 
 ---
 
@@ -267,6 +268,7 @@ Example:
   "gardenId": "uuid",
   "cursor": "opaque",
   "generatedAt": "2026-10-12T12:00:00.000Z",
+  "organizationContactDirectoryVersion": "42",
   "data": {
     "garden": {},
     "batches": [],
@@ -278,7 +280,7 @@ Example:
 }
 ```
 
-Organization contacts are not duplicated here.
+Organization contacts are not duplicated here. The snapshot exposes only the current `organizationContactDirectoryVersion`, letting the client decide whether its separate organization contact cache must be refreshed.
 
 ---
 
@@ -290,7 +292,7 @@ Contacts are organization-scoped and have:
 Organization.contactDirectoryVersion
 ```
 
-Contact create/update increments version atomically.
+Contact create/update increments version atomically. Garden changefeed and garden snapshot responses expose the current organization directory version as a lightweight invalidation signal; they do not embed contact rows.
 
 Client downloads:
 
