@@ -6,11 +6,22 @@
 
 React + TypeScript Vite PWA; NestJS modular monolith + Express; PostgreSQL + Prisma; Supabase Auth. Dexie IndexedDB is a **tenant-scoped offline cache and durable pending outbox** after explicit cutover. Render is optional for synthetic staging, never the hosting constraint. References: ADR-003, V3 schema draft, sync and migration docs.
 
+## Product roadmap vs academic presentation
+
+V3 is the roadmap of the **real Vườn Ươm product**. The Cloud Computing mini-project may document and demo one stable version of the product, but it does not create a parallel product roadmap.
+
+- Product requirements and architecture are chosen for real user/domain needs.
+- Coursework must not force a feature, provider, migration, deadline or architecture that the product would not otherwise need.
+- At report/demo time, pin a stable commit/tag as the **course snapshot**; `main` continues normal product development.
+- If `main` is mid-slice, demo the nearest stable snapshot instead of rushing unfinished work.
+- Course-specific report/deployment/demo material lives under [docs/academic/cloud-computing-2026/](../academic/cloud-computing-2026/PROJECT-BOUNDARY.md) and is presentation-only authority.
+- High-level planning is mirrored in [Notion — V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1); GitHub docs and `.agent/PROJECT_STATE.md` remain implementation/review authority.
+
 ## Delivery slices and entry/exit gates
 
 | Phase | Features | Entry / exit / authorization |
 |---|---|---|
-| V3-0 (NOW, docs only) | ADR, tenancy/roles, relational schema draft, sync protocol, safe migration design, feature inventory and staged rollout | Draft docs-only PR; independent architectural/security review; no package changes, services, live data or new DB |
+| V3-0 (NOW, docs only) | ADR, tenancy/roles, relational schema draft, sync protocol, safe migration design, feature inventory, staged rollout and product/course boundary | Draft docs-only PR; independent architectural/security review; no package changes, services, live data or new DB |
 | V3-1 (PENDING) | Login/signup, email verification/recovery, user profile, organization onboarding, garden membership invites and revocation | Explicit auth/privacy/role contract and sandbox credentials; anonymous and denied tenant tests |
 | V3-2 (PENDING) | Server CRUD + immutable audit for garden, batches, contacts, orders, reservation, shipment, dossier; backup staging/import & explicit cutover | Exact test parity with current domain; atomic transactions; reconciliation; read-only migration preview and server restore drill |
 | V3-3 (PENDING) | Multi-device online sync, offline cache/outbox, re-auth, conflict/duplicate handling, data versioning, retries | Two-device native concurrency; idempotency; no overselling; revoke/switch tenant/failed sync evidence |
@@ -30,4 +41,4 @@ Every feature requires (a) field contracts/validation, (b) per-tenant authorizat
 
 ## Baseline and historical status
 
-QA-01 PR #59 merged as 09c98f70f8358c3c78baa039c10edd67403de532; its main push CI is a separate gate. REM-05 PR #58 remains OPEN/DRAFT/UNMERGED at V3-0 branch creation. Preserve STOP FEATURE BUILD and NO-GO for the original real pilot until historical audit is explicitly reconsidered; the new V3 product-development approval is **not** pilot authorization.
+QA-01 PR #59 merged as 09c98f70f8358c3c78baa039c10edd67403de532; main push CI #38232017795 completed **SUCCESS** on attempt 1. Draft PR #60 initial V3-0 head CI #38232994935 also completed **SUCCESS**; any later documentation head must pass its own CI before merge. REM-05 PR #58 remains OPEN/DRAFT/UNMERGED from the V3-0 baseline. Preserve NO-GO for the original real pilot until its gates are explicitly reconsidered; the V3 product-development direction is **not** pilot authorization.
