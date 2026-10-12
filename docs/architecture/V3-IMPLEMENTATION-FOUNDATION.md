@@ -66,6 +66,10 @@ Version snapshot for implementation bootstrap:
 | `@nestjs/throttler` | `6.7.1` |
 | `prisma` | `7.10.0` |
 | `@prisma/client` | `7.10.0` |
+| `@prisma/adapter-pg` | `7.10.0` |
+| `pg` | `8.23.1` |
+| `@types/pg` | `8.23.1` |
+| `dotenv` | `18.0.7` |
 | `jose` | `6.2.12` |
 | `class-validator` | `0.15.1` |
 | `class-transformer` | `0.5.1` |
@@ -75,7 +79,7 @@ Version snapshot for implementation bootstrap:
 | `openapi-typescript` | `7.13.0` |
 | `@supabase/supabase-js` | `2.117.3` |
 
-Pin exact versions in the first backend/bootstrap PR. Upgrade separately after baseline CI is green.
+Pin exact versions in the first backend/bootstrap PR. Prisma 7 requires a database driver adapter for direct PostgreSQL connections, so `@prisma/adapter-pg` + `pg` are mandatory, not optional. `dotenv` is required by the frozen `prisma.config.ts` pattern. Upgrade separately after baseline CI is green.
 
 Do **not** start on Prisma 8 release candidates for V3 bootstrap.
 
@@ -151,6 +155,8 @@ Required validation:
 - subject.
 
 JWKS fetched from configured Supabase JWKS endpoint and cached by library/runtime behavior.
+
+Supabase Auth project configuration must keep **Confirm Email enabled** for the V3 email/password flow. Standard Supabase access-token claims include `email` but do not guarantee a separate `email_verified` claim; backend invitation acceptance therefore matches the authenticated non-anonymous JWT email to the invite and relies on the project-level Confirm Email policy rather than trusting `user_metadata.email_verified`.
 
 No Supabase service-role key is required for normal API authentication.
 
@@ -355,6 +361,18 @@ Avoid cross-module repository imports that bypass application services.
 # 10. Prisma policy
 
 Initial implementation must:
+
+Prisma Client runtime construction uses the mandatory PostgreSQL driver adapter:
+
+```ts
+import { PrismaPg } from "@prisma/adapter-pg"
+import { PrismaClient } from "./generated/prisma/client"
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
+export const prisma = new PrismaClient({ adapter })
+```
+
+Then:
 
 1. move reviewed schema from `docs/architecture/drafts/v3-schema.prisma` into `server/prisma/schema.prisma`;
 2. keep Prisma 7 generator `prisma-client` with output `../src/generated/prisma`;
