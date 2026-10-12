@@ -268,6 +268,51 @@
             "$ref": "#/components/responses/NotFound"
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSummary"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
       }
     },
     "/v3/organizations/{organizationId}/gardens": {
@@ -561,6 +606,38 @@
           },
           "422": {
             "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "listGardenInvitations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe invitation metadata; no raw token/share URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -1340,6 +1417,40 @@
           }
         }
       }
+    },
+    "/v3/organizations/{organizationId}/members": {
+      "get": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "listOrganizationMembers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationMemberDetail"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1645,6 +1756,7 @@
         "type": "object",
         "required": [
           "id",
+          "email",
           "organizations",
           "gardens",
           "version"
@@ -1674,6 +1786,10 @@
           },
           "version": {
             "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           }
         }
       },
@@ -1740,7 +1856,8 @@
         "required": [
           "id",
           "name",
-          "role"
+          "role",
+          "version"
         ],
         "properties": {
           "id": {
@@ -1756,6 +1873,9 @@
               "ADMIN",
               "MEMBER"
             ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
           }
         }
       },
@@ -1851,6 +1971,7 @@
         "type": "object",
         "required": [
           "userId",
+          "email",
           "displayName",
           "role",
           "version"
@@ -1876,6 +1997,10 @@
           },
           "version": {
             "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           }
         }
       },
@@ -2878,6 +3003,7 @@
         "type": "object",
         "required": [
           "id",
+          "email",
           "displayName",
           "version"
         ],
@@ -2895,6 +3021,10 @@
           },
           "version": {
             "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           }
         }
       },
@@ -2925,6 +3055,61 @@
         "examples": [
           "42"
         ]
+      },
+      "UpdateOrganizationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "expectedVersion"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "OrganizationMemberDetail": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "MEMBER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
       }
     }
   }
