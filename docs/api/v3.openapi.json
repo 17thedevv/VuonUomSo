@@ -2658,7 +2658,8 @@
         "required": [
           "changes",
           "nextCursor",
-          "hasMore"
+          "hasMore",
+          "organizationContactDirectoryVersion"
         ],
         "properties": {
           "changes": {
@@ -2672,6 +2673,9 @@
           },
           "hasMore": {
             "type": "boolean"
+          },
+          "organizationContactDirectoryVersion": {
+            "$ref": "#/components/schemas/QuantityString"
           }
         }
       },
@@ -2681,7 +2685,8 @@
           "gardenId",
           "cursor",
           "generatedAt",
-          "data"
+          "data",
+          "organizationContactDirectoryVersion"
         ],
         "properties": {
           "gardenId": {
@@ -2739,6 +2744,9 @@
                 }
               }
             }
+          },
+          "organizationContactDirectoryVersion": {
+            "$ref": "#/components/schemas/QuantityString"
           }
         }
       },
