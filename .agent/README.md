@@ -1,63 +1,73 @@
 # Vườn Ươm — Agent Skill System
 
-Thư mục `.agent/` chứa toàn bộ hệ thống kỹ năng chuẩn hóa (Agent Skills), quy tắc nghiệp vụ (Domain Rules), hướng dẫn kiến trúc và ranh giới sản phẩm dành cho các AI Coding/Review/Design Agents làm việc trong dự án **Vườn Ươm**.
+Thư mục `.agent/` là hệ điều hành cho AI Coding/Review/Design Agents của Vườn Ươm.
 
----
+## 1. Cách nạp skill
 
-## 1. Hệ thống Skill là gì?
+1. Đọc [PROJECT_STATE.md](./PROJECT_STATE.md).
+2. Tra [router.md](./router.md).
+3. Đọc skill tương ứng.
+4. Đọc ADR/contract được skill trỏ tới.
+5. Chỉ thực hiện scope đã được phase hiện tại cho phép.
 
-Skill system là một tập hợp các tài liệu vận hành được cấu trúc theo chuẩn của Google Antigravity. Hệ thống biến kiến thức cốt lõi của dự án thành các tài liệu kỹ thuật có thể hành động được, giúp mọi agent:
-- Không bị trôi lệch yêu cầu (prompt drift);
-- Không tự ý phát minh tính năng ngoài phase;
-- Không vi phạm các bất biến tồn kho cây giống lâm nghiệp;
-- Giữ vững nguyên lý thiết kế: *Đơn giản, thực dụng như Zalo*.
+`PROJECT_STATE.md` là authority cho **trạng thái phase**, không hardcode NEXT task trong từng skill.
 
----
-
-## 2. Cách Agents nạp và sử dụng Skills
-
-1. **Bước 1 — Xác định Phase hiện tại**:
-   Đọc [.agent/PROJECT_STATE.md](./PROJECT_STATE.md) để biết giai đoạn phát triển hiện hành và các giới hạn được phép làm.
-2. **Bước 2 — Tra cứu Skill cần dùng**:
-   Đọc [.agent/router.md](./router.md) để map loại task với skill phù hợp.
-3. **Bước 3 — Đọc nội dung Skill tương ứng**:
-   Đọc file `SKILL.md` của skill cần dùng (ví dụ: `.agent/skills/domain-rules/SKILL.md`).
-4. **Bước 4 — Tuân thủ Checklist & Báo cáo kết quả**:
-   Thực hiện các bước theo quy trình của `implementation` hoặc `review-audit`.
-
----
-
-## 3. Cấu trúc thư mục
+## 2. Skill catalog
 
 ```text
 .agent/
-├── README.md               # Tài liệu tổng quan hệ thống skill (file này)
-├── PROJECT_STATE.md        # Single Source of Truth cho Phase hiện tại & Roadmap
-├── router.md               # Bảng tra cứu điều hướng: Task -> Skill
+├── README.md
+├── PROJECT_STATE.md
+├── router.md
 └── skills/
-    ├── product-context/    # Bản chất sản phẩm, người dùng mục tiêu, ranh giới scope
-    ├── ux-design/          # Thiết kế mobile 360-430px, thuật ngữ lâm nghiệp, UX vạn
-    ├── domain-rules/       # Bất biến tồn kho, công thức physical vs ready vs available
-    ├── architecture/       # Ranh giới phân tầng UI -> Domain -> Repository -> Dexie
-    ├── implementation/     # Quy trình 5 bước code tính năng, kỷ luật nghiệm thu
-    ├── testing/            # Thứ tự ưu tiên test, policy bắt buộc cho regression
-    ├── github-workflow/    # Quy tắc Git/GitHub, branching, atomic commits, merge safety, CI
-    ├── validation/         # Thang đo bằng chứng thực tế, quy tắc STOP-BUILD sau P6
-    └── review-audit/       # Quy trình 5 bước review/audit code, mô hình lỗi BLOCKER/HIGH
+    ├── product-context/
+    ├── ux-design/
+    ├── domain-rules/
+    ├── architecture/
+    ├── api-contract/
+    ├── implementation/
+    ├── testing/
+    ├── github-workflow/
+    ├── validation/
+    └── review-audit/
 ```
 
----
+### product-context
+Bản chất sản phẩm, người dùng, V3 roadmap và scope discipline.
 
-## 4. Cập nhật Phase hiện tại ở đâu?
+### ux-design
+Mobile-first 360–430px, một tay, tiếng Việt lâm nghiệp, quantity UX.
 
-Khi dự án hoàn thành một milestone và sẵn sàng chuyển phase:
-- **CHỈ CẬP NHẬT TẠI MỘT NƠI DUY NHẤT**: [.agent/PROJECT_STATE.md](./PROJECT_STATE.md).
-- Không hardcode trạng thái phase rải rác trong các file skill để tránh mâu thuẫn dữ liệu.
+### domain-rules
+Bất biến Batch/Availability/Order/Reservation/Fulfillment/Shipment.
 
----
+### architecture
+Cloud-backed/offline-first V3; frontend/server/database/auth/tenancy boundaries.
 
-## 5. Khi nào thêm Skill mới?
+### api-contract
+REST/OpenAPI contract giữa frontend và backend: auth, tenant scope, DTO, pagination, errors, versions, idempotency, sync.
 
-Chỉ thêm skill mới khi:
-- Xuất hiện một quy trình nghiệp vụ hoàn toàn mới chưa được bao quát bởi 8 skills hiện tại (ví dụ: sau này có thể thêm skill `export-dossier` ở P5 hoặc `pilot-telemetry` ở P6).
-- **KHÔNG THÊM SKILL** chỉ để ghi chép tài liệu lý thuyết chung chung mà agent không thể dùng để hành động.
+### implementation
+Vertical slices, risk level, contract-first coding và handoff.
+
+### testing
+Domain/server/client/integration/concurrency/offline verification.
+
+### github-workflow
+Branch/commit/PR/CI rules và cách hai thành viên làm song song mà giảm conflict.
+
+### validation
+Field/pilot evidence. Validation gate và V3 implementation authorization là hai gate độc lập; không suy diễn cái này mở cái kia.
+
+### review-audit
+Review correctness, authorization/tenant isolation, contract compatibility, architecture, UX và tests.
+
+## 3. V3 rule quan trọng
+
+V3-0 hiện là **docs/design only**. Agent có thể thiết kế architecture/API/schema/sync nhưng không được biến tài liệu thành executable backend hoặc cloud provisioning.
+
+Khi V3-1+ được authorize, agent phải tiếp tục dùng đúng skill và contract đã review; không được coi việc có tài liệu là implementation approval.
+
+## 4. Khi nào thêm skill mới?
+
+Chỉ thêm khi có một quy trình lặp lại có rule hành động rõ ràng và chưa được skill hiện có bao phủ. Không thêm skill chỉ để lưu ghi chú lý thuyết.
