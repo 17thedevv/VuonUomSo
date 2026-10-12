@@ -242,7 +242,7 @@ Implement:
 - SHA-256 stored hash;
 - 7-day expiry;
 - duplicate pending replacement;
-- verified-email-bound preview/accept;
+- authenticated-email-bound preview/accept under Supabase Confirm Email policy;
 - GardenMember role changes;
 - GardenMember revoke/self-leave;
 - Organization ADMIN/MEMBER change by OWNER;
@@ -283,7 +283,7 @@ Required end-to-end cases:
 5. manager invites worker;
 6. manager cannot invite manager;
 7. worker cannot invite;
-8. forwarded token to different verified email fails;
+8. forwarded token to a different authenticated email fails;
 9. accepted invite creates MEMBER + GardenMember atomically;
 10. revoke member blocks next API request despite valid JWT;
 11. two accounts on same browser profile cannot see each other's cached tenant data;
