@@ -5,7 +5,7 @@
 
 generator client {
   provider     = "prisma-client"
-  output       = "../../server/src/generated/prisma"
+  output       = "../src/generated/prisma" // relative to future server/prisma/schema.prisma
   moduleFormat = "esm"
 }
 
@@ -162,6 +162,7 @@ model DeviceInstallation {
   unregisteredAt       DateTime?
   user                 AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
   mutations            AppliedMutation[]
+  events               DomainEvent[]
 
   @@unique([userId, clientInstallationId])
   @@index([userId, unregisteredAt])
@@ -354,6 +355,7 @@ model DomainEvent {
   createdAt      DateTime            @default(now())
   garden         Garden              @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
   actor          AppUser?            @relation("EventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  device         DeviceInstallation?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([gardenId, createdAt])
   @@index([gardenId, entityType, entityId])
