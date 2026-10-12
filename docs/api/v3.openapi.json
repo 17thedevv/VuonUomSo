@@ -573,7 +573,7 @@
         },
         "responses": {
           "200": {
-            "description": "Safe invitation preview for matching verified email",
+            "description": "Safe invitation preview for matching authenticated email under Confirm Email policy",
             "content": {
               "application/json": {
                 "schema": {
