@@ -14,7 +14,7 @@
 - QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). **Main push CI #38232017795 completed SUCCESS, attempt 1.**
 - REM-05 PR [#58](https://github.com/17thedevv/VuonUomSo/pull/58) remains DRAFT / UNMERGED; do not conflate local mobile impressions or staging deploy with signed R04/R05 acceptance.
 - **REAL PILOT remains NO-GO / NOT APPROVED / NOT STARTED**. R01–R08 historical records are preserved, re-audit remains pending; V2-C/D/E and MCP AI Control are not silently adopted.
-- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
+- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [API contract](../docs/architecture/V3-API-CONTRACT.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
 - Stop at a docs-only Draft PR and independent review; no automatic implementation or merge.
 
 ## 1. Project Identity
@@ -36,14 +36,14 @@
 
 | V3 phase | Trạng thái | Gate / scope |
 |---|---|---|
-| V3-0 | **NOW / DOCS-DESIGN ONLY** | ADR, tenancy/roles, schema draft, sync, migration, roadmap, product/course boundary; no live services/data |
+| V3-0 | **NOW / DOCS-DESIGN ONLY** | ADR, tenancy/roles, schema draft, REST/OpenAPI contract, sync, migration, V3-aware agent skills, roadmap, product/course boundary; no live services/data |
 | V3-1 | **PENDING AUTHORIZATION** | Identity, auth, org/garden onboarding, membership/invite/revoke |
 | V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
 | V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
 | V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |
 | V3-5 | **PENDING DISCOVERY/AUTHORIZATION** | Reports, notifications, photos, workload and scoped operational expansion |
 
-See [V3 Roadmap](../docs/product/V3-ROADMAP.md) and [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md).
+See [V3 Roadmap](../docs/product/V3-ROADMAP.md), [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md) and [V3 API Contract](../docs/architecture/V3-API-CONTRACT.md). Agent task routing is defined in [.agent/router.md](./router.md).
 
 ### Historical roadmap — V2 reset (09/10/2026)
 
