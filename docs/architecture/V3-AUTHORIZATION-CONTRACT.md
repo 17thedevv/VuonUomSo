@@ -275,13 +275,13 @@ Then:
 
 All happen atomically.
 
-If GardenMember already exists, reject with:
+Acceptance retry semantics:
 
-```text
-MEMBERSHIP_ALREADY_EXISTS
-```
+- if this same invitation is already ACCEPTED by the same AppUser and the resulting GardenMember still exists with the accepted role, return that canonical membership idempotently;
+- if the caller was already a GardenMember **before** this invitation was accepted, reject with `MEMBERSHIP_ALREADY_EXISTS` and do not change their role;
+- an invitation accepted by another identity can never be replayed by the caller.
 
-without changing their current role.
+This lets a client safely retry after an HTTP timeout without granting duplicate or escalated membership.
 
 ---
 
