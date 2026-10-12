@@ -12,7 +12,7 @@ Current source uses a Dexie database VuonUomDB, currently 11 stores: 9 business 
 - PostgreSQL is authoritative for all committed business facts after explicit **per-garden cutover**, never before.
 - IndexedDB remains primary for instant launch and *pending/tentative* offline drafts and commands; offline data is **not** proof that a server-side reservation was accepted.
 - Supabase Auth owns credentials, email verification, password recovery, access/refresh-token lifecycle. NestJS verifies token signature, issuer, audience, expiration and authorized subject, then independently authorizes organization/garden membership on every request. Prefer asymmetric signing keys/JWKS; no service-role key or JWT secret in browser.
-- NestJS owns business invariants and transaction boundaries; Prisma is the database access layer, not a source of domain permission rules. REST + OpenAPI is the initial API contract; no GraphQL/microservices requirement.
+- NestJS owns business invariants and transaction boundaries; Prisma is the database access layer, not a source of domain permission rules. REST + OpenAPI is the initial API contract; no GraphQL/microservices requirement. Canonical V3 endpoint/DTO/error/idempotency design is maintained in [V3-API-CONTRACT.md](./V3-API-CONTRACT.md).
 - Share portable pure TypeScript invariants from web/src/domain/ only after auditing transitive browser imports; backend owns persisted canonical results. Do not share mutable Dexie repositories or authorization code across client/server.
 
 ## Product / academic boundary
@@ -61,5 +61,5 @@ No production credentials, provider provisioning, executable schema migrations, 
 
 ## References
 
-- Internal: web/src/data/db.ts, web/src/domain/{batch,order,reservation,shipment}.ts, web/src/data/backup/*; QA-01 PR #59; REM-05 PR #58.
+- Internal: [V3 API Contract](./V3-API-CONTRACT.md), [V3 Sync Protocol](./V3-SYNC-PROTOCOL.md), [V3 Data Model Notes](./V3-DATA-MODEL-NOTES.md), web/src/data/db.ts, web/src/domain/{batch,order,reservation,shipment}.ts, web/src/data/backup/*; QA-01 PR #59; REM-05 PR #58.
 - External: https://docs.nestjs.com/guards ; https://docs.nestjs.com/openapi/security ; https://supabase.com/docs/guides/auth/jwts ; https://www.prisma.io/docs/orm/prisma-client/queries/transactions
