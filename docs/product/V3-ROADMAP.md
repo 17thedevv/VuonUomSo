@@ -21,8 +21,8 @@ V3 is the roadmap of the **real Vườn Ươm product**. The Cloud Computing min
 
 | Phase | Features | Entry / exit / authorization |
 |---|---|---|
-| V3-0 (NOW — DESIGN COMPLETE) | ADR, tenancy/roles, authorization matrix, relational schema draft, machine-readable REST/OpenAPI, sync/cursor/device protocol, migration staging, pinned toolchain, V3-aware agent skills, two-person implementation handoff | Exact-head CI + independent review + merge; still no runtime services/live data |
-| V3-1 (CODE-READY / NOT STARTED) | Login/signup, verification/recovery, user profile, device registration, organization/garden onboarding, membership/invite/revoke | V3-0 merged + explicit implementation authorization; follow `docs/development/V3-1-IMPLEMENTATION-HANDOFF.md` |
+| V3-0 (NOW — DESIGN COMPLETE) | ADR, tenancy/roles, authorization matrix, relational schema draft, machine-readable REST/OpenAPI, sync/cursor/device protocol, migration staging, pinned toolchain, V3-aware agent skills, solo implementation plan | Exact-head CI + independent review + merge; still no runtime services/live data |
+| V3-1 (CODE-READY / NOT STARTED) | Login/signup, verification/recovery, user profile, device registration, organization/garden onboarding, membership/invite/revoke | V3-0 merged + explicit implementation authorization; follow `docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md` |
 | V3-2 (PENDING) | Server CRUD + immutable audit for garden, batches, contacts, orders, reservation, shipment, dossier; backup staging/import & explicit cutover | Exact test parity with current domain; atomic transactions; reconciliation; read-only migration preview and server restore drill |
 | V3-3 (PENDING) | Multi-device online sync, offline cache/outbox, re-auth, conflict/duplicate handling, data versioning, retries | Two-device native concurrency; idempotency; no overselling; revoke/switch tenant/failed sync evidence |
 | V3-4 (PENDING) | Interactive tutorial, first-run walkthrough, task-based guides, searchable help, progress per user, offline help assets | Evidence-based UX copy, opt-out/restart tutorial, screen-reader, Telex/VNI/mobile acceptance |
