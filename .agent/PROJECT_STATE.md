@@ -25,7 +25,7 @@
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
 - **Giai đoạn dự án**: `V3-0 — Architecture & Product Foundation` (**DESIGN COMPLETE / REVIEW+MERGE PENDING**)
-- **Production Architecture direction**: `DESIGN FROZEN FOR IMPLEMENTATION HANDOFF`
+- **Production Architecture direction**: `DESIGN FROZEN / IMPLEMENTATION-READY`
 - **V3-1 implementation**: `CODE-READY / NOT YET AUTHORIZED / NOT STARTED`
 - **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
 
