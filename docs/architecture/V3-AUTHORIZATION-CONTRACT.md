@@ -191,6 +191,15 @@ Client receives the raw token **once** in a shareable app link:
 https://<app-origin>/invite?token=<opaque-token>
 ```
 
+On opening the invite route, the PWA must:
+
+1. read the token into in-memory invite state;
+2. immediately replace the browser URL/history entry with `/invite` before rendering third-party content or making unrelated requests;
+3. submit the token only in HTTPS JSON request bodies to preview/accept;
+4. never persist the raw token in analytics, logs, IndexedDB or localStorage.
+
+Use a strict Referrer-Policy for the app so invite query material is not leaked through referrers during the brief bootstrap window.
+
 Database stores only:
 
 ```text
@@ -238,7 +247,7 @@ This invalidates previously shared links.
 
 ## 5.5 Acceptance identity rule
 
-V3 Supabase Auth configuration must keep **Confirm Email enabled** for email/password signup.
+V3 Supabase Auth configuration must keep **Confirm Email enabled** for email/password signup and **anonymous sign-ins disabled**.
 
 Before preview/accept:
 
