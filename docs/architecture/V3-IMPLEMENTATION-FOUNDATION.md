@@ -162,6 +162,29 @@ Frontend uses `@supabase/supabase-js` only for Auth lifecycle and receives a pub
 
 ## Server
 
+Prisma 7 connection config lives in:
+
+```text
+server/prisma.config.ts
+```
+
+Initial shape:
+
+```ts
+import "dotenv/config"
+import { defineConfig, env } from "prisma/config"
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: {
+    path: "prisma/migrations",
+  },
+  datasource: {
+    url: env("DATABASE_URL"),
+  },
+})
+```
+
 Required runtime variables:
 
 ```text
@@ -334,11 +357,12 @@ Avoid cross-module repository imports that bypass application services.
 Initial implementation must:
 
 1. move reviewed schema from `docs/architecture/drafts/v3-schema.prisma` into `server/prisma/schema.prisma`;
-2. update syntax/config only as required by pinned Prisma;
-3. run `prisma format`;
-4. run `prisma validate`;
-5. generate a **reviewable initial migration**;
-6. add reviewed raw SQL for constraints Prisma schema cannot express.
+2. keep Prisma 7 generator `prisma-client` with output `../src/generated/prisma`;
+3. configure DATABASE_URL in `server/prisma.config.ts`, not in datasource block;
+4. run `prisma format`;
+5. run `prisma validate`;
+6. generate a **reviewable initial migration**;
+7. add reviewed raw SQL for constraints Prisma schema cannot express.
 
 Required database-level constraints include:
 
