@@ -80,7 +80,7 @@ Scope:
 - CORS config;
 - `jose` JWT verification;
 - AuthPrincipal;
-- `GET /v3/me` minimal authenticated path;
+- `POST /v3/me/bootstrap`, read-only `GET /v3/me` and versioned `PATCH /v3/me` profile path;
 - OpenAPI generation/check script;
 - server CI job;
 - unit/e2e test skeleton.
@@ -203,7 +203,7 @@ Depends on V3-1C API shapes.
 
 Scope:
 
-- post-login `/me`;
+- post-login `/me/bootstrap` once per authenticated identity followed by read-only `/me`;
 - first organization creation;
 - organization selection;
 - garden creation where permission allows;
