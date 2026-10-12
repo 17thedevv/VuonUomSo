@@ -476,7 +476,7 @@ Authenticated body:
 { "token": "opaque" }
 ```
 
-Acceptance atomically creates OrganizationMember(MEMBER) when missing, creates GardenMember, accepts invitation and appends audit evidence.
+Acceptance atomically creates OrganizationMember(MEMBER) when missing, creates GardenMember, accepts invitation and appends audit evidence. Retrying the **same already-accepted invitation by the same AppUser** returns the canonical membership idempotently; pre-existing unrelated membership still returns `MEMBERSHIP_ALREADY_EXISTS`.
 
 ### DELETE `/v3/gardens/{gardenId}/invitations/{invitationId}`
 
