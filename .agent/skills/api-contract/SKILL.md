@@ -14,6 +14,9 @@ Ngăn frontend và backend phát triển theo hai contract khác nhau.
 Canonical design source:
 
 - `docs/architecture/V3-API-CONTRACT.md`
+- `docs/api/v3.openapi.json`
+- `docs/architecture/V3-AUTHORIZATION-CONTRACT.md`
+- `docs/architecture/V3-IMPLEMENTATION-FOUNDATION.md`
 - `docs/architecture/V3-SYNC-PROTOCOL.md`
 - `docs/architecture/V3-DATA-MODEL-NOTES.md`
 - `docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md`
