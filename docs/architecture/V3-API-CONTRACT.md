@@ -300,7 +300,6 @@ Response `200`:
 {
   "id": "uuid",
   "displayName": null,
-  "authSubject": "verified-subject",
   "version": 1
 }
 ```
@@ -315,7 +314,6 @@ Example:
 {
   "id": "uuid",
   "displayName": "A Thư",
-  "authSubject": "verified-subject",
   "version": 2,
   "organizations": [
     {
@@ -355,7 +353,7 @@ Rules:
 - stale expectedVersion → `409 VERSION_CONFLICT`;
 - successful update increments AppUser.version.
 
-Do not return credential/session secrets.
+Do not return credential/session secrets or the provider-specific `authSubject`; it remains an internal identity mapping.
 
 ## 7.2 Organizations
 
