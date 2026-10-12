@@ -18,7 +18,7 @@ V3 hiện ở **V3-0 — design complete, pending exact-head CI/independent revi
 - [V3 Prisma Draft](architecture/drafts/v3-schema.prisma)
 - [V3 Sync Protocol](architecture/V3-SYNC-PROTOCOL.md)
 - [V3 Local-to-Cloud Migration](architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md)
-- [V3-1 Two-person Implementation Handoff](development/V3-1-IMPLEMENTATION-HANDOFF.md)
+- [V3-1 Solo Implementation Plan](development/V3-1-SOLO-IMPLEMENTATION-PLAN.md)
 - [Cloud Computing Project Boundary](academic/cloud-computing-2026/PROJECT-BOUNDARY.md)
 
 Target design:
