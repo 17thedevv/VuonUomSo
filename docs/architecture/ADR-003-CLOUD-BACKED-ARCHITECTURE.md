@@ -15,6 +15,16 @@ Current source uses a Dexie database VuonUomDB, currently 11 stores: 9 business 
 - NestJS owns business invariants and transaction boundaries; Prisma is the database access layer, not a source of domain permission rules. REST + OpenAPI is the initial API contract; no GraphQL/microservices requirement.
 - Share portable pure TypeScript invariants from web/src/domain/ only after auditing transitive browser imports; backend owns persisted canonical results. Do not share mutable Dexie repositories or authorization code across client/server.
 
+## Product / academic boundary
+
+This architecture is selected for the **Vườn Ươm product**, not to satisfy a course rubric. The Cloud Computing mini-project may use an actual stable deployment of Vườn Ươm as its case study, but it does not become an architecture authority.
+
+- Do not add a cloud component, provider, feature or migration solely because a presentation requires it.
+- The public-cloud service shown in coursework should reflect the product's actual approved deployment at the chosen demo snapshot.
+- A course deadline must not bypass V3 phase gates, security review, migration safeguards, tenant isolation or pilot authorization.
+- The demo/report should pin a stable commit/tag while normal product development continues on `main`.
+- Course-specific documents belong under `docs/academic/`; contradictions are resolved in favor of ADR/product/domain authority.
+
 ## Multi-tenant organizational decision
 
 - A person may belong to **multiple organizations and multiple gardens**, with different roles in each.
