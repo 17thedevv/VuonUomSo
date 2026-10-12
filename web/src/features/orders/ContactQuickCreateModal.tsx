@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { Contact } from '../../domain/contact'
+import { validatePhone } from '../../domain/phone'
 import { createContact } from '../../services/contactService'
 import { X, UserPlus, AlertCircle, Phone, Check } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
@@ -41,13 +42,22 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
       return
     }
 
+    const trimmedPhone = phone.trim()
+    if (trimmedPhone) {
+      const phoneValidation = validatePhone(trimmedPhone)
+      if (!phoneValidation.valid) {
+        setError(phoneValidation.error || 'Số điện thoại không hợp lệ.')
+        return
+      }
+    }
+
     submitting.current = true
     setIsSubmitting(true)
     setError(null)
 
     const result = await createContact({
       name: trimmedName,
-      phone: phone.trim() || undefined,
+      phone: trimmedPhone || undefined,
       roles: [mode],
       allowDuplicatePhone: forceAllowDuplicate
     })

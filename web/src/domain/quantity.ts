@@ -5,15 +5,49 @@ import { type Reservation, remainingReservationQuantity } from './reservation.js
  * Parses user input quantity supporting Vietnamese forestry conventions:
  * e.g., 30000, 30.000, 30,000, 3 vạn, 3v, 4,52 vạn, 4.52 vạn, 4,52v
  */
+function parseVanString(numStr: string): number | null {
+  const normalized = numStr.replace(',', '.')
+  const [intStr, decStr] = normalized.split('.')
+  const intVal = parseInt(intStr, 10)
+  if (isNaN(intVal) || intVal < 0) return null
+
+  let decVal = 0
+  if (decStr !== undefined) {
+    if (decStr.length > 4) {
+      const extra = decStr.slice(4)
+      if (/[^0]/.test(extra)) {
+        // Fractional tree remainder: strictly rejected!
+        return null
+      }
+    }
+    const dec4 = decStr.slice(0, 4).padEnd(4, '0')
+    decVal = parseInt(dec4, 10)
+    if (isNaN(decVal)) return null
+  }
+
+  const total = intVal * 10000 + decVal
+  if (!Number.isSafeInteger(total) || total < 0) return null
+  return total
+}
+
+/**
+ * Parses user input quantity supporting Vietnamese forestry conventions:
+ * e.g., 30000, 30.000, 30,000, 3 vạn, 3v, 4,52 vạn, 4.52 vạn, 4,52v
+ * Strictly rejects fractional trees (no Math.round silently creating trees).
+ */
 export function parseQuantity(
   input: string | number | null | undefined,
   defaultUnit?: 'cay' | 'van'
 ): number | null {
   if (input === null || input === undefined) return null
+
   if (typeof input === 'number') {
-    if (isNaN(input) || !isFinite(input) || input < 0) return null
-    if (defaultUnit === 'van') return Math.round(input * 10000)
-    return Math.round(input)
+    if (isNaN(input) || !Number.isFinite(input) || input < 0) return null
+    if (defaultUnit === 'van') {
+      return parseVanString(input.toString())
+    }
+    if (!Number.isInteger(input) || !Number.isSafeInteger(input)) return null
+    return input
   }
 
   const raw = input.trim().toLowerCase()
@@ -23,20 +57,14 @@ export function parseQuantity(
   // e.g. "3 vạn", "3v", "4,52 vạn", "4.52v", "4,52 v"
   const vanMatch = raw.match(/^([0-9]+(?:[.,][0-9]+)?)\s*(?:vạn|v)$/)
   if (vanMatch && vanMatch[1]) {
-    const numPart = vanMatch[1].replace(',', '.')
-    const parsed = parseFloat(numPart)
-    if (isNaN(parsed) || parsed < 0) return null
-    return Math.round(parsed * 10000)
+    return parseVanString(vanMatch[1])
   }
 
   // If defaultUnit is 'van', treat raw numbers (like "5", "4.52", "4,52") as vạn
   if (defaultUnit === 'van') {
     const decimalMatch = raw.match(/^([0-9]+(?:[.,][0-9]+)?)$/)
     if (decimalMatch && decimalMatch[1]) {
-      const numPart = decimalMatch[1].replace(',', '.')
-      const parsed = parseFloat(numPart)
-      if (isNaN(parsed) || parsed < 0) return null
-      return Math.round(parsed * 10000)
+      return parseVanString(decimalMatch[1])
     }
   }
 
@@ -44,20 +72,20 @@ export function parseQuantity(
   if (/^\d{1,3}(\.\d{3})+$/.test(raw)) {
     const clean = raw.replace(/\./g, '')
     const num = parseInt(clean, 10)
-    return isNaN(num) || num < 0 ? null : num
+    return isNaN(num) || !Number.isSafeInteger(num) || num < 0 ? null : num
   }
 
   // Standard comma thousand separator: "30,000"
   if (/^\d{1,3}(,\d{3})+$/.test(raw)) {
     const clean = raw.replace(/,/g, '')
     const num = parseInt(clean, 10)
-    return isNaN(num) || num < 0 ? null : num
+    return isNaN(num) || !Number.isSafeInteger(num) || num < 0 ? null : num
   }
 
   // Plain integers: "30000"
   if (/^\d+$/.test(raw)) {
     const num = parseInt(raw, 10)
-    return isNaN(num) || num < 0 ? null : num
+    return isNaN(num) || !Number.isSafeInteger(num) || num < 0 ? null : num
   }
 
   return null

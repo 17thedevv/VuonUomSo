@@ -396,5 +396,39 @@ describe('orderService', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('không tồn tại trong danh bạ')
     })
+
+    it('rejects order when unitPrice is negative and writes zero records (fail-closed)', async () => {
+      const beforeOrders = await db.orders.count()
+      const beforeEvents = await db.events.count()
+
+      // Negative unit price
+      const resNeg = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        unitPrice: -500
+      })
+      expect(resNeg.success).toBe(false)
+      expect(resNeg.error).toContain('không âm')
+
+      // Fail-closed
+      expect(await db.orders.count()).toBe(beforeOrders)
+      expect(await db.events.count()).toBe(beforeEvents)
+    })
+
+    it('rejects order when requestedDate is invalid calendar date (e.g. Feb 31st)', async () => {
+      const beforeOrders = await db.orders.count()
+
+      const resInvalidDate = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        requestedDate: '2026-02-31'
+      })
+      expect(resInvalidDate.success).toBe(false)
+      expect(resInvalidDate.error).toContain('không hợp lệ theo lịch')
+
+      expect(await db.orders.count()).toBe(beforeOrders)
+    })
   })
 })

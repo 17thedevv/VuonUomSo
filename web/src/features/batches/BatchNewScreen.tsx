@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { QuantityInput } from '../../shared/components/QuantityInput'
 import { createBatch } from '../../services/batchService'
+import { isValidCalendarDate, parseDateToIso } from '../../domain/date'
 import { Sprout, ChevronDown, ChevronUp, AlertCircle, Info } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 import { gardenReturnPath } from '../garden/gardenNavigation'
@@ -60,15 +61,25 @@ export const BatchNewScreen: React.FC = () => {
       return
     }
 
+    if (createdAt && !isValidCalendarDate(createdAt)) {
+      setFormError('Ngày ươm lô không hợp lệ theo lịch.')
+      return
+    }
+
+    if (preferredSellBefore && !isValidCalendarDate(preferredSellBefore)) {
+      setFormError('Ngày dự kiến bán không hợp lệ theo lịch.')
+      return
+    }
+
     setIsSubmitting(true)
     setFormError(null)
 
     const result = await createBatch({
       variety: effectiveVariety,
       initialQuantity: parsedQuantity,
-      createdAt: new Date(createdAt).toISOString(),
+      createdAt: parseDateToIso(createdAt) || new Date().toISOString(),
       code: customCode.trim() || undefined,
-      preferredSellBefore: preferredSellBefore ? new Date(preferredSellBefore).toISOString() : undefined,
+      preferredSellBefore: parseDateToIso(preferredSellBefore) || undefined,
       sourceNote: sourceNote.trim() || undefined
     })
 

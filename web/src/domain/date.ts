@@ -69,3 +69,47 @@ export function formatHeaderDate(dateInput: string | Date = new Date()): string 
 
   return `${weekday}, ${day}/${month}`
 }
+
+/**
+ * Strictly checks if a date string is a valid real calendar date in YYYY-MM-DD format.
+ * Prevents calendar roll-overs such as Feb 31st or Feb 29 on non-leap years.
+ */
+export function isValidCalendarDate(dateString: string | undefined | null): boolean {
+  if (!dateString) return false
+  const trimmed = dateString.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false
+
+  const [yStr, mStr, dStr] = trimmed.split('-')
+  const year = parseInt(yStr, 10)
+  const month = parseInt(mStr, 10)
+  const day = parseInt(dStr, 10)
+
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false
+
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  if (isNaN(parsed.getTime())) return false
+
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  )
+}
+
+/**
+ * Safely parses a date string to an ISO string without throwing RangeError.
+ * Returns null if the date is invalid or empty.
+ */
+export function parseDateToIso(dateString: string | undefined | null): string | null {
+  if (!dateString) return null
+  const trimmed = dateString.trim()
+  if (!isValidCalendarDate(trimmed)) return null
+
+  const [yStr, mStr, dStr] = trimmed.split('-')
+  const year = parseInt(yStr, 10)
+  const month = parseInt(mStr, 10)
+  const day = parseInt(dStr, 10)
+
+  return new Date(Date.UTC(year, month - 1, day)).toISOString()
+}
+

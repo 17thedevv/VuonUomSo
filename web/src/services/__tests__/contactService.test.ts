@@ -99,4 +99,41 @@ describe('contactService', () => {
     expect(result.success).toBe(false)
     expect(result.error).toContain('tên khách hàng')
   })
+
+  it('strictly rejects contact creation with invalid phone number and produces zero writes (fail-closed)', async () => {
+    const invalidPhones = ['0912abc5678', '12345', '0123456789', '0912#345678']
+
+    for (const phone of invalidPhones) {
+      const res = await createContact({
+        name: 'Khách Lỗi',
+        phone
+      })
+
+      expect(res.success).toBe(false)
+      expect(res.error).toBeDefined()
+    }
+
+    // Assert fail-closed: zero contacts and zero events written
+    expect(await db.contacts.count()).toBe(0)
+    expect(await db.events.count()).toBe(0)
+  })
+
+  it('preserves user raw phone formatting in database and detects cross-format duplicates', async () => {
+    // 1. User enters formatted phone "+84 912 345 678"
+    const first = await createContact({
+      name: 'Bác Ba',
+      phone: '+84 912 345 678'
+    })
+    expect(first.success).toBe(true)
+    expect(first.contact?.phone).toBe('+84 912 345 678') // Preserved as entered!
+
+    // 2. Second user enters domestic representation "0912.345.678"
+    const second = await createContact({
+      name: 'Bác Ba Vườn Cau',
+      phone: '0912.345.678'
+    })
+    expect(second.success).toBe(false)
+    expect(second.duplicateWarning).toBe(true)
+    expect(second.existingContact?.name).toBe('Bác Ba')
+  })
 })

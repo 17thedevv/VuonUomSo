@@ -76,4 +76,15 @@ describe('Quick contact customer/supplier roles (real Dexie)', () => {
     expect(success).not.toHaveBeenCalled()
     expect(await db.contacts.count()).toBe(0)
   })
+
+  it('rejects invalid phone with letters and displays error without creating contact', async () => {
+    const success = setup('customer')
+    fireEvent.change(screen.getByLabelText(/Tên khách hàng/), { target: { value: 'Khách Test' } })
+    fireEvent.change(screen.getByLabelText(/Số điện thoại/), { target: { value: '0912abc5678' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu khách' }))
+
+    await screen.findByText(/Số điện thoại chứa ký tự không hợp lệ/)
+    expect(success).not.toHaveBeenCalled()
+    expect(await db.contacts.count()).toBe(0)
+  })
 })

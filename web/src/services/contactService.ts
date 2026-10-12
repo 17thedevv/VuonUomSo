@@ -1,4 +1,5 @@
 import type { Contact, ContactRole } from '../domain/contact'
+import { validatePhone } from '../domain/phone'
 import { contactRepository, eventRepository } from '../data/repositories'
 import { db } from '../data/db'
 
@@ -29,6 +30,12 @@ export async function createContact(input: CreateContactInput): Promise<CreateCo
   }
 
   const phone = input.phone?.trim()
+  if (phone) {
+    const phoneValidation = validatePhone(phone)
+    if (!phoneValidation.valid) {
+      return { success: false, error: phoneValidation.error || 'Số điện thoại không hợp lệ.' }
+    }
+  }
 
   try {
     return await db.transaction('rw', [db.contacts, db.events], async (): Promise<CreateContactResult> => {

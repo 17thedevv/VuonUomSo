@@ -5,6 +5,7 @@ import {
   eventRepository
 } from '../data/repositories'
 import { formatQuantity } from '../domain/quantity'
+import { isValidCalendarDate } from '../domain/date'
 import { getGardenAvailability } from './gardenQueryService'
 import { undoService } from './undoService'
 import { db } from '../data/db'
@@ -92,6 +93,13 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
 
   if (input.unitPrice !== undefined && (!Number.isSafeInteger(input.unitPrice) || input.unitPrice < 0)) {
     return { success: false, error: 'Giá mỗi cây phải là số nguyên không âm hợp lệ.' }
+  }
+
+  if (input.requestedDate !== undefined && input.requestedDate.trim() !== '') {
+    const datePart = input.requestedDate.trim().slice(0, 10)
+    if (!isValidCalendarDate(datePart)) {
+      return { success: false, error: 'Ngày hẹn lấy không hợp lệ theo lịch.' }
+    }
   }
 
   const id = `order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
