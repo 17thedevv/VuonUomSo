@@ -17,6 +17,8 @@ Giữ Vườn Ươm chuyển từ local prototype sang cloud-backed PWA mà khô
 - `docs/architecture/V3-DATA-MODEL-NOTES.md`
 - `docs/architecture/V3-SYNC-PROTOCOL.md`
 - `docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md`
+- `docs/architecture/V3-AUTHORIZATION-CONTRACT.md`
+- `docs/architecture/V3-IMPLEMENTATION-FOUNDATION.md`
 - `docs/architecture/V3-API-CONTRACT.md` khi task có API.
 
 ## 2. Target architecture
