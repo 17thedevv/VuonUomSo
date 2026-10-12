@@ -130,6 +130,7 @@ Quantity strings require explicit canonical integer-string validation; do not us
 
 Global cross-cutting concerns:
 
+- strict `Referrer-Policy` suitable for invite-token URL scrubbing;
 - request-id middleware/interceptor;
 - exception-to-API-envelope filter;
 - JWT authentication guard;
@@ -156,7 +157,7 @@ Required validation:
 
 JWKS fetched from configured Supabase JWKS endpoint and cached by library/runtime behavior.
 
-Supabase Auth project configuration must keep **Confirm Email enabled** for the V3 email/password flow. Standard Supabase access-token claims include `email` but do not guarantee a separate `email_verified` claim; backend invitation acceptance therefore matches the authenticated non-anonymous JWT email to the invite and relies on the project-level Confirm Email policy rather than trusting `user_metadata.email_verified`.
+Supabase Auth project configuration must keep **Confirm Email enabled** and **anonymous sign-ins disabled** for V3. Standard Supabase access-token claims include `email` but do not guarantee a separate `email_verified` claim; backend invitation acceptance therefore matches the authenticated non-anonymous JWT email to the invite and relies on the project-level Confirm Email policy rather than trusting `user_metadata.email_verified`.
 
 No Supabase service-role key is required for normal API authentication.
 
