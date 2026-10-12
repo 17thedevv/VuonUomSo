@@ -16,8 +16,9 @@ Prisma 7 implementation note:
 ### AppUser
 
 - Maps only to verified Supabase subject.
-- `version` protects mutable self-profile fields such as displayName.
-- Provisioning is explicit/idempotent through `POST /v3/me/bootstrap`; read-only `GET /v3/me` does not create records.
+- Stores normalized lowercase `email` copied from the verified JWT for membership/admin display; Supabase remains authority for email ownership/change.
+- `POST /v3/me/bootstrap` idempotently creates the AppUser or refreshes its normalized email if the authenticated Supabase email changed.
+- `version` protects mutable profile facts such as displayName/email synchronization against stale updates; read-only `GET /v3/me` does not create records.
 - Never stores password hashes.
 - Supabase owns credential/session lifecycle.
 
