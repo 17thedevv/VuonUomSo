@@ -3,7 +3,7 @@
 **Owner: 17thedev**  
 **Status: CODE-READY / NOT STARTED / requires explicit V3-1 authorization in PROJECT_STATE.**
 
-This plan replaces all previous team allocation/handoff material. Vườn Ươm V3 is currently developed by one person.
+Vườn Ươm V3 is currently developed by **17thedev as the sole developer**.
 
 ## 1. Mandatory references
 
