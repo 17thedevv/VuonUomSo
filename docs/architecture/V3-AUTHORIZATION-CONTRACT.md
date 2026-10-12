@@ -287,6 +287,14 @@ without changing their current role.
 
 # 6. Invitation API
 
+## GET `/v3/gardens/{gardenId}/invitations`
+
+Garden OWNER/MANAGER only.
+
+Returns only currently PENDING, non-expired invitation metadata. Raw token/shareUrl is never returned again after creation.
+
+Historical accepted/revoked/expired invitation records remain backend audit data.
+
 ## POST `/v3/gardens/{gardenId}/invitations`
 
 Auth: Garden OWNER/MANAGER according to target-role matrix.
@@ -358,7 +366,17 @@ Revokes PENDING invitation if caller has permission.
 
 ---
 
-# 7. Role update API
+# 7. Member list and role update API
+
+## GET `/v3/organizations/{organizationId}/members`
+
+Organization OWNER/ADMIN only. Returns userId, normalized email, displayName, organization role and membership version.
+
+## GET `/v3/gardens/{gardenId}/members`
+
+Garden OWNER/MANAGER only. Returns userId, normalized email, displayName, garden role and membership version.
+
+
 
 ## PATCH `/v3/gardens/{gardenId}/members/{userId}`
 
