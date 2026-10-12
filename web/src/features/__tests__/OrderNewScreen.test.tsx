@@ -331,4 +331,41 @@ describe('OrderNewScreen', () => {
       expect(contacts.some((c) => c.name === 'Bác Hoàng Hữu Lũng')).toBe(true)
     })
   })
+
+  it('rejects invalid unit price and displays error message without creating order', async () => {
+    const user = userEvent.setup()
+    renderOrderForm()
+
+    await screen.findByLabelText(/Khách đặt cây/)
+    await user.click(screen.getByRole('button', { name: /\+ Thêm thông tin/i }))
+
+    const priceInput = screen.getByLabelText(/Giá \/ cây/)
+    await user.type(priceInput, 'abc1200')
+
+    const ordersBefore = await orderRepository.getAll()
+    await user.click(screen.getByRole('button', { name: /LƯU ĐƠN HÀNG/i }))
+
+    await screen.findByText(/Giá mỗi cây chỉ được chứa chữ số và dấu phân cách/)
+    expect(screen.queryByTestId('order-detail-view')).not.toBeInTheDocument()
+    expect(await orderRepository.getAll()).toEqual(ordersBefore)
+  })
+
+  it('rejects invalid custom calendar date and displays error without creating order', async () => {
+    const user = userEvent.setup()
+    renderOrderForm()
+
+    await screen.findByLabelText(/Khách đặt cây/)
+    await user.click(screen.getByRole('button', { name: 'Khác...' }))
+
+    const dateInput = screen.getByLabelText(/Chọn ngày hẹn lấy/)
+    await user.clear(dateInput)
+    await user.type(dateInput, '2026-02-31')
+
+    const ordersBefore = await orderRepository.getAll()
+    await user.click(screen.getByRole('button', { name: /LƯU ĐƠN HÀNG/i }))
+
+    await screen.findByText(/Ngày hẹn lấy không hợp lệ theo lịch/)
+    expect(screen.queryByTestId('order-detail-view')).not.toBeInTheDocument()
+    expect(await orderRepository.getAll()).toEqual(ordersBefore)
+  })
 })

@@ -1,4 +1,5 @@
 import type { Contact } from '../../domain/contact'
+import { arePhonesEqual } from '../../domain/phone'
 import { db, type VuonUomDatabase } from '../db'
 
 export interface ContactRepository {
@@ -24,10 +25,9 @@ export class DexieContactRepository implements ContactRepository {
   }
 
   async findByPhone(phone: string): Promise<Contact | null> {
-    const normalizedInput = phone.replace(/\D/g, '')
-    if (!normalizedInput) return null
+    if (!phone?.trim()) return null
     const all = await this.database.contacts.toArray()
-    const match = all.find((c) => c.phone && c.phone.replace(/\D/g, '') === normalizedInput)
+    const match = all.find((c) => c.phone && arePhonesEqual(c.phone, phone))
     return match ?? null
   }
 

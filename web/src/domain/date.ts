@@ -69,3 +69,75 @@ export function formatHeaderDate(dateInput: string | Date = new Date()): string 
 
   return `${weekday}, ${day}/${month}`
 }
+
+export const MIN_SUPPORTED_YEAR = 1970
+export const MAX_SUPPORTED_YEAR = 2099
+
+/**
+ * Strictly checks if a date string is a valid real calendar date in YYYY-MM-DD format
+ * within the supported business era (1970 - 2099).
+ * Prevents calendar roll-overs such as Feb 31st or Feb 29 on non-leap years, and ancient/far-future years.
+ */
+export function isValidCalendarDate(dateString: string | undefined | null): boolean {
+  if (!dateString) return false
+  const trimmed = dateString.trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false
+
+  const [yStr, mStr, dStr] = trimmed.split('-')
+  const year = parseInt(yStr, 10)
+  const month = parseInt(mStr, 10)
+  const day = parseInt(dStr, 10)
+
+  if (year < MIN_SUPPORTED_YEAR || year > MAX_SUPPORTED_YEAR) return false
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false
+
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  if (isNaN(parsed.getTime())) return false
+
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  )
+}
+
+/**
+ * Strictly validates an order/shipment requested date string.
+ * Must be EITHER an exact YYYY-MM-DD string OR an exact ISO timestamp YYYY-MM-DDTHH:mm:ss(.sss)?Z.
+ * Strictly rejects trailing characters or malformed formats (e.g. "2026-10-12abc").
+ */
+export function isValidRequestedDate(dateInput: string | undefined | null): boolean {
+  if (!dateInput) return false
+  const trimmed = dateInput.trim()
+
+  // Case 1: Plain YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return isValidCalendarDate(trimmed)
+  }
+
+  // Case 2: Exact ISO 8601 UTC timestamp
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(trimmed)) {
+    const datePart = trimmed.slice(0, 10)
+    return isValidCalendarDate(datePart)
+  }
+
+  return false
+}
+
+/**
+ * Safely parses a date string to an ISO string without throwing RangeError.
+ * Returns null if the date is invalid or empty.
+ */
+export function parseDateToIso(dateString: string | undefined | null): string | null {
+  if (!dateString) return null
+  const trimmed = dateString.trim()
+  if (!isValidCalendarDate(trimmed)) return null
+
+  const [yStr, mStr, dStr] = trimmed.split('-')
+  const year = parseInt(yStr, 10)
+  const month = parseInt(mStr, 10)
+  const day = parseInt(dStr, 10)
+
+  return new Date(Date.UTC(year, month - 1, day)).toISOString()
+}
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import type { Contact } from '../../domain/contact'
-import { createContact } from '../../services/contactService'
+import { validatePhone } from '../../domain/phone'
+import { createContact, MAX_CONTACT_NAME_LENGTH } from '../../services/contactService'
 import { X, UserPlus, AlertCircle, Phone, Check } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 
@@ -40,6 +41,19 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
       setError(isSupplier ? 'Vui lòng nhập tên nhà vườn.' : 'Vui lòng nhập tên khách hàng.')
       return
     }
+    if (trimmedName.length > MAX_CONTACT_NAME_LENGTH) {
+      setError('Tên liên hệ không được vượt quá 100 ký tự.')
+      return
+    }
+
+    const trimmedPhone = phone.trim()
+    if (trimmedPhone) {
+      const phoneValidation = validatePhone(trimmedPhone)
+      if (!phoneValidation.valid) {
+        setError(phoneValidation.error || 'Số điện thoại không hợp lệ.')
+        return
+      }
+    }
 
     submitting.current = true
     setIsSubmitting(true)
@@ -47,7 +61,7 @@ export const ContactQuickCreateModal: React.FC<ContactQuickCreateModalProps> = (
 
     const result = await createContact({
       name: trimmedName,
-      phone: phone.trim() || undefined,
+      phone: trimmedPhone || undefined,
       roles: [mode],
       allowDuplicatePhone: forceAllowDuplicate
     })

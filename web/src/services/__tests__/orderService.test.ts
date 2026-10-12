@@ -6,7 +6,8 @@ import type { Reservation } from '../../domain/reservation'
 import type { DomainEvent } from '../../analytics/events'
 import { validReservation } from '../../domain/reconciliation'
 import { getGardenAvailability } from '../gardenQueryService'
-import { createOrder, getVarietyAvailability } from '../orderService'
+import { createOrder, updateOrder, getVarietyAvailability } from '../orderService'
+import { MAX_UNIT_PRICE } from '../../domain/price'
 import {
   contactRepository,
   batchRepository,
@@ -395,6 +396,120 @@ describe('orderService', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('không tồn tại trong danh bạ')
+    })
+
+    it('rejects order when unitPrice is negative and writes zero records (fail-closed)', async () => {
+      const beforeOrders = await db.orders.count()
+      const beforeEvents = await db.events.count()
+
+      // Negative unit price
+      const resNeg = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        unitPrice: -500
+      })
+      expect(resNeg.success).toBe(false)
+      expect(resNeg.error).toContain('không âm')
+
+      // Fail-closed
+      expect(await db.orders.count()).toBe(beforeOrders)
+      expect(await db.events.count()).toBe(beforeEvents)
+    })
+
+    it('rejects order when requestedDate is invalid calendar date (e.g. Feb 31st)', async () => {
+      const beforeOrders = await db.orders.count()
+
+      const resInvalidDate = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        requestedDate: '2026-02-31'
+      })
+      expect(resInvalidDate.success).toBe(false)
+      expect(resInvalidDate.error).toContain('không hợp lệ theo lịch')
+
+      expect(await db.orders.count()).toBe(beforeOrders)
+    })
+
+    it('rejects order when unitPrice exceeds MAX_UNIT_PRICE (1 billion VNĐ) and fails closed', async () => {
+      const beforeOrders = await db.orders.count()
+      const beforeEvents = await db.events.count()
+
+      const resExcess = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        unitPrice: MAX_UNIT_PRICE + 1
+      })
+      expect(resExcess.success).toBe(false)
+      expect(resExcess.error).toContain('không vượt quá')
+
+      expect(await db.orders.count()).toBe(beforeOrders)
+      expect(await db.events.count()).toBe(beforeEvents)
+    })
+
+    it('rejects order when requestedDate has malformed suffix or out-of-era year and fails closed', async () => {
+      const beforeOrders = await db.orders.count()
+      const beforeEvents = await db.events.count()
+
+      const resTrailing = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        requestedDate: '2026-10-12abc'
+      })
+      expect(resTrailing.success).toBe(false)
+      expect(resTrailing.error).toContain('không hợp lệ theo lịch')
+
+      const resAncient = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        requestedDate: '0026-10-12'
+      })
+      expect(resAncient.success).toBe(false)
+      expect(resAncient.error).toContain('không hợp lệ theo lịch')
+
+      expect(await db.orders.count()).toBe(beforeOrders)
+      expect(await db.events.count()).toBe(beforeEvents)
+    })
+
+    it('updateOrder strictly enforces MAX_UNIT_PRICE and requestedDate formatting', async () => {
+      await contactRepository.save({
+        id: 'c1',
+        name: 'Bác Ba',
+        roles: ['customer']
+      })
+
+      const created = await createOrder({
+        customerId: 'c1',
+        variety: 'Keo lai AH1',
+        requestedQuantity: 5000,
+        unitPrice: 2000,
+        requestedDate: '2026-10-12'
+      })
+      expect(created.success).toBe(true)
+      const orderId = created.order!.id
+
+      // Reject update with excessive price
+      const updateExcess = await updateOrder({
+        orderId,
+        unitPrice: MAX_UNIT_PRICE + 1
+      })
+      expect(updateExcess.success).toBe(false)
+
+      // Reject update with malformed requestedDate suffix
+      const updateDate = await updateOrder({
+        orderId,
+        requestedDate: '2026-10-12abc'
+      })
+      expect(updateDate.success).toBe(false)
+
+      // Verify original order in db remains unchanged
+      const current = await db.orders.get(orderId)
+      expect(current?.unitPrice).toBe(2000)
+      expect(current?.requestedDate).toBe('2026-10-12')
     })
   })
 })

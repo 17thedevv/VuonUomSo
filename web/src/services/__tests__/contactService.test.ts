@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '../../data/db'
-import { createContact } from '../contactService'
+import { createContact, MAX_CONTACT_NAME_LENGTH } from '../contactService'
 import { contactRepository, eventRepository } from '../../data/repositories'
 import { clearAllData } from '../../data/seed'
 
@@ -98,5 +98,61 @@ describe('contactService', () => {
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('tên khách hàng')
+  })
+
+  it('strictly rejects contact creation with invalid phone number and produces zero writes (fail-closed)', async () => {
+    const invalidPhones = ['0912abc5678', '12345', '0123456789', '0912#345678']
+
+    for (const phone of invalidPhones) {
+      const res = await createContact({
+        name: 'Khách Lỗi',
+        phone
+      })
+
+      expect(res.success).toBe(false)
+      expect(res.error).toBeDefined()
+    }
+
+    // Assert fail-closed: zero contacts and zero events written
+    expect(await db.contacts.count()).toBe(0)
+    expect(await db.events.count()).toBe(0)
+  })
+
+  it('preserves user raw phone formatting in database and detects cross-format duplicates', async () => {
+    // 1. User enters formatted phone "+84 912 345 678"
+    const first = await createContact({
+      name: 'Bác Ba',
+      phone: '+84 912 345 678'
+    })
+    expect(first.success).toBe(true)
+    expect(first.contact?.phone).toBe('+84 912 345 678') // Preserved as entered!
+
+    // 2. Second user enters domestic representation "0912.345.678"
+    const second = await createContact({
+      name: 'Bác Ba Vườn Cau',
+      phone: '0912.345.678'
+    })
+    expect(second.success).toBe(false)
+    expect(second.duplicateWarning).toBe(true)
+    expect(second.existingContact?.name).toBe('Bác Ba')
+  })
+
+  it('enforces contact name length limit (<= 100 characters) and fails closed', async () => {
+    const valid100Name = 'A'.repeat(MAX_CONTACT_NAME_LENGTH)
+    const resValid = await createContact({ name: valid100Name })
+    expect(resValid.success).toBe(true)
+    expect(resValid.contact?.name).toBe(valid100Name)
+
+    const invalid101Name = 'B'.repeat(MAX_CONTACT_NAME_LENGTH + 1)
+    const contactsBefore = await db.contacts.count()
+    const eventsBefore = await db.events.count()
+
+    const resInvalid = await createContact({ name: invalid101Name })
+    expect(resInvalid.success).toBe(false)
+    expect(resInvalid.error).toContain('không được vượt quá 100 ký tự')
+
+    // Assert fail-closed: zero extra writes
+    expect(await db.contacts.count()).toBe(contactsBefore)
+    expect(await db.events.count()).toBe(eventsBefore)
   })
 })

@@ -8,6 +8,8 @@ import { contactRepository, batchRepository } from '../../data/repositories'
 import type { Contact } from '../../domain/contact'
 import type { Batch } from '../../domain/batch'
 import { formatQuantity } from '../../domain/quantity'
+import { parseUnitPrice } from '../../domain/price'
+import { isValidCalendarDate, parseDateToIso } from '../../domain/date'
 import { UserPlus, Calendar, Plus, AlertCircle, Info, ChevronDown, ChevronUp, CheckCircle2 } from 'lucide-react'
 import { validationTracker } from '../../validation/validationTracker'
 import { gardenReturnPath } from '../garden/gardenNavigation'
@@ -154,7 +156,7 @@ export const OrderNewScreen: React.FC = () => {
       now.setDate(now.getDate() + 3)
       return now.toISOString()
     }
-    return new Date(customDate).toISOString()
+    return parseDateToIso(customDate) || now.toISOString()
   }
 
   useEffect(() => {
@@ -183,17 +185,32 @@ export const OrderNewScreen: React.FC = () => {
       return
     }
 
+    // Validate Unit Price (reject characters/negatives instead of naive regex replacement)
+    const priceResult = parseUnitPrice(unitPrice)
+    if (!priceResult.valid) {
+      setFormError(priceResult.error || 'Giá mỗi cây không hợp lệ.')
+      void validationTracker.actionFailed('order_created', 'validation')
+      return
+    }
+
+    // Validate Custom Date if selected
+    if (dateOption === 'custom' && !isValidCalendarDate(customDate)) {
+      setFormError('Ngày hẹn lấy không hợp lệ theo lịch (định dạng YYYY-MM-DD).')
+      void validationTracker.actionFailed('order_created', 'validation')
+      return
+    }
+
     setIsSubmitting(true)
     setFormError(null)
 
-    const parsedPrice = unitPrice.trim() ? parseFloat(unitPrice.replace(/\D/g, '')) : undefined
+    const parsedPrice = priceResult.value
 
     const result = await createOrder({
       customerId,
       variety,
       requestedQuantity: parsedQuantity,
       requestedDate: getRequestedDateIso(),
-      unitPrice: isNaN(parsedPrice as number) ? undefined : parsedPrice,
+      unitPrice: parsedPrice,
       note: note.trim() || undefined
     })
 
@@ -210,9 +227,10 @@ export const OrderNewScreen: React.FC = () => {
     }
   }
 
+  const priceParsed = parseUnitPrice(unitPrice)
   const estimatedTotal =
-    parsedQuantity && unitPrice.trim()
-      ? parsedQuantity * parseFloat(unitPrice.replace(/\D/g, ''))
+    parsedQuantity && priceParsed.valid && priceParsed.value !== undefined
+      ? parsedQuantity * priceParsed.value
       : null
 
   // Batches matching current variety for context panel
@@ -412,6 +430,8 @@ export const OrderNewScreen: React.FC = () => {
                 {dateOption === 'custom' && (
                   <div className="mt-2">
                     <input
+                      id="order-custom-date"
+                      aria-label="Chọn ngày hẹn lấy"
                       type="date"
                       value={customDate}
                       onChange={(e) => setCustomDate(e.target.value)}

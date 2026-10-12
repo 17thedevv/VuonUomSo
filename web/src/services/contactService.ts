@@ -1,6 +1,9 @@
-import type { Contact, ContactRole } from '../domain/contact'
+import { MAX_CONTACT_NAME_LENGTH, type Contact, type ContactRole } from '../domain/contact'
+import { validatePhone } from '../domain/phone'
 import { contactRepository, eventRepository } from '../data/repositories'
 import { db } from '../data/db'
+
+export { MAX_CONTACT_NAME_LENGTH }
 
 export interface CreateContactInput {
   name: string
@@ -27,8 +30,17 @@ export async function createContact(input: CreateContactInput): Promise<CreateCo
   if (!name) {
     return { success: false, error: isSupplier ? 'Vui lòng nhập tên nhà vườn.' : 'Vui lòng nhập tên khách hàng.' }
   }
+  if (name.length > MAX_CONTACT_NAME_LENGTH) {
+    return { success: false, error: 'Tên liên hệ không được vượt quá 100 ký tự.' }
+  }
 
   const phone = input.phone?.trim()
+  if (phone) {
+    const phoneValidation = validatePhone(phone)
+    if (!phoneValidation.valid) {
+      return { success: false, error: phoneValidation.error || 'Số điện thoại không hợp lệ.' }
+    }
+  }
 
   try {
     return await db.transaction('rw', [db.contacts, db.events], async (): Promise<CreateContactResult> => {

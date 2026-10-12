@@ -5,7 +5,8 @@ import {
   createShipment,
   type OrderShipmentSummary
 } from '../../services/shipmentService'
-import { formatQuantity } from '../../domain/quantity'
+import { formatQuantity, parseQuantity } from '../../domain/quantity'
+import { isValidCalendarDate } from '../../domain/date'
 import { PageHeader } from '../../shared/components/PageHeader'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
@@ -155,8 +156,20 @@ export const ShipmentNewScreen: React.FC = () => {
   const vanPlanned = (totalPlanned / 10000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })
 
   const handleQuantityChange = (reservationId: string, val: string, max: number) => {
-    const parsed = parseInt(val.replace(/\D/g, ''), 10)
-    const validVal = isNaN(parsed) ? 0 : Math.min(Math.max(parsed, 0), max)
+    const rawTrimmed = val.trim()
+    if (!rawTrimmed) {
+      setLineQuantities((prev) => ({
+        ...prev,
+        [reservationId]: 0
+      }))
+      setError(null)
+      return
+    }
+    const parsed = parseQuantity(rawTrimmed)
+    if (parsed === null) {
+      return
+    }
+    const validVal = Math.min(Math.max(parsed, 0), max)
     setLineQuantities((prev) => ({
       ...prev,
       [reservationId]: validVal
@@ -175,6 +188,12 @@ export const ShipmentNewScreen: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (isSubmitting) return
+
+    if (plannedDate && !isValidCalendarDate(plannedDate)) {
+      setError('Ngày dự kiến giao không hợp lệ theo lịch.')
+      void validationTracker.actionFailed('shipment_planned', 'validation')
+      return
+    }
 
     if (totalPlanned <= 0) {
       setError('Vui lòng nhập số lượng cây cần giao lớn hơn 0.')

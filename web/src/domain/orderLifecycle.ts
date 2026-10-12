@@ -1,6 +1,8 @@
 import { reservedQuantityForOrder, type Order, type OrderStatus } from './order'
 import type { Reservation } from './reservation'
 import type { Shipment } from './shipment'
+import { MAX_UNIT_PRICE } from './price'
+import { isValidRequestedDate } from './date'
 
 export type OrderChanges = {
   requestedQuantity?: number
@@ -54,17 +56,15 @@ export function validateOrderChanges(
   if (changes.requestedDate !== undefined) {
     const date = changes.requestedDate?.trim() || undefined
     if (date) {
-      const parsed = new Date(date)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsed.getTime()) ||
-        parsed.toISOString().slice(0, 10) !== date) {
-        return { success: false, code: 'INVALID_INPUT', error: 'Ngày hẹn lấy không hợp lệ.' }
+      if (!isValidRequestedDate(date)) {
+        return { success: false, code: 'INVALID_INPUT', error: 'Ngày hẹn lấy không hợp lệ theo lịch.' }
       }
     }
     next.requestedDate = date
   }
   if (changes.unitPrice !== undefined) {
-    if (changes.unitPrice !== null && (!Number.isSafeInteger(changes.unitPrice) || changes.unitPrice < 0)) {
-      return { success: false, code: 'INVALID_INPUT', error: 'Giá mỗi cây phải là số nguyên không âm hợp lệ.' }
+    if (changes.unitPrice !== null && (!Number.isSafeInteger(changes.unitPrice) || changes.unitPrice < 0 || changes.unitPrice > MAX_UNIT_PRICE)) {
+      return { success: false, code: 'INVALID_INPUT', error: `Giá mỗi cây phải là số nguyên không âm và không vượt quá ${MAX_UNIT_PRICE.toLocaleString('vi-VN')} đ.` }
     }
     next.unitPrice = changes.unitPrice ?? undefined
   }
