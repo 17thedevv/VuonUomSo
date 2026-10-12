@@ -1,40 +1,71 @@
 # Vườn Ươm — Project Documentation
 
-Thư mục `docs/` chứa tài liệu đặc tả, kiến trúc, nghiên cứu sản phẩm và hướng dẫn phát triển của dự án **Vườn Ươm**.
+Thư mục `docs/` chứa product contracts, architecture decisions, UX, development evidence và academic presentation material của **Vườn Ươm**.
 
----
+Trạng thái phase hiện tại luôn lấy từ [`.agent/PROJECT_STATE.md`](../.agent/PROJECT_STATE.md), không suy ra từ tuổi của một file tài liệu.
 
-## Cấu trúc tài liệu
+## Current V3 design set
+
+V3 hiện ở **V3-0 — docs/design only**.
+
+- [V3 Roadmap](product/V3-ROADMAP.md)
+- [ADR-003 — Cloud-backed Architecture](architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md)
+- [V3 API Contract](architecture/V3-API-CONTRACT.md)
+- [V3 Data Model Notes](architecture/V3-DATA-MODEL-NOTES.md)
+- [V3 Prisma Draft](architecture/drafts/v3-schema.prisma)
+- [V3 Sync Protocol](architecture/V3-SYNC-PROTOCOL.md)
+- [V3 Local-to-Cloud Migration](architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md)
+- [Cloud Computing Project Boundary](academic/cloud-computing-2026/PROJECT-BOUNDARY.md)
+
+Target design:
+
+```text
+React/Vite PWA
+  ↕ REST/OpenAPI
+NestJS modular monolith
+  ↕ Prisma
+PostgreSQL
+
+Supabase Auth
+Dexie tenant-scoped cache + pending outbox after cutover
+```
+
+V3-0 documentation does **not** authorize backend runtime, cloud provisioning, live migration, production deployment or real tenant data.
+
+## Documentation structure
 
 ```text
 docs/
-├── architecture/      # Tài liệu thiết kế hệ thống, data boundary, Dexie schema, offline-first
-├── product/           # Bối cảnh thị trường cây giống, user persona, roadmap, domain model
-├── ux/                # Thiết kế trải nghiệm Zalo-first, mobile ergonomics, typography, tokens
-└── development/       # Hướng dẫn setup môi trường, quy chuẩn kiểm thử, troubleshooting
+├── architecture/   # ADR, API/data/sync/migration contracts and architecture audits
+├── product/        # roadmap, product contracts, workflow/IA
+├── ux/             # mobile/Zalo-first UX guidance
+├── development/    # implementation/acceptance/history evidence
+└── academic/       # course/report/demo packaging only
 ```
 
----
+## Historical V2/FC material
 
-## 1. `architecture/`
-- Kiến trúc tầng: `UI -> Domain -> Repository -> Dexie IndexedDB`.
-- Chiến lược mở rộng trong tương lai:
-  - Khi có Cloud backend: Thêm `supabase/` ở root.
-  - Khi có Native mobile app: Thêm Capacitor shell trong `web/` (`web/android`, `web/ios`).
+V2/FC documents remain valuable as accepted domain/history evidence, especially for quantity/reservation/shipment semantics. They are **not the current roadmap authority** unless V3 docs explicitly reference those frozen semantics.
 
-## 2. `product/`
+Important retained sources include:
 
-- [V2 Roadmap](product/V2-ROADMAP.md): roadmap hiện hành; FC5/FC6 SUPERSEDED; cleanup → A → B → real pilot → evidence decides C/D/E.
-- [V2-A Functional Contract](product/V2-A-FUNCTIONAL-CONTRACT.md): grouping legacy, coherent IndexedDB snapshot, available sum theo từng lô.
-- [Workflow audit](product/V2-WORKFLOW-AUDIT.md), [Information Architecture](product/V2-INFORMATION-ARCHITECTURE.md), [Route & Component Map](product/V2-ROUTE-COMPONENT-MAP.md): blueprint; không phải mọi screen/module đã được triển khai.
-- [General-Commerce Readiness Audit](architecture/GENERAL-COMMERCE-READINESS-AUDIT.md): bằng chứng lịch sử; G01/G02/G10 DONE / CLOSED qua #32/#33; V2-A1 DONE / CLOSED qua #35; V2-A2 NEXT duy nhất. Trạng thái task mới nhất ở [PROJECT_STATE](../.agent/PROJECT_STATE.md).
+- [V2 Roadmap](product/V2-ROADMAP.md)
+- [V2-A Functional Contract](product/V2-A-FUNCTIONAL-CONTRACT.md)
+- [Workflow Audit](product/V2-WORKFLOW-AUDIT.md)
+- [Information Architecture](product/V2-INFORMATION-ARCHITECTURE.md)
+- [Route & Component Map](product/V2-ROUTE-COMPONENT-MAP.md)
+- [General-Commerce Readiness Audit](architecture/GENERAL-COMMERCE-READINESS-AUDIT.md)
+- FC3/FC4 functional contracts for reservation/fulfillment truth.
 
-- Định vị: **Sổ cây giống trên điện thoại** cho hệ sinh thái lâm nghiệp (Hữu Lũng, Lạng Sơn và mở rộng).
-- Bất biến cốt lõi: Quản lý lô, khả năng đáp ứng (Availability), giữ cây (Reservation), xuất xe (Shipment).
+## Source authority
 
-## 3. `ux/`
-- Nguyên lý Zalo: Giao diện một tay, font chữ rõ ràng, nút bấm lớn $\ge 44\text{px}$.
-- Ô nhập số chuẩn lâm nghiệp: Hỗ trợ tự nhiên cả "vạn" và "cây".
+When documents conflict:
 
-## 4. `development/`
-- Hướng dẫn chạy và build web app: Xem [root README.md](../README.md).
+1. explicit current owner decision;
+2. `.agent/PROJECT_STATE.md`;
+3. approved ADR/domain/product contracts;
+4. V3 roadmap;
+5. high-level planning mirrors;
+6. academic presentation material.
+
+Course material may summarize the product but cannot change product architecture or phase gates.
