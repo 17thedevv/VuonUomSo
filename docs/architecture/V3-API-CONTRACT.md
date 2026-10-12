@@ -863,11 +863,12 @@ Response concept:
     }
   ],
   "nextCursor": "opaque",
-  "hasMore": false
+  "hasMore": false,
+  "organizationContactDirectoryVersion": "42"
 }
 ```
 
-Client applies a complete page atomically.
+Client applies a complete page atomically. `organizationContactDirectoryVersion` is a lightweight invalidation signal for the separate organization contact cache.
 
 Garden sync uses a commit-ordered per-garden `syncRevision` frozen in the implementation foundation.
 
@@ -896,6 +897,7 @@ Conceptual response:
   "gardenId": "uuid",
   "cursor": "opaque",
   "generatedAt": "2026-10-12T12:00:00.000Z",
+  "organizationContactDirectoryVersion": "42",
   "data": {
     "garden": {},
     "batches": [],
@@ -907,7 +909,7 @@ Conceptual response:
 }
 ```
 
-Organization-scoped contacts are **not** duplicated into garden snapshot/changefeed.
+Organization-scoped contacts are **not** duplicated into garden snapshot/changefeed. Garden sync responses expose only the current organization `contactDirectoryVersion` so clients know when the separate contact cache is stale.
 
 They use a separate organization contact-directory snapshot:
 
