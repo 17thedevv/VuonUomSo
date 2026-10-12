@@ -1,42 +1,81 @@
 # Vườn Ươm — AI Agent Operating Instructions
 
-Chào mừng bạn tham gia lập trình và phát triển dự án **Vườn Ươm** (*Sổ cây giống trên điện thoại*).
-
-Để đảm bảo tính nhất quán tuyệt đối về kiến trúc, trải nghiệm người dùng, bất biến số lượng và ranh giới roadmap, bạn **BẮT BUỘC** tuân thủ hệ thống kỹ năng chuẩn hóa của dự án.
-
----
+Mọi AI Coding/Review/Design Agent làm việc trong repository **Vườn Ươm** phải tuân thủ hệ thống rule dưới đây trước khi sửa code hoặc tài liệu.
 
 ## 1. Điểm khởi đầu bắt buộc
 
-Trước khi thực hiện bất kỳ thay đổi nào:
-1. Đọc [.agent/PROJECT_STATE.md](file:///.agent/PROJECT_STATE.md) để biết **Phase hiện tại** và những gì được phép / bị cấm làm.
-2. Đọc [.agent/router.md](file:///.agent/router.md) để biết **bộ kỹ năng (Skills)** cần kích hoạt cho công việc của bạn.
-3. **Cấu trúc Repository**:
-   - `web/`: Ứng dụng Web/PWA chạy được. **Mọi lệnh npm (install, dev, test, lint, build) phải chạy từ thư mục `web/`**.
-   - `docs/`: Tài liệu đặc tả, kiến trúc, bối cảnh lâm nghiệp & UX.
-   - `.agent/`: Hệ điều hành Agent (Skills, Project State, Router).
-   - `.github/`: CI workflows và tự động hóa repository.
+Trước mọi task:
 
----
+1. Đọc [`.agent/PROJECT_STATE.md`](.agent/PROJECT_STATE.md) để xác định **phase hiện tại** và scope được phép.
+2. Đọc [`.agent/router.md`](.agent/router.md) để nạp đúng skill.
+3. Đọc contract/ADR liên quan trước khi tự suy diễn behavior.
+4. Nếu task đụng API giữa frontend/backend, **bắt buộc** đọc `api-contract` trước implementation.
 
-## 2. Hệ thống kỹ năng dự án (Project Skills)
+Cấu trúc hiện tại:
 
-Hệ thống skills nằm trong thư mục [.agent/skills/](file:///.agent/skills/):
+- `web/`: React + TypeScript + Vite PWA hiện hữu.
+- `docs/`: product, architecture, development và academic docs.
+- `.agent/`: Project State, Router và project skills.
+- `.github/`: CI/GitHub automation.
+- Backend NestJS **chưa được phép triển khai trong V3-0**; vị trí package/runtime chỉ được tạo ở phase implementation đã authorize.
 
-- [`product-context`](file:///.agent/skills/product-context/SKILL.md): Bản chất sản phẩm, bối cảnh người làm giống lâm nghiệp, ranh giới scope.
-- [`ux-design`](file:///.agent/skills/ux-design/SKILL.md): Nguyên tắc Zalo-first, di động một tay 360–430px, thuật ngữ tiếng Việt lâm nghiệp, ô nhập số "vạn".
-- [`domain-rules`](file:///.agent/skills/domain-rules/SKILL.md): Bất biến số lượng, công thức phân biệt Tồn kho vật lý $\neq$ Cây đủ chuẩn $\neq$ Cây còn bán.
-- [`architecture`](file:///.agent/skills/architecture/SKILL.md): Ranh giới UI $\rightarrow$ Domain $\rightarrow$ Repository $\rightarrow$ Dexie IndexedDB; cấm over-engineering.
-- [`implementation`](file:///.agent/skills/implementation/SKILL.md): Quy trình 5 bước code tính năng, kỷ luật nghiệm thu.
-- [`testing`](file:///.agent/skills/testing/SKILL.md): Ưu tiên Invariants > UI; chính sách bắt buộc regression test khi sửa lỗi tồn kho.
-- [`github-workflow`](file:///.agent/skills/github-workflow/SKILL.md): Quy tắc Git/GitHub, branching, atomic commits, merge safety, CI tối thiểu, ranh giới quyền hạn agent.
-- [`validation`](file:///.agent/skills/validation/SKILL.md): Thang đo bằng chứng thực tế, quy tắc STOP-BUILD sau P6 để mang app ra vườn kiểm chứng.
-- [`review-audit`](file:///.agent/skills/review-audit/SKILL.md): Quy trình 5 bước audit code, mô hình lỗi BLOCKER/HIGH/MEDIUM/LOW.
+## 2. Project Skills
 
----
+- `product-context`: product identity, V3 roadmap, scope guardrails.
+- `ux-design`: mobile/Zalo-first UX và thuật ngữ.
+- `domain-rules`: stock/availability/reservation/shipment invariants.
+- `architecture`: V3 cloud-backed/offline-first boundaries, tenancy, data authority.
+- `api-contract`: REST/OpenAPI contract, auth context, DTO/error/version/idempotency rules.
+- `implementation`: coding workflow và slice discipline.
+- `testing`: risk-based verification, domain/server/client/integration tests.
+- `github-workflow`: branches, atomic commits, CI, merge safety, two-person coordination.
+- `validation`: field evidence/pilot gates; không dùng pilot evidence để tự mở phase kỹ thuật.
+- `review-audit`: correctness, tenancy/security, architecture, UX, tests, scope.
 
-## 3. Ba nguyên tắc vàng bất di bất dịch
+## 3. V3 architecture direction
 
-1. **Nguyên lý Zalo**: *Một người biết dùng Zalo phải có thể dùng Vườn Ươm mà không cần học phần mềm quản lý.*
-2. **Kỷ luật Phase**: *Không tự ý làm tính năng thuộc phase sau khi phase hiện tại chưa hoàn thành.*
-3. **Bất biến số lượng**: *Không bao giờ bán khống cây; giữ cây (reservation) không làm giảm tồn kho vật lý; xuất xe (shipment) mới làm giảm tồn kho vật lý.*
+Target đã được chấp thuận ở **mức design**:
+
+```text
+React/Vite PWA
+  ↕ REST/OpenAPI
+NestJS modular monolith
+  ↕ Prisma
+PostgreSQL
+
+Supabase Auth → JWT/JWKS verification at NestJS
+Dexie/IndexedDB → tenant-scoped cache + durable pending outbox after cutover
+```
+
+Các điểm không được suy diễn sai:
+
+- PostgreSQL là authority cho committed business facts **sau explicit per-garden cutover**.
+- Dexie vẫn cần cho instant start/offline cache/pending commands; không trở thành authority song song sau cutover.
+- Supabase Auth xác thực identity; NestJS vẫn phải authorize organization/garden membership.
+- Multi-organization/multi-garden là yêu cầu sản phẩm thật, không phải yêu cầu riêng của môn Cloud.
+- Modular monolith là mặc định; không tự tách microservices.
+- Render hoặc provider khác chỉ là deployment choice, không phải architecture authority.
+
+## 4. Current phase gate
+
+Tại V3-0:
+
+- được phép: ADR, schema/API/sync/migration design, agent skills, threat/access review, roadmap;
+- không được phép: executable backend, auth provisioning, cloud database provisioning, live migration, production deployment, real tenant data.
+
+V3-1+ chỉ bắt đầu khi có authorization riêng trong `.agent/PROJECT_STATE.md`.
+
+## 5. Ba nguyên tắc bất di bất dịch
+
+1. **Domain correctness**: không oversell; reservation không làm giảm physical stock; shipment mới làm giảm physical stock theo contract.
+2. **Tenant isolation**: mọi server read/write phải scope và authorize organization/garden; deny by default.
+3. **Contract-first collaboration**: frontend và backend không tự đoán request/response của nhau. Shared API contract được chốt trước khi hai người code song song.
+
+## 6. Product/course boundary
+
+Coursework chỉ trình bày một stable snapshot của sản phẩm thật. Không được:
+
+- thêm feature chỉ để đủ slide;
+- đổi provider/architecture chỉ vì rubric;
+- bypass V3 phase gate;
+- mô tả feature chưa tồn tại như đã triển khai.

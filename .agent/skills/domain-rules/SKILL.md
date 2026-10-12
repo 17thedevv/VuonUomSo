@@ -1,119 +1,180 @@
 ---
 name: domain-rules
 description: >-
-  Critical domain correctness skill. Enforces forestry inventory invariants, distinctions
-  between physical stock, ready stock, and available stock, reservation mechanics, and derived calculations.
+  Canonical Vườn Ươm domain correctness rules for stock, availability,
+  reservation Q/F/outstanding/coverage, orders and shipments.
 ---
 
 # Forestry Domain Invariants & Rules
 
 ## 1. Purpose
 
-Đây là **kỹ năng quan trọng nhất về tính đúng đắn (correctness)** trong toàn bộ dự án Vườn Ươm. Kỹ năng này quy định các bất biến toán học và nghiệp vụ bắt buộc phải được bảo toàn khi thao tác với cây giống, tồn kho, giữ cây, đơn đặt hàng và chuyến giao.
+Bảo vệ semantics đã được kiểm chứng của Vườn Ươm khi chuyển sang V3 server-authoritative architecture.
 
----
+Các implementation mới **không được đơn giản hóa** reservation thành “quantity đang giữ” hoặc biến external supplier commitment thành stock của vườn.
 
-## 2. When to Use & When NOT to Use
+## 2. Core quantities
 
-- **WHEN TO USE**:
-  - Bắt buộc đọc trước khi sửa đổi, thêm mới hoặc tính toán logic liên quan đến:
-    - `Batch` (Lô cây), `Quantity` (Số lượng), `Mortality` (Hao hụt);
-    - `Reservation` (Giữ cây), `Availability` (Khả dụng);
-    - `Order` (Đơn hàng), `Shipment` (Xuất giao cây).
-  - Khi thiết kế logic kiểm tra điều kiện (validation logic) cho các form nhập liệu.
-  - Khi viết Unit test cho tầng domain.
-- **WHEN NOT TO USE**:
-  - Khi chỉ sửa màu sắc nút bấm hoặc căn chỉnh layout màn hình (dùng `ux-design`).
-  - Khi thiết lập index bảng Dexie IndexedDB (dùng `architecture`).
+### Batch
 
----
+- `initialQuantity`: số ban đầu.
+- `currentQuantity`: physical/living stock hiện còn.
+- `readyQuantity`: số đã đủ chuẩn.
+- Luôn: `0 <= readyQuantity <= currentQuantity <= initialQuantity`.
 
-## 3. Core Stock Distinction (Sự khác biệt cốt lõi về tồn kho)
+### Reservation
 
-Trong sản xuất cây giống lâm nghiệp, việc nhầm lẫn giữa cây thực tế và cây có thể bán sẽ dẫn đến vỡ đơn (bán khống cây). Agent **PHẢI** phân biệt 3 tầng số lượng:
+Với mỗi reservation:
 
-$$\text{Physical Stock} \quad\neq\quad \text{Ready Stock} \quad\neq\quad \text{Available Stock}$$
+- **Q = quantity**: tổng cam kết của record ở phiên bản hiện tại, gồm cả phần đã xuất.
+- **F = fulfilledQuantity**: số thực tế đã xuất từ reservation đó.
+- `0 <= F <= Q`.
 
-### Ví dụ thực tế một lô Keo lai BV16:
-1. **Initial Quantity (Cắm hom ban đầu)**: $100.000\text{ cây}$
-2. **Current / Physical Quantity (Cây còn sống thực tế)**: $82.000\text{ cây}$ (hao hụt 18.000 cây trong quá trình bật mầm)
-3. **Ready Quantity (Cây đủ chuẩn xuất vườn)**: $50.000\text{ cây}$ (32.000 cây còn non đang nuôi tiếp)
-4. **Reserved Quantity (Đã giữ cho khách cọc)**: $20.000\text{ cây}$ (Anh Hùng giữ)
-5. **Available Quantity (Cây còn bán được)**: $30.000\text{ cây}$ ($50.000 - 20.000$)
+### Outstanding O
 
----
+```text
+active     → O = max(Q - F, 0)
+released   → O = 0
+fulfilled  → O = 0
+```
 
-## 4. Core Formulas (Công thức chuẩn)
+`O` mới là lượng **đang giữ/chưa xuất**.
 
-Mọi phép tính trong hệ thống phải tuân theo các công thức thuần túy sau:
+### Coverage C của một reservation
 
-### 1. Số lượng đã giữ của một lô (`reservedQuantityForBatch`):
-$$\text{reserved}(batch) = \sum_{r \in \text{Reservations},\, r.batchId = batch.id,\, r.status = \text{'active'}} r.quantity$$
+```text
+active     → C = Q
+fulfilled  → C = Q
+released   → C = F
+```
 
-### 2. Số lượng còn bán được của một lô (`availableQuantityForBatch`):
-$$\text{available}(batch) = \max\Big(\text{readyQuantity} - \text{reserved}(batch),\; 0\Big)$$
+Released source vẫn giữ lịch sử phần đã xuất `F`; không xóa coverage lịch sử.
 
-### 3. Số lượng còn thiếu của một đơn hàng (`shortageForOrder`):
-$$\text{shortage}(order) = \max\Big(\text{requestedQuantity} - \sum_{r.orderId = order.id,\, r.status = \text{'active'}} r.quantity,\; 0\Big)$$
+### Coverage của order
 
-### 4. Tỷ lệ sống của lô cây (`survivalRate`):
-$$\text{survivalRate}(batch) = \begin{cases} 0 & \text{nếu } \text{initialQuantity} \le 0 \\ \dfrac{\text{currentQuantity}}{\text{initialQuantity}} & \text{ngược lại} \end{cases}$$
+```text
+orderCoverage = sum(C của mọi reservation own + external)
+```
 
----
+### Shortage của order
 
-## 5. Mandatory Invariants (8 Bất biến bắt buộc - MUST)
+```text
+shortage = max(requestedQuantity - orderCoverage, 0)
+```
 
-1. **Số lượng không âm**:
-   Mọi đại lượng số lượng ($quantity, initial, current, ready, reserved, shipped$) **MUST** luôn $\ge 0$.
-2. **Cây đủ chuẩn không vượt quá cây thực tế**:
-   $$\text{readyQuantity} \le \text{currentQuantity} \le \text{initialQuantity}$$
-3. **Không được bán khống (No Over-Reservation)**:
-   Khi giữ cây từ lô nội bộ (`sourceType = 'own_batch'`), số lượng giữ **MUST NOT** vượt quá $\text{available}(batch)$ tại thời điểm giữ.
-4. **Giữ cây KHÔNG làm giảm tồn kho vật lý**:
-   Tạo `Reservation` chỉ là khóa logic giữ cây cho khách. Cây vẫn nằm ngoài luống, do đó `currentQuantity` **KHÔNG ĐƯỢC PHÉP** giảm khi tạo reservation.
-5. **Chuyến giao thực tế MỚI làm giảm tồn kho vật lý**:
-   Chỉ khi một `Shipment` được ghi nhận thực tế bốc cây lên xe chở đi (`status = 'completed'` hoặc 'partial'), `currentQuantity` và `readyQuantity` của lô mới bị trừ đi tương ứng số lượng đã giao.
-6. **Cho phép xuất giao từng phần (Partial Shipment)**:
-   Một đơn $30.000\text{ cây}$ có thể giao thành 3 chuyến xe $10.000\text{ cây}$. Đơn hàng chỉ chuyển sang `shipped` khi tổng số lượng thực giao $\ge$ số lượng đặt.
-7. **Hủy/Nhả giữ cây phải hoàn trả khả dụng (Release Restoration)**:
-   Khi khách hủy cọc hoặc hết hạn giữ (`status = 'released'`), số lượng khả dụng $\text{available}(batch)$ **MUST** tự động tăng lại tương ứng.
-8. **Đảm bảo tính lũy thừa (Idempotency)**:
-   Gửi lại một mutation (do mạng lag hoặc bấm đúp) **MUST NOT** sinh ra duplicate reservation hoặc trừ tồn kho 2 lần.
+Shortage là trạng thái nghiệp vụ hợp lệ; không tự clamp hoặc tạo nguồn giả.
 
----
+## 3. Availability của own batch
 
-## 6. Domain Logic Placement (Vị trí đặt mã nguồn)
+Chỉ **own-batch outstanding O** tham gia availability của lô:
 
-- **Pure Domain Functions**: Toàn bộ công thức tính toán trên **MUST** được viết dưới dạng hàm thuần túy (pure functions, không side-effects) đặt trong `src/domain/`.
-- **TUYỆT ĐỐI CẤM** nhét logic tính toán tồn kho, cộng trừ số lượng vào trong thân JSX hoặc React Component.
+```text
+ownOutstanding(batch)
+  = sum(O của reservation sourceType=own_batch trỏ batch đó)
 
----
+available(batch)
+  = max(readyQuantity - ownOutstanding(batch), 0)
+```
 
-## 7. Derived Status vs Stored Status
+External supplier commitment **không** làm giảm availability của own batch.
 
-- Ưu tiên suy diễn trạng thái từ dữ liệu thực tế (Derived status) bất cứ khi nào khả thi.
-- Không lưu 2 nguồn sự thật (single source of truth) gây mâu thuẫn dữ liệu.
+Lưu ý: historical/committed shortage có thể khiến tổng outstanding lớn hơn ready sau các biến động/reconciliation hợp lệ. Read model phải hiển thị shortage trung thực; **new reserve command** vẫn phải kiểm tra current available tại commit và không được oversell.
 
----
+## 4. Source semantics
 
-## 8. Mutation Review Checklist
+Reservation phải exclusive:
 
-Trước khi thay đổi bất kỳ bản ghi dữ liệu nào, agent **BẮT BUỘC** tự trả lời 6 câu hỏi:
-- [ ] Số lượng nào đang thay đổi? (Vật lý hay Logic?)
-- [ ] Số lượng sau khi đổi có đảm bảo $\ge 0$ không?
-- [ ] Lô cây có bị giữ vượt quá số cây còn bán không?
-- [ ] Thao tác này có sinh ra reservation bị rò rỉ (leak) không?
-- [ ] Nếu chạy lại thao tác này 2 lần liên tiếp, dữ liệu có bị nhân đôi không?
-- [ ] Trường hợp khách chỉ lấy một phần đơn (partial shipment) đã được xử lý chưa?
+### own_batch
 
----
+- có `batchId`;
+- không có `supplierId`;
+- giữ cây dựa trên current available của lô;
+- shipment confirm có thể làm giảm physical/ready stock của lô theo quantity thực xuất.
 
-## 9. Failure Modes & Concrete Scenarios
+### external_supplier
 
-### Kịch bản A: Khách muốn giữ 30.000 cây từ lô còn bán 22.000 cây
-- ❌ **Xử lý sai**: Cho phép tạo reservation 30.000 cây, khiến `available` âm ($-8.000$).
-- ✅ **Xử lý đúng**: Báo lỗi ngay lập tức: Lô chỉ còn 22.000 cây đủ bán. Đề xuất: giữ 22.000 cây từ lô này, và 8.000 cây gom từ nguồn ngoài (`external_supplier`).
+- có `supplierId`;
+- không có `batchId`;
+- là explicit commitment từ nguồn ngoài;
+- không được suy diễn thành tồn kho trong vườn;
+- shipment external không làm giảm own batch stock.
 
-### Kịch bản B: Khách đặt đơn và chủ vườn bấm "Xác nhận giữ cây"
-- ❌ **Xử lý sai**: Lấy `batch.currentQuantity = batch.currentQuantity - 10000`.
-- ✅ **Xử lý đúng**: Giữ nguyên `currentQuantity`. Tạo một bản ghi `Reservation` với `quantity = 10000`. Cây thực tế vẫn còn trong vườn!
+## 5. Order creation
+
+Tạo order chỉ ghi nhu cầu.
+
+**MUST NOT auto-reserve** khi tạo order trừ khi một contract tương lai explicit thay đổi behavior và được review riêng.
+
+## 6. Shipment semantics
+
+- Planned shipment **không phải shipped**.
+- Chỉ completed/confirmed actual shipment mới tăng fulfilled/shipped truth.
+- Own source actual shipment mới giảm own physical/ready stock.
+- Partial shipment được phép.
+- Completed shipment/fulfillment history không được xóa khi release phần outstanding còn lại.
+
+## 7. No oversell
+
+Tạo **new own reservation** phải re-read authority tại transaction commit và đảm bảo lượng mới không vượt current available.
+
+Không được dựa vào:
+
+- stale client cache;
+- optimistic UI;
+- preview cũ;
+- client-computed availability.
+
+V3 server phải serialize/lock/version-check theo reviewed transaction strategy.
+
+## 8. Idempotency
+
+Retry cùng business intent không được:
+
+- tạo duplicate reservation;
+- confirm shipment hai lần;
+- giảm stock hai lần;
+- append duplicate durable business outcome.
+
+V3 dùng server idempotency receipt theo API/sync contract; historical local operation guards vẫn phải được preserve khi migrate semantics.
+
+## 9. Quantity representation
+
+### Local historical code
+Hiện tại JS quantity phải là safe non-negative integer theo existing guards.
+
+### V3 API/server
+PostgreSQL dùng BIGINT cho business quantity theo schema design. API serialize quantity bằng **canonical decimal string** để tránh precision loss.
+
+Không parse qua floating point rồi silently round.
+
+## 10. Server/client placement
+
+- Pure invariant/calculation có thể share TypeScript sau dependency audit.
+- Server là canonical validator cho committed writes sau cutover.
+- Client validation phục vụ UX, không thay server validation.
+- React JSX không chứa ad-hoc stock arithmetic.
+
+## 11. Mutation checklist
+
+Trước mọi mutation:
+
+- [ ] Quantity nào đổi: physical, ready, Q, F hay planned?
+- [ ] Source own hay external?
+- [ ] O và C sau mutation là gì?
+- [ ] Order shortage có hiển thị trung thực?
+- [ ] Có oversell từ stale availability không?
+- [ ] Planned có bị nhầm thành shipped không?
+- [ ] Retry cùng intent có duplicate effect không?
+- [ ] Tenant/garden references có cùng scope không?
+- [ ] Audit/history cần preserve gì?
+
+## 12. Canonical references
+
+Khi skill này mơ hồ, ưu tiên contract đã review trong repository, đặc biệt:
+
+- `docs/development/FC3-FUNCTIONAL-CONTRACT.md`
+- `docs/development/FC4-FUNCTIONAL-CONTRACT.md`
+- current pure-domain helpers/tests trên merged main
+- V3 architecture/API docs chỉ được map semantics, không tự viết lại nghiệp vụ.
+
+Historical FC5 contract chỉ là reference cho capability preserved/not adopted trừ khi scope được mở lại.
