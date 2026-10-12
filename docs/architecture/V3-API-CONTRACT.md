@@ -1,6 +1,6 @@
 # V3-0 — REST / OpenAPI Contract
 
-**Status: DESIGN ONLY / NOT AUTHORIZED FOR IMPLEMENTATION OR DEPLOYMENT.**
+**Status: DESIGN FROZEN FOR IMPLEMENTATION HANDOFF. Runtime implementation/deployment still requires the corresponding V3 phase to be explicitly authorized in PROJECT_STATE.**
 
 This document is the canonical frontend/backend API design for Vườn Ươm V3. It exists so 17thedev and Tráng A Thư can implement separate server/client slices without inventing incompatible DTOs.
 
@@ -10,6 +10,8 @@ Read with:
 - [V3 Data Model Notes](./V3-DATA-MODEL-NOTES.md)
 - [V3 Sync Protocol](./V3-SYNC-PROTOCOL.md)
 - [V3 Local-to-Cloud Migration](./V3-LOCAL-TO-CLOUD-MIGRATION.md)
+- [V3 Authorization Contract](./V3-AUTHORIZATION-CONTRACT.md)
+- [V3 Implementation Foundation](./V3-IMPLEMENTATION-FOUNDATION.md)
 - [V3 Roadmap](../product/V3-ROADMAP.md)
 
 If this document conflicts with an approved domain contract, **domain semantics win** and this API document must be corrected before implementation.
@@ -64,7 +66,7 @@ Content-Type: application/json
 Accept: application/json
 ```
 
-Migration artifact upload transport may later use a different content type after size/storage review.
+Normal API uses JSON. Legacy import upload is frozen as authenticated `multipart/form-data` with one `application/json` file field, maximum 10 MiB; see §13.
 
 ---
 
@@ -226,6 +228,26 @@ Client logic must branch on `code`, not framework exception text.
 | 500 | `INTERNAL_ERROR` | unexpected server failure |
 | 503 | `SERVICE_UNAVAILABLE` | transient dependency/runtime outage |
 
+Additional frozen codes:
+
+```text
+INVITATION_EXPIRED
+INVITATION_REVOKED
+INVITATION_EMAIL_MISMATCH
+INVITATION_ROLE_NOT_ALLOWED
+MEMBERSHIP_ALREADY_EXISTS
+MEMBERSHIP_NOT_FOUND
+ROLE_CHANGE_NOT_ALLOWED
+ORGANIZATION_OWNER_IMMUTABLE
+DEVICE_NOT_REGISTERED
+DIRECTORY_SNAPSHOT_STALE
+SYNC_CURSOR_EXPIRED
+COMPENSATION_NOT_SUPPORTED
+COMPENSATION_CONFLICT
+IMPORT_EXPIRED
+IMPORT_HASH_MISMATCH
+```
+
 Domain-specific codes can be added, but removal/semantic reuse is a contract change.
 
 ---
@@ -249,8 +271,8 @@ Response:
 
 Rules:
 
-- default/max `limit` frozen at implementation review;
-- deterministic ordering required;
+- default `limit = 50`, maximum `limit = 100`;
+- deterministic default ordering is `createdAt DESC, id ASC` unless an endpoint explicitly freezes another order;
 - cursor opaque;
 - filters must be tenant scoped server-side;
 - count/search must not leak other tenants.
@@ -259,7 +281,7 @@ Rules:
 
 # 7. V3-1 — Identity and tenant endpoints
 
-These endpoints are **design candidates for V3-1**, not implementation authorization.
+These endpoints are **design-frozen for V3-1 handoff**, but V3-1 runtime implementation still requires explicit phase authorization.
 
 ## 7.1 Current user
 
@@ -312,7 +334,7 @@ Request:
 
 Response: `201` canonical organization + initial caller membership.
 
-Exact naming limits and ownership role require access-matrix freeze before implementation.
+Organization creator becomes the single Organization OWNER for initial V3. Organization OWNER transfer/multiple owners are deferred.
 
 ### GET `/v3/organizations/{organizationId}`
 
@@ -330,25 +352,110 @@ Create garden if caller has permission.
 
 ### GET `/v3/gardens/{gardenId}`
 
-Canonical garden metadata + caller's effective role/capabilities.
+Canonical garden metadata + server-computed effective role/permission keys.
 
-## 7.4 Membership
+Garden creation rules:
+
+- created by Organization OWNER → owner receives Garden OWNER;
+- created by Organization ADMIN → Organization OWNER receives Garden OWNER and creating ADMIN receives Garden MANAGER;
+- no garden exists without the Organization OWNER as Garden OWNER.
+
+## 7.4 Membership and invitations
+
+Canonical policy is frozen in [V3-AUTHORIZATION-CONTRACT.md](./V3-AUTHORIZATION-CONTRACT.md).
 
 ### GET `/v3/gardens/{gardenId}/members`
 
-Authorized member list.
+Garden OWNER/MANAGER only.
 
 ### POST `/v3/gardens/{gardenId}/invitations`
 
-Create invitation. Final request fields, delivery mechanism, expiry and acceptance token model remain a **V3-1 review blocker**.
+Request:
+
+```json
+{
+  "email": "member@example.com",
+  "role": "WORKER"
+}
+```
+
+Allowed invite roles:
+
+```text
+OWNER   → MANAGER / WORKER / VIEWER
+MANAGER → WORKER / VIEWER
+```
+
+Garden OWNER role is reserved for the Organization OWNER and cannot be invited.
+
+Invitation expires after 7 days. Creating a replacement invite for the same garden + normalized email revokes the previous pending token.
+
+Response returns invitation metadata plus a one-time share URL containing the raw opaque token. Server stores only SHA-256(token).
+
+### POST `/v3/invitations/preview`
+
+Authenticated body:
+
+```json
+{ "token": "opaque" }
+```
+
+Authenticated verified email must match invite target.
+
+### POST `/v3/invitations/accept`
+
+Authenticated body:
+
+```json
+{ "token": "opaque" }
+```
+
+Acceptance atomically creates OrganizationMember(MEMBER) when missing, creates GardenMember, accepts invitation and appends audit evidence.
+
+### DELETE `/v3/gardens/{gardenId}/invitations/{invitationId}`
+
+Revoke pending invite.
+
+### PATCH `/v3/gardens/{gardenId}/members/{userId}`
+
+```json
+{
+  "role": "VIEWER",
+  "expectedVersion": 3
+}
+```
+
+OWNER manages MANAGER/WORKER/VIEWER. MANAGER only changes WORKER ↔ VIEWER. OWNER target is immutable through this endpoint.
 
 ### DELETE `/v3/gardens/{gardenId}/members/{userId}`
 
-Revoke membership when policy allows.
+Revokes according to permission matrix. A non-owner may leave their own garden.
 
-Revocation must stop future sync replay and access; cached client data handling follows sync/security policy.
+### PATCH `/v3/organizations/{organizationId}/members/{userId}`
 
-> Role update endpoint is intentionally not frozen until the permission matrix is reviewed.
+Organization OWNER only; target role is ADMIN or MEMBER. Organization OWNER cannot be changed in V3-1.
+
+## 7.5 Device registration
+
+Client creates one random `clientInstallationId` UUID per PWA/browser storage profile and environment.
+
+### POST `/v3/devices/register`
+
+```json
+{
+  "clientInstallationId": "uuid",
+  "label": "Chrome Android",
+  "platform": "pwa"
+}
+```
+
+Idempotent by `(authenticated user, clientInstallationId)`. Returns canonical `deviceId`.
+
+### DELETE `/v3/devices/{deviceId}`
+
+Unregister caller-owned device. Commands using an unregistered/foreign device return `DEVICE_NOT_REGISTERED`.
+
+No hardware fingerprinting, IMEI or advertising identifier is collected.
 
 ---
 
@@ -610,10 +717,38 @@ Exact DTOs are frozen per action before implementation. The action names below a
 | `shipment.confirm` | record actual shipment/fulfillment | V3-2 |
 | `shipment.cancel` | cancel planned shipment where allowed | V3-2 |
 | `dossier.upsert` | update batch dossier | V3-2 |
+| `mutation.compensate` | explicit safe compensation of a supported prior mutation | V3-2 |
 
-### Not frozen yet
+### Compensation / Undo
 
-Undo mapping is intentionally **not assigned an action name yet**. Existing Undo/stale guards/history semantics must be reviewed and mapped explicitly instead of exposing a generic “undo anything” command.
+V3 maps Undo to `mutation.compensate`, not a blind rollback.
+
+Payload:
+
+```json
+{
+  "targetMutationId": "uuid"
+}
+```
+
+Server checks same garden, current permission, explicit compensation registry and current state/version/history. Compensation is a new mutation with a new idempotency key and audit/change revision.
+
+Unsupported target → `COMPENSATION_NOT_SUPPORTED`.
+
+State no longer safe → `COMPENSATION_CONFLICT`.
+
+Applied command responses may expose:
+
+```json
+{
+  "compensation": {
+    "supported": true,
+    "targetMutationId": "uuid"
+  }
+}
+```
+
+as a UI affordance only.
 
 ---
 
@@ -733,7 +868,13 @@ Response concept:
 
 Client applies a complete page atomically.
 
-Exact exposure of internal ChangeLog sequence vs encoded cursor remains an implementation review decision; **cursor stays opaque either way**.
+Garden sync uses a commit-ordered per-garden `syncRevision` frozen in the implementation foundation.
+
+All ChangeLog rows from one committed mutation share one revision and have deterministic ordinal values. Pages never split one revision.
+
+Cursor is HMAC-signed opaque data bound to garden + revision. Minimum retained changefeed window is 90 days. Expired cursor returns `410 SYNC_CURSOR_EXPIRED`.
+
+Default page target: 100 change rows; maximum target: 500, except one complete revision may exceed the target.
 
 ## 12.2 Snapshot
 
@@ -765,7 +906,15 @@ Conceptual response:
 }
 ```
 
-Organization-scoped contacts may be included as an explicitly scoped snapshot section or fetched separately; final decision must avoid cross-garden/organization leakage and unnecessary duplication.
+Organization-scoped contacts are **not** duplicated into garden snapshot/changefeed.
+
+They use a separate organization contact-directory snapshot:
+
+```http
+GET /v3/organizations/{organizationId}/contacts/snapshot?limit=100&cursor=<opaque>
+```
+
+Each download is bound to one `directoryVersion`. If the directory changes between pages, server returns `409 DIRECTORY_SNAPSHOT_STALE`; client discards temporary pages and restarts, then atomically swaps the local organization contact cache only after a complete version is downloaded.
 
 ## 12.3 Retry behavior
 
@@ -784,21 +933,39 @@ Migration remains owner-controlled and separately gated.
 Logical flow:
 
 ```text
-stage artifact
-→ validate/preview
+upload/stage
+→ strict validate + preview
 → owner confirms digest + target garden
-→ atomic commit/publish
+→ atomic canonical commit
 → verify canonical snapshot
 → explicit cutover
 ```
 
-Proposed routes:
+## POST `/v3/gardens/{gardenId}/imports`
 
-### POST `/v3/gardens/{gardenId}/imports`
+Auth: Garden OWNER only.
 
-Create staged import from validated legacy Backup V1.
+Content:
 
-The final upload transport is **not frozen** until artifact-size/storage/security review. Do not assume public object storage.
+```http
+Content-Type: multipart/form-data
+```
+
+One file field:
+
+```text
+file: application/json
+```
+
+Maximum raw size:
+
+```text
+10 MiB
+```
+
+Server computes SHA-256, strict-validates legacy Backup V1 and stores only private staged normalized payload associated with MigrationImport. No canonical business rows are written during preview.
+
+Staged payload expires after 24 hours.
 
 Response:
 
@@ -807,18 +974,17 @@ Response:
   "importId": "uuid",
   "status": "staged",
   "contentHash": "sha256:...",
+  "expiresAt": "2026-10-13T12:00:00.000Z",
   "previewCounts": {},
   "warnings": []
 }
 ```
 
-### GET `/v3/gardens/{gardenId}/imports/{importId}`
+## GET `/v3/gardens/{gardenId}/imports/{importId}`
 
-Return owner-visible staged/verified/committed status and preview.
+Owner-visible preview/status. Never returns another tenant's staged payload.
 
-### POST `/v3/gardens/{gardenId}/imports/{importId}/commit`
-
-Request:
+## POST `/v3/gardens/{gardenId}/imports/{importId}/commit`
 
 ```json
 {
@@ -827,9 +993,19 @@ Request:
 }
 ```
 
-Must be idempotent for same reviewed import/digest.
+Rules:
 
-No cutover is implied solely by successful import commit; verified consistency + explicit cutover decision remains required.
+- OWNER only;
+- expired import → `IMPORT_EXPIRED`;
+- hash mismatch → `IMPORT_HASH_MISMATCH`;
+- repeated same confirmed import is idempotent;
+- canonical data/audit/provenance commit atomically;
+- staged payload purged after successful verification;
+- failed/rejected/expired payload purged without canonical writes.
+
+No public object-storage bucket is required for V3 bootstrap.
+
+Successful import does **not** itself switch local/cloud authority. Explicit verified cutover remains a separate owner action.
 
 ---
 
@@ -890,7 +1066,15 @@ At minimum:
 
 ### Contract verification
 
-Server CI should eventually verify generated/declared OpenAPI against controller DTOs. Client types, if generated, must derive from reviewed OpenAPI rather than handwritten duplicate shapes.
+Frozen implementation path:
+
+- generated checked-in spec: `docs/api/v3.openapi.json`;
+- NestJS `@nestjs/swagger` generates the spec deterministically;
+- server CI runs `openapi:check`;
+- frontend runs `openapi-typescript` to generate `web/src/api/generated/v3.d.ts`;
+- generated types are never hand edited.
+
+Pinned toolchain and package boundaries are in [V3-IMPLEMENTATION-FOUNDATION.md](./V3-IMPLEMENTATION-FOUNDATION.md).
 
 ---
 
@@ -963,19 +1147,19 @@ Before V3-1/V3-2 implementation acceptance:
 
 ---
 
-# 19. Unresolved decisions before implementation
+# 19. Design freeze summary
 
-These are **review blockers**, not permission to improvise in code:
+The previous V3-0 blockers are now resolved as follows:
 
-1. exact OrganizationMember/GardenMember permission matrix;
-2. invitation creation/acceptance/expiry mechanics;
-3. final role-update API;
-4. exact OpenAPI/NestJS version/toolchain;
-5. device registration model for `deviceId`;
-6. stable Undo command mapping;
-7. contact inclusion strategy in garden snapshot;
-8. import upload transport/size threshold/staging storage;
-9. changefeed retention/cursor expiry representation;
-10. exact list filter/sort/limit constraints.
+1. Permission matrix → frozen in V3 Authorization Contract.
+2. Invitations → 7-day email-bound share-link token, SHA-256 stored token, authenticated preview/accept.
+3. Role update → explicit organization/garden endpoints with immutable OWNER rules.
+4. Toolchain → pinned in V3 Implementation Foundation.
+5. Device registration → authenticated client-installation registration with canonical deviceId.
+6. Undo → `mutation.compensate` with explicit compensation registry and fresh validation.
+7. Contacts → organization-scoped paginated snapshot bound to `directoryVersion`; not duplicated into garden feed.
+8. Import → authenticated multipart JSON, 10 MiB cap, private staged payload, 24-hour expiry.
+9. Changefeed → commit-ordered per-garden revision, signed cursor, 90-day minimum retention, 410 on expiry.
+10. Pagination → default 50/max 100; deterministic ordering.
 
-Resolve them in design review or scoped implementation-contract PR before dependent code lands.
+Remaining implementation choices are local code details that **must not change these contracts**. Any change to the frozen decisions requires a design-contract PR before dependent frontend/backend code merges.
