@@ -291,6 +291,7 @@ Idempotently ensures an `AppUser` row exists for the verified Supabase `sub`.
 
 - no tenant membership is invented;
 - repeated calls for the same subject return the same canonical user;
+- normalized lowercase email is refreshed from the authenticated JWT when it changes;
 - this is the only automatic identity-provisioning endpoint;
 - `GET /me` remains side-effect free.
 
@@ -299,6 +300,7 @@ Response `200`:
 ```json
 {
   "id": "uuid",
+  "email": "user@example.com",
   "displayName": null,
   "version": 1
 }
@@ -313,6 +315,7 @@ Example:
 ```json
 {
   "id": "uuid",
+  "email": "athu@example.com",
   "displayName": "A Thư",
   "version": 2,
   "organizations": [
@@ -381,6 +384,23 @@ Organization creator becomes the single Organization OWNER for initial V3. Organ
 
 Caller-visible organization detail.
 
+### PATCH `/v3/organizations/{organizationId}`
+
+Organization OWNER/ADMIN only.
+
+```json
+{
+  "name": "Vườn ươm Tuấn Sơn",
+  "expectedVersion": 2
+}
+```
+
+Organization has an optimistic `version`; stale update returns `409 VERSION_CONFLICT`.
+
+### GET `/v3/organizations/{organizationId}/members`
+
+Organization OWNER/ADMIN only. Returns member `userId`, normalized email, displayName, organization role and membership version.
+
 ## 7.3 Gardens
 
 ### GET `/v3/organizations/{organizationId}/gardens`
@@ -407,7 +427,11 @@ Canonical policy is frozen in [V3-AUTHORIZATION-CONTRACT.md](./V3-AUTHORIZATION-
 
 ### GET `/v3/gardens/{gardenId}/members`
 
-Garden OWNER/MANAGER only.
+Garden OWNER/MANAGER only. Each row returns userId, normalized email, displayName, role and membership version.
+
+### GET `/v3/gardens/{gardenId}/invitations`
+
+Garden OWNER/MANAGER only. Lists safe invitation metadata for PENDING/expired/revoked/accepted records according to retention policy; **never returns raw token/shareUrl**.
 
 ### POST `/v3/gardens/{gardenId}/invitations`
 
