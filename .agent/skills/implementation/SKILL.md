@@ -1,165 +1,105 @@
 ---
 name: implementation
 description: >-
-  Standardized coding workflow for implementing features in Vườn Ươm. Covers inspection,
-  identifying invariants, vertical slice development, risk-based verification, and scope discipline.
+  V3 implementation workflow: phase check, contract/invariants, thin slices,
+  two-person integration, risk-based verification and truthful handoff.
 ---
 
 # Feature Implementation Workflow
 
-## 1. Purpose
+## 1. Before coding
 
-Chuẩn hóa quy trình thực hiện công việc lập trình của Agent: từ khâu khảo sát mã nguồn hiện có, xác định bất biến nghiệp vụ, triển khai lát cắt mỏng nhất (Vertical Slice), kiểm thử đến báo cáo kết quả.
+1. Đọc `.agent/PROJECT_STATE.md`.
+2. Đọc router + skills liên quan.
+3. Nếu có frontend ↔ backend boundary, đọc `api-contract` và canonical API doc.
+4. Xác định owner/reviewer và shared files.
+5. Không code executable phase chưa được authorize.
 
-Mục tiêu là vừa giữ an toàn domain, vừa tránh feedback loop chậm do chạy full quality gate sau mọi chỉnh sửa nhỏ.
+## 2. Contract-first rule
 
----
-
-## 2. When to Use & When NOT to Use
-
-- **WHEN TO USE**:
-  - Khi bắt đầu thực hiện bất kỳ task coding / refactoring nào trong dự án.
-  - Khi triển khai một màn hình, component, hook hoặc service mới.
-- **WHEN NOT TO USE**:
-  - Khi chỉ cần đọc tài liệu giải thích cho người dùng mà không sửa mã nguồn.
-  - Khi thực hiện review/audit code của người khác (dùng `review-audit`).
-
----
-
-## 3. The 5-Step Implementation Workflow
+Với API/server/client task:
 
 ```text
-Step 1: Inspect mã nguồn & Phase hiện tại
-   ↓
-Step 2: Xác định Invariants + Risk Level
-   ↓
-Step 3: Triển khai lát cắt nhỏ nhất
-   ↓
-Step 4: Verification theo mức rủi ro
-   ↓
-Step 5: Báo cáo trung thực & minh bạch
+contract
+→ review
+→ backend/client implementation song song
+→ integration tests
 ```
 
-### Bước 1 — Khảo sát
-
-- Đọc `.agent/PROJECT_STATE.md` để biết phase hiện tại cho phép làm gì.
-- Kiểm tra type/domain liên quan.
-- Kiểm tra repository/service hiện tại.
-- Đọc test hiện có để nắm kỳ vọng.
-- Không tạo parallel implementation nếu đã có code tương đương.
-
-### Bước 2 — Xác định Invariants + Risk Level
-
-Trước khi code, xác định task thuộc mức nào:
+Không làm:
 
 ```text
-LOW
-CSS / copy / layout / docs
-
-NORMAL
-UI behavior / form / navigation / non-critical service
-
-HIGH
-quantity / reservation / shipment / Dexie / migration /
-backup-restore / destructive reset / cross-entity integrity
+backend tự nghĩ DTO
++
+frontend tự đoán DTO
+→ cuối phase mới ghép
 ```
 
-Nếu HIGH phải đọc `domain-rules` và `testing` trước khi sửa.
+Contract change trong lúc code phải cập nhật canonical doc trước hoặc cùng atomic PR, và báo cho branch phụ thuộc.
 
-### Bước 3 — Triển khai lát cắt nhỏ nhất
+## 3. Risk levels
 
-Thứ tự từ trong ra ngoài:
+### LOW
+Docs/copy/CSS/refactor không đổi behavior.
 
-1. Domain nếu có.
-2. Data / repository nếu có.
-3. Application/service.
-4. UI/screen.
-5. Tests phù hợp với behavior vừa thêm/sửa.
+### NORMAL
+UI flow, read endpoint/client integration, non-critical service.
 
-Không xây hạ tầng cho nhu cầu chưa tồn tại.
+### HIGH
+Quantity, reservation, shipment, auth/authorization, tenant isolation, Prisma migration, idempotency, sync/conflict, backup/restore, destructive operation.
 
-### Bước 4 — Verification theo mức rủi ro
+HIGH phải có testing/security/domain review phù hợp.
 
-Không còn quy tắc “mỗi task nhỏ đều chạy full 4 lệnh ngay lập tức”.
+## 4. Thin slice order
 
-Dùng cadence trong `testing/SKILL.md`.
+Tùy task, ưu tiên:
 
-#### Trong lúc làm
+1. contract;
+2. pure domain/invariant;
+3. persistence/application;
+4. HTTP/API adapter;
+5. client API adapter/offline state;
+6. UI;
+7. tests/evidence.
 
-```text
-LOW
-→ manual / visual check
-→ targeted tests nếu có logic
+Không tạo hạ tầng cho feature chưa được scope.
 
-NORMAL
-→ related tests
-→ typecheck/lint khi slice ổn định
+## 5. V3 server rules
 
-HIGH
-→ regression test
-→ related integration tests
-→ full suite trước handoff/push
-```
+Khi backend phase đã authorize:
 
-#### Trước push / PR / merge / final handoff
+- controller không chứa business logic lớn;
+- membership authorization phía server;
+- quantity decimal string ở API;
+- version/conflict explicit;
+- high-risk mutation idempotent;
+- transaction bảo toàn write + audit/changefeed/receipt theo contract;
+- 401/403/404 không leak tenant metadata.
 
-Chạy full gate ít nhất một lần trên exact head được bàn giao:
+## 6. V3 client rules
 
-```bash
-cd web
-npm run typecheck
-npm run lint
-npm test
-npm run build
-```
+- không coi local optimistic state là committed;
+- retry cùng intent giữ idempotency key;
+- tenant/account cache partition;
+- auth expiry pause/re-auth hợp lý;
+- conflict không silent overwrite.
 
-Ngoại lệ duy nhất:
+## 7. Verification
 
-- low-risk docs/CSS-only có thể dùng targeted/manual local checks và dựa vào exact-head CI full gate;
-- báo cáo phải nói rõ chưa chạy full local nếu đúng như vậy.
+Trong lúc làm: targeted/related tests.
 
-Nếu task sửa UI: phải visual-check viewport liên quan; responsive bug phải kiểm đúng breakpoint gây lỗi.
+Trước handoff/PR/merge: exact-head gate theo `testing` và `github-workflow`.
 
-### Bước 5 — Báo cáo
+## 8. Handoff format
 
-Báo cáo kết thúc task gồm:
+Báo cáo:
 
-1. **Implemented**
-2. **Changed files**
-3. **Behavior**
-4. **Verification**
-   - targeted checks đã chạy;
-   - full checks đã chạy;
-   - CI nếu có.
-5. **Deferred**
-6. **Risks**
+1. Implemented
+2. Contract impact
+3. Changed files
+4. Behavior
+5. Verification
+6. Deferred
+7. Risks/gates
 
-Không được nói `all tests pass` nếu chỉ chạy targeted test.
-
----
-
-## 4. Scope Discipline
-
-- Không vượt roadmap hiện tại.
-- Bugfix phục vụ field validation được phép nếu không thêm product feature mới.
-- Nếu phát hiện việc ngoài scope, ghi vào Deferred.
-- Không trộn UI bugfix với domain/metric refactor nếu không cần thiết.
-
----
-
-## 5. Checklist trước khi kết thúc Task
-
-### Low/Normal risk
-- [ ] Đã chạy targeted/related tests phù hợp?
-- [ ] Đã kiểm manual/visual nếu sửa UI?
-- [ ] Typecheck/lint đã chạy ở stable slice hoặc trước handoff?
-
-### High risk
-- [ ] Có regression test nếu cần?
-- [ ] Related integration tests pass?
-- [ ] Full suite + build pass trước push/handoff?
-
-### Final handoff / PR / merge
-- [ ] Exact head đã được full gate local hoặc CI?
-- [ ] Báo cáo phân biệt rõ local targeted vs full verification?
-- [ ] Không vượt scope?
+Không nói “done” nếu chỉ hoàn thành một slice hoặc phase chưa được acceptance.
