@@ -621,7 +621,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Safe invitation metadata; no raw token/share URL",
+            "description": "Currently PENDING, non-expired invitation metadata only; no raw token/share URL",
             "content": {
               "application/json": {
                 "schema": {
