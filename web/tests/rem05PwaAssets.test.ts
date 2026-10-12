@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const webRoot = fileURLToPath(new URL('../', import.meta.url))
+const webRoot = process.cwd()
 const publicFile = (name: string) => readFileSync(resolve(webRoot, 'public', name))
 const sourceFile = (name: string) => readFileSync(resolve(webRoot, name), 'utf8')
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
