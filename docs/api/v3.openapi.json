@@ -83,6 +83,43 @@
             "$ref": "#/components/responses/AuthRequired"
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "updateMe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated self profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
       }
     },
     "/v3/devices/register": {
@@ -1280,6 +1317,29 @@
           }
         }
       }
+    },
+    "/v3/me/bootstrap": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "bootstrapMe",
+        "responses": {
+          "200": {
+            "description": "Idempotently provisioned current AppUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1587,7 +1647,8 @@
           "id",
           "authSubject",
           "organizations",
-          "gardens"
+          "gardens",
+          "version"
         ],
         "properties": {
           "id": {
@@ -1614,6 +1675,9 @@
             "items": {
               "$ref": "#/components/schemas/GardenMembershipSummary"
             }
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
           }
         }
       },
@@ -2811,6 +2875,55 @@
           "confirmTargetGardenId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "authSubject",
+          "displayName",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "authSubject": {
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "UpdateMeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "expectedVersion"
+        ],
+        "properties": {
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
           }
         }
       }
