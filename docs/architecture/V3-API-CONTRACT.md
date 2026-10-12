@@ -696,7 +696,7 @@ HTTP `403` only when garden itself is visible but role lacks permission:
 
 # 10. Initial command action inventory
 
-Exact DTOs are frozen per action before implementation. The action names below are the proposed V3 mapping of existing business capability.
+V3-1 identity/tenant DTOs are frozen and code-ready. For V3-2 business mutations, the command envelope/action names below are frozen architecture, while each action's exact payload DTO must be frozen in its V3-2 implementation slice before backend/client code for that action starts. This is intentional phase-gating, not a V3-1 blocker.
 
 | Action | Purpose | Phase |
 |---|---|---|
@@ -852,7 +852,8 @@ Response concept:
 {
   "changes": [
     {
-      "sequence": "opaque-or-string-safe-representation",
+      "revision": "1235",
+      "ordinal": 0,
       "entityType": "batch",
       "entityId": "uuid",
       "entityVersion": 8,
