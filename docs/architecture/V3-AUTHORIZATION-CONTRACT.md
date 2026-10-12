@@ -238,12 +238,16 @@ This invalidates previously shared links.
 
 ## 5.5 Acceptance identity rule
 
+V3 Supabase Auth configuration must keep **Confirm Email enabled** for email/password signup.
+
 Before preview/accept:
 
 1. user must authenticate with Supabase;
-2. server verifies JWT;
-3. authenticated Supabase identity must have a **verified email**;
-4. normalized verified email must exactly equal invitation target email.
+2. server verifies JWT signature/issuer/audience/expiry/subject and rejects anonymous identity;
+3. verified token must contain the authenticated email claim;
+4. normalized authenticated email must exactly equal invitation target email.
+
+Supabase access tokens do not guarantee a dedicated `email_verified` claim. Do **not** trust editable `user_metadata.email_verified`. The product relies on Supabase's Confirm Email policy to prevent a new email/password user from receiving a sign-in session before confirmation.
 
 A forwarded link alone cannot grant access to a different authenticated email.
 
@@ -316,7 +320,7 @@ Authenticated request:
 }
 ```
 
-Returns only safe invitation preview if verified email matches:
+Returns only safe invitation preview if the authenticated email matches:
 
 ```json
 {
@@ -491,7 +495,7 @@ Use `404 RESOURCE_NOT_FOUND` for foreign-tenant invitation/member IDs when exist
 - MANAGER cannot invite MANAGER;
 - MANAGER cannot change MANAGER role;
 - no one can invite OWNER;
-- invitee verified email mismatch cannot preview/accept;
+- invitee authenticated email mismatch cannot preview/accept;
 - expired/revoked token cannot accept;
 - duplicate pending invite invalidates old token;
 - accept creates org MEMBER + garden role atomically;
@@ -509,6 +513,6 @@ Not part of V3-1:
 - custom roles/permissions UI;
 - platform impersonation;
 - organization-member hard deletion;
-- public invitation links not bound to verified identity;
+- public invitation links not bound to authenticated email identity;
 - SMS/phone invitation channel;
 - cross-organization sharing.
