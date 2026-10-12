@@ -16,7 +16,13 @@ When V3-1 implementation is authorized, use:
 ├── server/                      # new NestJS modular monolith
 │   ├── package.json
 │   ├── package-lock.json
+│   ├── nest-cli.json
 │   ├── tsconfig.json
+│   ├── tsconfig.build.json
+│   ├── prisma.config.ts
+│   ├── scripts/
+│   │   ├── generate-openapi.ts
+│   │   └── check-openapi.ts
 │   ├── prisma/
 │   │   └── schema.prisma
 │   ├── src/
@@ -118,6 +124,18 @@ Use ESM consistently for new server package:
   "type": "module"
 }
 ```
+
+Initial `nest-cli.json`:
+
+```json
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src"
+}
+```
+
+`tsconfig.build.json` extends the server tsconfig and excludes tests, generated test fixtures and `dist`.
 
 TypeScript:
 
