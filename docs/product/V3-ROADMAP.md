@@ -1,6 +1,6 @@
 # V3 Roadmap — Cloud-backed PWA & Feature Expansion
 
-**Status: PROPOSED DESIGN ROADMAP, NOT AN IMPLEMENTATION APPROVAL.** V3-0 documentation and decision review only is authorized. All executable backend, auth, cloud data, user onboarding and production migration are gated. REM-05 remains independent and pilot remains NO-GO until explicit re-audit/approval. This roadmap does not retroactively close any historical gates or silently adopt PR #29/#31/#58.
+**Status: V3 ROADMAP ACTIVE; V3-0 DESIGN FROZEN / PENDING REVIEW+MERGE.** The architecture/API/auth/sync/migration/toolchain design is code-ready, but executable V3-1+ work remains phase-gated until explicitly opened in PROJECT_STATE. REM-05 remains independent and pilot remains NO-GO until explicit re-audit/approval. This roadmap does not retroactively close any historical gates or silently adopt PR #29/#31/#58.
 
 ## Architecture target
 
@@ -21,8 +21,8 @@ V3 is the roadmap of the **real Vườn Ươm product**. The Cloud Computing min
 
 | Phase | Features | Entry / exit / authorization |
 |---|---|---|
-| V3-0 (NOW, docs only) | ADR, tenancy/roles, relational schema draft, REST/OpenAPI contract, sync protocol, safe migration design, V3-aware agent skills, feature inventory, staged rollout and product/course boundary | Draft docs-only PR; independent architectural/security review; no package changes, services, live data or new DB |
-| V3-1 (PENDING) | Login/signup, email verification/recovery, user profile, organization onboarding, garden membership invites and revocation | Explicit auth/privacy/role contract and sandbox credentials; anonymous and denied tenant tests |
+| V3-0 (NOW — DESIGN COMPLETE) | ADR, tenancy/roles, authorization matrix, relational schema draft, machine-readable REST/OpenAPI, sync/cursor/device protocol, migration staging, pinned toolchain, V3-aware agent skills, two-person implementation handoff | Exact-head CI + independent review + merge; still no runtime services/live data |
+| V3-1 (CODE-READY / NOT STARTED) | Login/signup, verification/recovery, user profile, device registration, organization/garden onboarding, membership/invite/revoke | V3-0 merged + explicit implementation authorization; follow `docs/development/V3-1-IMPLEMENTATION-HANDOFF.md` |
 | V3-2 (PENDING) | Server CRUD + immutable audit for garden, batches, contacts, orders, reservation, shipment, dossier; backup staging/import & explicit cutover | Exact test parity with current domain; atomic transactions; reconciliation; read-only migration preview and server restore drill |
 | V3-3 (PENDING) | Multi-device online sync, offline cache/outbox, re-auth, conflict/duplicate handling, data versioning, retries | Two-device native concurrency; idempotency; no overselling; revoke/switch tenant/failed sync evidence |
 | V3-4 (PENDING) | Interactive tutorial, first-run walkthrough, task-based guides, searchable help, progress per user, offline help assets | Evidence-based UX copy, opt-out/restart tutorial, screen-reader, Telex/VNI/mobile acceptance |
