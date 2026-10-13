@@ -7,6 +7,7 @@ import pg from "pg";
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly pool: pg.Pool;
 
   constructor(@Inject(ConfigService) private readonly configService: ConfigService) {
     const connectionString =
@@ -14,6 +15,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const pool = new pg.Pool({ connectionString });
     const adapter = new PrismaPg(pool);
     super({ adapter });
+    this.pool = pool;
   }
 
   async onModuleInit(): Promise<void> {
@@ -27,5 +29,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
+    await this.pool.end().catch(() => {});
   }
 }

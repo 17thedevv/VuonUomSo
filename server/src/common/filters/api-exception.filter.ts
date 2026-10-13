@@ -19,7 +19,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const rawRequestId = request.requestId || response.getHeader("X-Request-Id") || request.headers["x-request-id"];
+    const rawRequestId = request.requestId || response.getHeader("X-Request-Id");
     const requestId = typeof rawRequestId === "string" ? rawRequestId : randomUUID();
 
     response.setHeader("X-Request-Id", requestId);

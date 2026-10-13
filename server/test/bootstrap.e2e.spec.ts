@@ -43,4 +43,33 @@ describe("V3-1A: Bootstrap & Global Configuration", () => {
     expect(res.body.error.code).toBe("RESOURCE_NOT_FOUND");
     expect(res.body.error.requestId).toBe(res.headers["x-request-id"]);
   });
+
+  it("enforces server-owned request ID: ignores client-supplied X-Request-Id and generates canonical server UUID", async () => {
+    const clientSuppliedUuid = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
+
+    const res = await request(context.app.getHttpServer())
+      .get("/v3/health")
+      .set("X-Request-Id", clientSuppliedUuid);
+
+    expect(res.status).toBe(200);
+    const serverRequestId = res.headers["x-request-id"];
+    expect(serverRequestId).toBeDefined();
+    expect(serverRequestId).not.toBe(clientSuppliedUuid);
+    expect(serverRequestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it("error response propagates canonical server-owned request ID even when client supplies X-Request-Id", async () => {
+    const clientSuppliedUuid = "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";
+
+    const res = await request(context.app.getHttpServer())
+      .get("/v3/unknown-path")
+      .set("X-Request-Id", clientSuppliedUuid);
+
+    expect(res.status).toBe(404);
+    const serverRequestId = res.headers["x-request-id"];
+    expect(serverRequestId).not.toBe(clientSuppliedUuid);
+    expect(res.body.error.requestId).toBe(serverRequestId);
+  });
 });

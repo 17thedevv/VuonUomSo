@@ -26,6 +26,16 @@ export class EnvironmentVariables {
   @IsOptional()
   PORT: number = 3000;
 
+  @IsNumber()
+  @Min(100)
+  @IsOptional()
+  THROTTLE_TTL: number = 60000;
+
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  THROTTLE_LIMIT: number = 120;
+
   @IsString()
   DATABASE_URL!: string;
 

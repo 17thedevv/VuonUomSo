@@ -11,19 +11,19 @@ declare global {
 }
 
 export function requestIdHandler(req: Request, res: Response, next: NextFunction): void {
-  const rawHeader = req.headers["x-request-id"];
-  const incomingId = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+  // Always generate a fresh, server-owned UUID to guarantee untampered request identity
+  const serverRequestId = randomUUID();
 
-  // Use server-generated UUID to ensure trustworthiness, or propagate valid UUID if specified
-  const isValidUuid =
-    incomingId &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(incomingId);
+  // If client provided a tracking header, preserve it under non-authoritative clientRequestId
+  const clientHeader = req.headers["x-request-id"] || req.headers["x-client-request-id"];
+  const clientTrackingId = Array.isArray(clientHeader) ? clientHeader[0] : clientHeader;
+  if (clientTrackingId) {
+    (req as any).clientRequestId = clientTrackingId;
+  }
 
-  const requestId = isValidUuid ? incomingId : randomUUID();
-
-  req.requestId = requestId;
-  req.headers["x-request-id"] = requestId;
-  res.setHeader("X-Request-Id", requestId);
+  req.requestId = serverRequestId;
+  req.headers["x-request-id"] = serverRequestId;
+  res.setHeader("X-Request-Id", serverRequestId);
 
   next();
 }
