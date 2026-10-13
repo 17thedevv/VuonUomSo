@@ -5,6 +5,23 @@ import { getSupabaseClient } from '../../lib/supabase/client'
 
 type CallbackState = 'processing' | 'success' | 'error'
 
+function sanitizeCallbackError(err: unknown, isRecovery: boolean): string {
+  if (isRecovery) {
+    return 'Không thể khôi phục mật khẩu. Hãy yêu cầu liên kết mới.'
+  }
+  const str = err instanceof Error ? err.message.toLowerCase() : String(err || '').toLowerCase()
+  if (
+    str.includes('expired') ||
+    str.includes('invalid') ||
+    str.includes('otp') ||
+    str.includes('token') ||
+    str.includes('pkce')
+  ) {
+    return 'Liên kết không hợp lệ hoặc đã hết hạn.'
+  }
+  return 'Không thể xác nhận tài khoản. Vui lòng thử lại.'
+}
+
 export const AuthCallbackScreen: React.FC = () => {
   const navigate = useNavigate()
   const [state, setState] = useState<CallbackState>('processing')
@@ -14,18 +31,20 @@ export const AuthCallbackScreen: React.FC = () => {
     let isMounted = true
 
     const processAuthCallback = async () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : ''
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+      const isRecovery = hash.includes('type=recovery') || params.get('type') === 'recovery'
+
       try {
         const supabase = getSupabaseClient()
-        // Check if there is an error in URL hash or query params
-        const hash = window.location.hash
-        const params = new URLSearchParams(window.location.search)
 
+        // Check for error in query params or URL hash
         if (params.get('error') || hash.includes('error=')) {
-          const desc =
+          const rawDesc =
             params.get('error_description') ||
             new URLSearchParams(hash.replace(/^#/, '')).get('error_description') ||
-            'Liên kết không hợp lệ hoặc đã hết hạn.'
-          throw new Error(desc)
+            'invalid'
+          throw new Error(rawDesc)
         }
 
         // Wait for Supabase client to process tokens in URL and establish session
@@ -38,25 +57,31 @@ export const AuthCallbackScreen: React.FC = () => {
         if (data.session) {
           if (isMounted) {
             setState('success')
-            // Redirect after brief confirmation feedback
             setTimeout(() => {
               if (isMounted) {
-                navigate('/', { replace: true })
+                // Distinguish recovery from normal email confirmation
+                if (isRecovery) {
+                  navigate('/reset-password', { replace: true })
+                } else {
+                  navigate('/', { replace: true })
+                }
               }
-            }, 1200)
+            }, 800)
           }
         } else {
-          // If no session found in URL and no active session
           if (isMounted) {
             setState('error')
-            setErrorMsg('Liên kết không hợp lệ hoặc đã hết hạn.')
+            setErrorMsg(
+              isRecovery
+                ? 'Không thể khôi phục mật khẩu. Hãy yêu cầu liên kết mới.'
+                : 'Liên kết không hợp lệ hoặc đã hết hạn.'
+            )
           }
         }
       } catch (err: unknown) {
         if (isMounted) {
           setState('error')
-          const raw = err instanceof Error ? err.message : String(err)
-          setErrorMsg(raw || 'Liên kết không hợp lệ hoặc đã hết hạn.')
+          setErrorMsg(sanitizeCallbackError(err, isRecovery))
         }
       }
     }
