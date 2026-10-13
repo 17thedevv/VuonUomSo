@@ -343,7 +343,7 @@ model BatchDossier {
   supplier          Contact?  @relation("DossierSupplier", fields: [organizationId, supplierContactId], references: [organizationId, id], onDelete: Restrict)
 
   @@unique([organizationId, gardenId, id])
-  @@unique([gardenId, batchId])
+  @@unique([organizationId, gardenId, batchId])
 }
 
 model DomainEvent {
