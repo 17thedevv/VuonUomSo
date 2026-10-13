@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
 import { getSupabaseClient } from '../../lib/supabase/client'
+import { useAuth } from '../../auth/useAuth'
 
 type CallbackState = 'processing' | 'success' | 'error'
 
@@ -24,20 +25,38 @@ function sanitizeCallbackError(err: unknown, isRecovery: boolean): string {
 
 export const AuthCallbackScreen: React.FC = () => {
   const navigate = useNavigate()
+  const { isPasswordRecovery } = useAuth()
   const [state, setState] = useState<CallbackState>('processing')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const recoveryRef = useRef(isPasswordRecovery || false)
 
   useEffect(() => {
     let isMounted = true
+    if (isPasswordRecovery) {
+      recoveryRef.current = true
+    }
+
+    const supabase = getSupabaseClient()
+
+    // 1. Subscribe to canonical auth state changes to capture PASSWORD_RECOVERY even if URL was cleaned
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (!isMounted) return
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveryRef.current = true
+      }
+    })
 
     const processAuthCallback = async () => {
+      // 2. Immediate check of query/hash parameters before SDK cleans them
       const hash = typeof window !== 'undefined' ? window.location.hash : ''
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
-      const isRecovery = hash.includes('type=recovery') || params.get('type') === 'recovery'
+      if (hash.includes('type=recovery') || params.get('type') === 'recovery') {
+        recoveryRef.current = true
+      }
 
       try {
-        const supabase = getSupabaseClient()
-
         // Check for error in query params or URL hash
         if (params.get('error') || hash.includes('error=')) {
           const rawDesc =
@@ -59,8 +78,8 @@ export const AuthCallbackScreen: React.FC = () => {
             setState('success')
             setTimeout(() => {
               if (isMounted) {
-                // Distinguish recovery from normal email confirmation
-                if (isRecovery) {
+                // Distinguish recovery from normal email confirmation using canonical event
+                if (recoveryRef.current || isPasswordRecovery) {
                   navigate('/reset-password', { replace: true })
                 } else {
                   navigate('/', { replace: true })
@@ -72,7 +91,7 @@ export const AuthCallbackScreen: React.FC = () => {
           if (isMounted) {
             setState('error')
             setErrorMsg(
-              isRecovery
+              (recoveryRef.current || isPasswordRecovery)
                 ? 'Không thể khôi phục mật khẩu. Hãy yêu cầu liên kết mới.'
                 : 'Liên kết không hợp lệ hoặc đã hết hạn.'
             )
@@ -81,7 +100,7 @@ export const AuthCallbackScreen: React.FC = () => {
       } catch (err: unknown) {
         if (isMounted) {
           setState('error')
-          setErrorMsg(sanitizeCallbackError(err, isRecovery))
+          setErrorMsg(sanitizeCallbackError(err, recoveryRef.current || isPasswordRecovery))
         }
       }
     }
@@ -90,8 +109,9 @@ export const AuthCallbackScreen: React.FC = () => {
 
     return () => {
       isMounted = false
+      subscription.unsubscribe()
     }
-  }, [navigate])
+  }, [navigate, isPasswordRecovery])
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">

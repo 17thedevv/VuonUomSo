@@ -236,7 +236,7 @@ describe('AuthProvider & Auth Lifecycle', () => {
   })
 
   it('purges persisted session via local signOut and resets status upon 401 re-auth event', async () => {
-    mockGetSession.mockResolvedValueOnce({
+    mockGetSession.mockResolvedValue({
       data: {
         session: {
           access_token: 'stale-token',
@@ -363,5 +363,45 @@ describe('AuthProvider & Auth Lifecycle', () => {
 
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewSecurePassword123' })
     expect(capturedError).toBeNull()
+  })
+
+  it('handles canonical PASSWORD_RECOVERY event and sets isPasswordRecovery flag', async () => {
+    let authCallback: ((event: string, session: any) => void) | null = null
+    mockOnAuthStateChange.mockImplementation((cb) => {
+      authCallback = cb
+      return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
+    })
+
+    const RecoveryConsumer: React.FC = () => {
+      const { status, isPasswordRecovery } = useAuth()
+      return (
+        <div>
+          <div data-testid="status">{status}</div>
+          <div data-testid="is-recovery">{isPasswordRecovery ? 'yes' : 'no'}</div>
+        </div>
+      )
+    }
+
+    render(
+      <AuthProvider>
+        <RecoveryConsumer />
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('unauthenticated')
+      expect(screen.getByTestId('is-recovery').textContent).toBe('no')
+    })
+
+    // Supabase client emits canonical PASSWORD_RECOVERY event
+    act(() => {
+      authCallback?.('PASSWORD_RECOVERY', {
+        access_token: 'recovery-token',
+        user: { id: 'u-rec', email: 'reset@vuonuom.local' }
+      })
+    })
+
+    expect(screen.getByTestId('status').textContent).toBe('authenticated')
+    expect(screen.getByTestId('is-recovery').textContent).toBe('yes')
   })
 })

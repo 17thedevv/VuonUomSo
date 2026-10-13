@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { LoginScreen } from '../../features/auth/LoginScreen'
 import { SignupScreen } from '../../features/auth/SignupScreen'
 import { ForgotPasswordScreen } from '../../features/auth/ForgotPasswordScreen'
@@ -18,6 +18,7 @@ const createMockAuthContext = (overrides?: Partial<AuthContextValue>): AuthConte
   signOut: vi.fn(),
   requestPasswordReset: vi.fn(),
   updatePassword: vi.fn(),
+  isPasswordRecovery: false,
   ...overrides
 })
 
@@ -182,6 +183,7 @@ describe('Auth Screens UX & Flow', () => {
     it('handles callback with established session and navigates', async () => {
       vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
         auth: {
+          onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
           getSession: vi.fn().mockResolvedValue({
             data: { session: { access_token: 'valid-session' } },
             error: null
@@ -189,10 +191,14 @@ describe('Auth Screens UX & Flow', () => {
         }
       } as any)
 
+      const mockAuth = createMockAuthContext()
+
       render(
-        <MemoryRouter>
-          <AuthCallbackScreen />
-        </MemoryRouter>
+        <AuthContext.Provider value={mockAuth}>
+          <MemoryRouter>
+            <AuthCallbackScreen />
+          </MemoryRouter>
+        </AuthContext.Provider>
       )
 
       await waitFor(() => {
@@ -203,6 +209,7 @@ describe('Auth Screens UX & Flow', () => {
     it('displays error state when callback fails or has invalid link', async () => {
       vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
         auth: {
+          onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
           getSession: vi.fn().mockResolvedValue({
             data: { session: null },
             error: new Error('Token has expired or is invalid')
@@ -210,10 +217,14 @@ describe('Auth Screens UX & Flow', () => {
         }
       } as any)
 
+      const mockAuth = createMockAuthContext()
+
       render(
-        <MemoryRouter>
-          <AuthCallbackScreen />
-        </MemoryRouter>
+        <AuthContext.Provider value={mockAuth}>
+          <MemoryRouter>
+            <AuthCallbackScreen />
+          </MemoryRouter>
+        </AuthContext.Provider>
       )
 
       await waitFor(() => {
@@ -226,6 +237,7 @@ describe('Auth Screens UX & Flow', () => {
       const rawTechnicalError = 'AuthApiError: invalid_grant 400 Flow code PKCE token mismatch'
       vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
         auth: {
+          onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
           getSession: vi.fn().mockResolvedValue({
             data: { session: null },
             error: new Error(rawTechnicalError)
@@ -233,10 +245,14 @@ describe('Auth Screens UX & Flow', () => {
         }
       } as any)
 
+      const mockAuth = createMockAuthContext()
+
       render(
-        <MemoryRouter>
-          <AuthCallbackScreen />
-        </MemoryRouter>
+        <AuthContext.Provider value={mockAuth}>
+          <MemoryRouter>
+            <AuthCallbackScreen />
+          </MemoryRouter>
+        </AuthContext.Provider>
       )
 
       await waitFor(() => {
@@ -251,6 +267,7 @@ describe('Auth Screens UX & Flow', () => {
     it('sanitizes recovery error with actionable Vietnamese recovery guidance', async () => {
       vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
         auth: {
+          onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
           getSession: vi.fn().mockResolvedValue({
             data: { session: null },
             error: new Error('Recovery link has expired')
@@ -260,15 +277,66 @@ describe('Auth Screens UX & Flow', () => {
 
       window.history.replaceState({}, '', '/auth/callback?type=recovery')
 
+      const mockAuth = createMockAuthContext()
+
       render(
-        <MemoryRouter>
-          <AuthCallbackScreen />
-        </MemoryRouter>
+        <AuthContext.Provider value={mockAuth}>
+          <MemoryRouter>
+            <AuthCallbackScreen />
+          </MemoryRouter>
+        </AuthContext.Provider>
       )
 
       await waitFor(() => {
         expect(screen.getByText('Không thể khôi phục mật khẩu. Hãy yêu cầu liên kết mới.')).toBeInTheDocument()
       })
+    })
+
+    it('redirects to /reset-password upon canonical PASSWORD_RECOVERY event even when URL was already cleaned by SDK', async () => {
+      let authStateCallback: ((event: string, session: any) => void) | null = null
+      vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
+        auth: {
+          onAuthStateChange: vi.fn().mockImplementation((cb) => {
+            authStateCallback = cb
+            return { data: { subscription: { unsubscribe: vi.fn() } } }
+          }),
+          getSession: vi.fn().mockResolvedValue({
+            data: { session: { access_token: 'recovery-token' } },
+            error: null
+          })
+        }
+      } as any)
+
+      // URL has ALREADY been cleaned by Supabase SDK: completely empty search and hash!
+      window.history.replaceState({}, '', '/auth/callback')
+
+      const mockAuth = createMockAuthContext()
+
+      render(
+        <AuthContext.Provider value={mockAuth}>
+          <MemoryRouter initialEntries={['/auth/callback']}>
+            <Routes>
+              <Route path="/auth/callback" element={<AuthCallbackScreen />} />
+              <Route path="/reset-password" element={<div>Đích đến Đặt lại mật khẩu</div>} />
+              <Route path="/" element={<div>Trang chủ</div>} />
+            </Routes>
+          </MemoryRouter>
+        </AuthContext.Provider>
+      )
+
+      // Supabase client emits canonical PASSWORD_RECOVERY event
+      act(() => {
+        authStateCallback?.('PASSWORD_RECOVERY', {
+          access_token: 'recovery-token',
+          user: { id: 'u-rec' }
+        })
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Đích đến Đặt lại mật khẩu')).toBeInTheDocument()
+      }, { timeout: 3000 })
+
+      expect(screen.queryByText('Trang chủ')).not.toBeInTheDocument()
     })
   })
 })

@@ -15,7 +15,8 @@ const createMockAuthContext = (): AuthContextValue => ({
   signUp: vi.fn(),
   signOut: vi.fn(),
   requestPasswordReset: vi.fn(),
-  updatePassword: vi.fn()
+  updatePassword: vi.fn(),
+  isPasswordRecovery: false
 })
 
 describe('Mobile 360px / 390px / 430px Acceptance', () => {

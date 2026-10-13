@@ -12,6 +12,7 @@ export interface AuthContextValue {
   status: AuthStatus
   user: User | null
   session: Session | null
+  isPasswordRecovery: boolean
   signIn: (email: string, password: string) => Promise<{ user: User; session: Session }>
   signUp: (email: string, password: string) => Promise<SignUpResult>
   signOut: () => Promise<void>

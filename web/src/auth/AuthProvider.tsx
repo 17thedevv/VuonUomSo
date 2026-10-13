@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { getSupabaseClient } from '../lib/supabase/client'
 import { AuthContext } from './auth-context'
@@ -14,7 +14,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
   const [status, setStatus] = useState<AuthStatus>('initializing')
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
 
+  const currentSessionRef = useRef<Session | null>(null)
   const supabase = useMemo(() => getSupabaseClient(), [])
 
   useEffect(() => {
@@ -24,27 +26,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
     supabase.auth.getSession().then(({ data, error }) => {
       if (!isMounted) return
       if (error || !data.session) {
+        currentSessionRef.current = null
         setSession(null)
         setUser(null)
         setStatus('unauthenticated')
       } else {
+        currentSessionRef.current = data.session
         setSession(data.session)
         setUser(data.session.user)
         setStatus('authenticated')
       }
     }).catch(() => {
       if (isMounted) {
+        currentSessionRef.current = null
         setSession(null)
         setUser(null)
         setStatus('unauthenticated')
       }
     })
 
-    // 2. Auth state subscription
+    // 2. Auth state subscription (handles canonical PASSWORD_RECOVERY event)
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true)
+      }
+
+      currentSessionRef.current = currentSession
       if (currentSession) {
         setSession(currentSession)
         setUser(currentSession.user)
@@ -53,18 +64,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
         setSession(null)
         setUser(null)
         setStatus('unauthenticated')
+        setIsPasswordRecovery(false)
       }
     })
 
     // 3. Register controlled 401 re-auth handler
     setAuthRequiredHandler(() => {
-      // Clear rejected session from local browser storage without remote signout call
+      // End current session locally and clean local session persistence
       void supabase.auth.signOut({ scope: 'local' }).catch(() => {})
 
       if (!isMounted) return
       setSession(null)
       setUser(null)
       setStatus('unauthenticated')
+      setIsPasswordRecovery(false)
       if (onAuthRequired) {
         onAuthRequired()
       }
@@ -92,9 +105,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
         throw new Error('Đăng nhập không thành công. Vui lòng thử lại.')
       }
 
+      currentSessionRef.current = data.session
       setSession(data.session)
       setUser(data.user)
       setStatus('authenticated')
+      setIsPasswordRecovery(false)
 
       return { user: data.user, session: data.session }
     },
@@ -119,6 +134,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
 
       const hasSession = !!data.session
       if (hasSession) {
+        currentSessionRef.current = data.session
         setSession(data.session)
         setUser(data.user)
         setStatus('authenticated')
@@ -137,9 +153,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
     try {
       await supabase.auth.signOut()
     } finally {
+      currentSessionRef.current = null
       setSession(null)
       setUser(null)
       setStatus('unauthenticated')
+      setIsPasswordRecovery(false)
     }
   }, [supabase])
 
@@ -164,6 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
       if (error) {
         throw error
       }
+      setIsPasswordRecovery(false)
     },
     [supabase]
   )
@@ -173,13 +192,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
       status,
       user,
       session,
+      isPasswordRecovery,
       signIn,
       signUp,
       signOut,
       requestPasswordReset,
       updatePassword
     }),
-    [status, user, session, signIn, signUp, signOut, requestPasswordReset, updatePassword]
+    [status, user, session, isPasswordRecovery, signIn, signUp, signOut, requestPasswordReset, updatePassword]
   )
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>

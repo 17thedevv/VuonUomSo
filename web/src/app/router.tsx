@@ -35,6 +35,7 @@ import { ForgotPasswordScreen } from '../features/auth/ForgotPasswordScreen'
 import { ResetPasswordScreen } from '../features/auth/ResetPasswordScreen'
 import { AuthCallbackScreen } from '../features/auth/AuthCallbackScreen'
 import { AuthBoundary } from '../auth/AuthBoundary'
+import { useAuth } from '../auth/useAuth'
 
 const RootLayout: React.FC = () => {
   return (
@@ -102,6 +103,7 @@ const AppShellLayout: React.FC = () => {
  * Root index redirector based on onboarding state.
  */
 const RootRedirect: React.FC = () => {
+  const { isPasswordRecovery } = useAuth()
   const [checking, setChecking] = useState(true)
   const [isOnboarded, setIsOnboarded] = useState(false)
 
@@ -111,6 +113,10 @@ const RootRedirect: React.FC = () => {
       setChecking(false)
     })
   }, [])
+
+  if (isPasswordRecovery) {
+    return <Navigate to="/reset-password" replace />
+  }
 
   if (checking) {
     return (
