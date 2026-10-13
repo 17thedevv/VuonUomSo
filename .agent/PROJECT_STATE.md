@@ -5,9 +5,17 @@
 
 ---
 
-## V3-1 authorization addendum — 2026-10-13 (V3-0 CLOSED / V3-1 AUTHORIZED FOR IMPLEMENTATION)
+## V3-1A closure addendum — 2026-10-13 (V3-1A CLOSED / V3-1B NEXT)
 
 **Developer allocation:** `17thedev (sole developer)`. Không chia team, không có Tráng A Thư, không có two-person handoff. Mọi slice implementation thực hiện tuần tự theo [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md).
+
+**V3-1A Server Foundation closure:**
+- PR [#64](https://github.com/17thedevv/VuonUomSo/pull/64) (`feat(v3-1a): bootstrap server foundation`) đã hoàn tất independent review & re-audit (PASS FOR READY/MERGE GATE, review ID 5500151038), 2 LOW findings đã được cleanup triệt để tại commit `9e7c235ed34c41a33ba7acd2c6b79785a467d765`.
+- PR bỏ trạng thái Draft và merge vào `main` tại merge commit `836995892a1da2ae91925bd18e7de51451ffe0c4`.
+- Exact PR head SHA: `9e7c235ed34c41a33ba7acd2c6b79785a467d765` (CI run [#38363714964](https://github.com/17thedevv/VuonUomSo/actions/runs/38363714964) SUCCESS: 35/35 server tests, 1.259/1.259 web tests).
+- Main push CI run [#38364601217](https://github.com/17thedevv/VuonUomSo/actions/runs/38364601217) trên merge commit `836995892a1da2ae91925bd18e7de51451ffe0c4` đạt **SUCCESS** (Attempt 1: cả Server Quality Gates và Web Quality Gates PASS).
+- V3-1A hoàn tất: NestJS server package, Prisma 7 schema baseline, structured JSON logging với sensitive data redaction, request ID correlation (server-owned), rate limiting (120 req/min baseline) với `AppThrottlerGuard`, `GET /v3/health`, `POST /v3/me/bootstrap` với concurrent race protection, versioned `PATCH /v3/me` với database-authoritative OCC conditional write, OpenAPI contract sync đạt 0 drift.
+- Slice kế tiếp ngay lập tức: **`V3-1B — Auth Client Foundation` (NEXT)**.
 
 **V3-0 design closure:**
 - PR [#62](https://github.com/17thedevv/VuonUomSo/pull/62) (`docs(v3-0): freeze solo implementation contracts and V3-1 plan`) đã được kiểm toán độc lập (0 Blocker, 0 High, 0 Medium, 0 Low), bỏ trạng thái Draft và merge vào `main` tại merge commit `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`.
@@ -17,18 +25,19 @@
 
 **V3-1 implementation authorization:**
 - V3-1 (`Identity, Auth & Tenancy Foundation`) chính thức **AUTHORIZED / STARTED**.
-- Slice triển khai kế tiếp ngay lập tức: **`V3-1A — Server Foundation` (NEXT)**.
-- Trình tự thực thi V3-1 tuân thủ nghiêm ngặt 4 slice tuần tự trong [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md):
-  1. `V3-1A — Server Foundation` (NestJS modular monolith bootstrap, Fastify/Express HTTP, Pino logging, Prisma client setup, health check, baseline test harness).
-  2. `V3-1B — Auth & Identity Integration` (Supabase JWT/JWKS verification, user identity, dev auth fallback, auth guards).
-  3. `V3-1C — Org & Garden Tenancy` (Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor).
-  4. `V3-1D — Device Registration & Client Integration` (Device session tokens, client bootstrap, end-to-end integration verification).
+- V3-1A: **DONE / CLOSED (#64)** (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS).
+- Slice triển khai kế tiếp ngay lập tức: **`V3-1B — Auth Client Foundation` (NEXT)**.
+- Trình tự thực thi V3-1 tuân thủ nghiêm ngặt các slice tuần tự trong [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md):
+  1. `V3-1A — Server Foundation` (DONE / CLOSED #64).
+  2. `V3-1B — Auth Client Foundation` (NEXT: Supabase client bootstrap, session provider/hook, login/signup/logout, token attachment, API error handling, mobile UX).
+  3. `V3-1C — Org & Garden Tenancy Server` (Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor).
+  4. `V3-1D — Tenant Onboarding Client` (Garden setup, org onboarding UX).
+  5. `V3-1E — Membership / Invitation Server & Client`.
 - **Ranh giới an toàn giữ nguyên không đổi:**
   - V3-2+ (`Server Domain & Migration Cutover`, `Offline Sync`, v.v.) tiếp tục ở trạng thái **PENDING AUTHORIZATION / NOT AUTHORIZED**.
   - Cloud database production provisioning, live data migration thật và thu thập real tenant data tiếp tục **NOT AUTHORIZED**.
   - **REAL PILOT tiếp tục NO-GO / NOT APPROVED / NOT STARTED**. Hồ sơ audit lịch sử R01–R08 được lưu giữ; REM-05 physical device testing tiếp tục chờ nghiệm thu.
   - **Giới hạn môn Cloud:** Coursework chỉ là presentation snapshot của sản phẩm thật; không lái product requirements, kiến trúc, provider hay deadline.
-  - Task đóng/mở gate này tuyệt đối **không viết runtime code** (`server/`, dependency backend, v.v.).
 
 ## 1. Project Identity
 
@@ -36,10 +45,11 @@
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
 - **Developer**: `17thedev (sole developer)`
-- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1A**)
+- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1B**)
 - **V3-0 Design Gate**: `DONE / CLOSED (#62)` (merge `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, CI #38340235275 SUCCESS)
+- **V3-1A Server Foundation**: `DONE / CLOSED (#64)` (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS)
 - **Production Architecture direction**: `CANONICAL / FROZEN ON MAIN`
-- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1A — Server Foundation` là **NEXT**)
+- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1B — Auth Client Foundation` là **NEXT**)
 - **V3-2+ implementation**: `NOT AUTHORIZED`
 - **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
 - **Real pilot**: `NO-GO / NOT APPROVED`
@@ -50,12 +60,12 @@
 
 ### Roadmap hiện hành — V3 transition (13/10/2026)
 
-**V3 là roadmap sản phẩm hiện hành.** V3-0 design gate đã hoàn tất và đóng qua PR #62. V3-1 đã được phê duyệt triển khai theo kế hoạch solo sequential slices (bắt đầu từ V3-1A). Các phase từ V3-2 trở đi vẫn cần authorization riêng. Mini-project môn Cloud là presentation layer và không tạo product requirements.
+**V3 là roadmap sản phẩm hiện hành.** V3-0 design gate đã hoàn tất và đóng qua PR #62. V3-1A đã hoàn tất và đóng qua PR #64. V3-1B là slice kế tiếp. Các phase từ V3-2 trở đi vẫn cần authorization riêng. Mini-project môn Cloud là presentation layer và không tạo product requirements.
 
 | V3 phase | Trạng thái | Gate / scope |
 |---|---|---|
 | V3-0 | **DONE / CLOSED (#62)** | ADR, frozen authorization matrix, Prisma 7 schema draft, machine-readable REST/OpenAPI, device/sync/cursor, migration staging, pinned toolchain, agent skills, solo implementation plan; merged to main at `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, main CI #38340235275 SUCCESS |
-| V3-1 | **NOW / AUTHORIZED / STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; exact solo implementation sequence in [V3-1 Solo Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md); immediate slice: **V3-1A Server Foundation (NEXT)** |
+| V3-1 | **NOW / AUTHORIZED / STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; V3-1A Server Foundation DONE / CLOSED (#64); immediate slice: **V3-1B Auth Client Foundation (NEXT)** |
 | V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
 | V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
 | V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |

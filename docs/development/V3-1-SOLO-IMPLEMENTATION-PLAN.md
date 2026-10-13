@@ -50,10 +50,12 @@ A dependent slice starts only after the dependency is merged into latest `main`.
 
 ## 3. V3-1A — Server foundation
 
-Suggested branch:
+**Status: DONE / CLOSED (#64)** (merged at `836995892a1da2ae91925bd18e7de51451ffe0c4`, main CI [#38364601217](https://github.com/17thedevv/VuonUomSo/actions/runs/38364601217) SUCCESS)
+
+Branch:
 
 ```text
-feat/v3-1-server-foundation
+feat/v3-1-server-foundation (merged via PR #64)
 ```
 
 Scope:
@@ -76,16 +78,18 @@ Scope:
 
 Acceptance:
 
-- build/test/typecheck/lint pass;
+- build/test/typecheck/lint pass (35/35 server tests);
 - invalid/missing JWT covered;
 - Prisma validate pass;
-- OpenAPI design seed and generated spec stay semantically aligned;
+- OpenAPI design seed and generated spec stay semantically aligned (0 drift);
 - no secrets;
-- existing web CI remains green.
+- existing web CI remains green (1.259/1.259 tests).
 
 ---
 
 ## 4. V3-1B — Auth client foundation
+
+**Status: NEXT / READY TO START**
 
 Suggested branch:
 
