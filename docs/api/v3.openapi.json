@@ -64,10 +64,8 @@
   "paths": {
     "/v3/me": {
       "get": {
-        "tags": [
-          "Identity"
-        ],
         "operationId": "getMe",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Current authenticated profile and memberships",
@@ -80,25 +78,29 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/AuthRequired"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Identity"
-        ],
-        "operationId": "updateMe",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateMeRequest"
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
               }
             }
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current profile and memberships",
+        "tags": [
+          "Identity"
+        ]
+      },
+      "patch": {
+        "operationId": "updateMe",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Updated self profile",
@@ -111,15 +113,45 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/AuthRequired"
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "Version/idempotency/business conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           },
           "422": {
-            "$ref": "#/components/responses/ValidationRejected"
+            "description": "Validation rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update self profile",
+        "tags": [
+          "Identity"
+        ]
       }
     },
     "/v3/devices/register": {
@@ -1397,10 +1429,8 @@
     },
     "/v3/me/bootstrap": {
       "post": {
-        "tags": [
-          "Identity"
-        ],
         "operationId": "bootstrapMe",
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Idempotently provisioned current AppUser",
@@ -1413,9 +1443,25 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/AuthRequired"
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Idempotently provision current AppUser",
+        "tags": [
+          "Identity"
+        ]
       }
     },
     "/v3/organizations/{organizationId}/members": {
@@ -1450,6 +1496,28 @@
             "$ref": "#/components/responses/NotFound"
           }
         }
+      }
+    },
+    "/v3/health": {
+      "get": {
+        "operationId": "getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Operational status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Operational health check",
+        "tags": [
+          "System"
+        ]
       }
     }
   },
@@ -1669,129 +1737,118 @@
       },
       "ErrorEnvelope": {
         "type": "object",
-        "required": [
-          "error"
-        ],
         "properties": {
           "error": {
-            "type": "object",
-            "required": [
-              "code",
-              "message",
-              "requestId"
-            ],
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              },
-              "requestId": {
-                "type": "string"
-              },
-              "details": {
-                "type": "object",
-                "additionalProperties": true
-              }
-            }
+            "$ref": "#/components/schemas/ErrorDetail"
           }
-        }
+        },
+        "required": [
+          "error"
+        ]
       },
       "OrganizationMembership": {
         "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Organization UUID",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "description": "Membership role in organization",
+            "example": "MEMBER"
+          },
+          "version": {
+            "type": "number",
+            "description": "Membership record version",
+            "minimum": 1
+          }
+        },
         "required": [
           "organizationId",
           "role",
           "version"
-        ],
-        "properties": {
-          "organizationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "OWNER",
-              "ADMIN",
-              "MEMBER"
-            ]
-          },
-          "version": {
-            "$ref": "#/components/schemas/Version"
-          }
-        }
+        ]
       },
       "GardenMembershipSummary": {
         "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "description": "Parent organization UUID",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "description": "Garden UUID",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "description": "Membership role in garden",
+            "example": "WORKER"
+          },
+          "version": {
+            "type": "number",
+            "description": "Membership record version",
+            "minimum": 1
+          }
+        },
         "required": [
           "organizationId",
           "gardenId",
           "role",
           "version"
-        ],
-        "properties": {
-          "organizationId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "gardenId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "role": {
-            "enum": [
-              "OWNER",
-              "MANAGER",
-              "WORKER",
-              "VIEWER"
-            ]
-          },
-          "version": {
-            "$ref": "#/components/schemas/Version"
-          }
-        }
+        ]
       },
       "MeResponse": {
         "type": "object",
-        "required": [
-          "id",
-          "email",
-          "organizations",
-          "gardens",
-          "version"
-        ],
         "properties": {
           "id": {
             "type": "string",
+            "description": "Canonical user UUID",
             "format": "uuid"
           },
+          "email": {
+            "type": "string",
+            "description": "Normalized lowercase email address",
+            "format": "email"
+          },
           "displayName": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "description": "Self-chosen display name",
+            "nullable": true,
+            "maxLength": 120
           },
           "organizations": {
+            "description": "Caller-visible organization memberships",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrganizationMembership"
             }
           },
           "gardens": {
+            "description": "Caller-visible garden memberships",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/GardenMembershipSummary"
             }
           },
           "version": {
-            "$ref": "#/components/schemas/Version"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
+            "type": "number",
+            "description": "Optimistic concurrency version (integer >= 1)",
+            "minimum": 1
           }
-        }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "organizations",
+          "gardens",
+          "version"
+        ]
       },
       "Device": {
         "type": "object",
@@ -3001,32 +3058,35 @@
       },
       "UserProfile": {
         "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Canonical user UUID",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "description": "Normalized lowercase email address",
+            "format": "email"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Self-chosen display name",
+            "nullable": true,
+            "maxLength": 120
+          },
+          "version": {
+            "type": "number",
+            "description": "Optimistic concurrency version (integer >= 1)",
+            "minimum": 1
+          }
+        },
         "required": [
           "id",
           "email",
           "displayName",
           "version"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "displayName": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 120
-          },
-          "version": {
-            "$ref": "#/components/schemas/Version"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        }
+        ]
       },
       "UpdateMeRequest": {
         "type": "object",
@@ -3110,6 +3170,49 @@
             "$ref": "#/components/schemas/Version"
           }
         }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Health check status",
+            "example": "ok"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable error code",
+            "example": "INVALID_REQUEST"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable error message in Vietnamese",
+            "example": "Yêu cầu không hợp lệ."
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Request correlation ID",
+            "example": "c2b5e28a-78f9-4672-965a-0d70eb064f2b"
+          },
+          "details": {
+            "type": "object",
+            "description": "Optional structured error details",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ]
       }
     }
   }

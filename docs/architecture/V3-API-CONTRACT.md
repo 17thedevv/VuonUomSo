@@ -59,6 +59,25 @@ Deployment infrastructure may place a reverse proxy/domain in front of this path
 
 Breaking API changes require a reviewed versioning decision; do not silently change V3 field meaning.
 
+### 2.1 Operational health check
+
+### GET `/v3/health`
+
+Unauthenticated operational readiness probe for test and deployment infrastructure.
+
+Response `200`:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+Rules:
+- minimal payload;
+- does not require Bearer authentication;
+- never leaks database credentials, environment variables, or private internal dependencies.
+
 ### Content type
 
 ```http
