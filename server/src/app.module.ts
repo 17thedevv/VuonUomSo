@@ -1,9 +1,8 @@
-import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, Reflector } from "@nestjs/core";
 import { validateEnvironment } from "./common/env/env.validation.js";
-import { RequestIdMiddleware } from "./common/middleware/request-id.middleware.js";
 import { ApiExceptionFilter } from "./common/filters/api-exception.filter.js";
 import { PrismaModule } from "./common/prisma/prisma.module.js";
 import { AuthModule } from "./auth/auth.module.js";
@@ -50,8 +49,4 @@ import { AppThrottlerGuard } from "./common/guards/throttler.guard.js";
     },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestIdMiddleware).forRoutes("*");
-  }
-}
+export class AppModule {}

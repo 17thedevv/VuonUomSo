@@ -36,9 +36,11 @@ async function bootstrap(): Promise<void> {
 
 // Only start listening when run directly, not when imported
 if (process.env.NODE_ENV !== "test") {
+  const fatalLogger = new StructuredLogger();
   bootstrap().catch((err: unknown) => {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("Failed to start server:", errorMsg);
+    const stack = err instanceof Error ? err.stack : undefined;
+    fatalLogger.error(`Failed to start server: ${errorMsg}`, stack, "Bootstrap");
     process.exit(1);
   });
 }

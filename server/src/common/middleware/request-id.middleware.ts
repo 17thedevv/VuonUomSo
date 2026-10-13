@@ -11,6 +11,11 @@ declare global {
 }
 
 export function requestIdHandler(req: Request, res: Response, next: NextFunction): void {
+  // Avoid regenerating UUID if already assigned on this request
+  if (req.requestId) {
+    return next();
+  }
+
   // Always generate a fresh, server-owned UUID to guarantee untampered request identity
   const serverRequestId = randomUUID();
 
