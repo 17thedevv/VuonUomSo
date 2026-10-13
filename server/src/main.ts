@@ -1,14 +1,15 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
-import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AppModule } from "./app.module.js";
 import { configureApp } from "./setup.js";
 
+import { StructuredLogger } from "./common/logging/structured-logger.service.js";
+
 async function bootstrap(): Promise<void> {
-  const logger = new Logger("Bootstrap");
+  const structuredLogger = new StructuredLogger();
   const app = await NestFactory.create(AppModule, {
-    logger: ["log", "error", "warn"],
+    logger: structuredLogger,
   });
 
   const configService = app.get(ConfigService);
@@ -30,7 +31,7 @@ async function bootstrap(): Promise<void> {
   });
 
   await app.listen(port);
-  logger.log(`Vườn Ươm V3 Server running on port ${port} with prefix /v3`);
+  structuredLogger.log(`Vườn Ươm V3 Server running on port ${port} with prefix /v3`, "Bootstrap");
 }
 
 // Only start listening when run directly, not when imported
