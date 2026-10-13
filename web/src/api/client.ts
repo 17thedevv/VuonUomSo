@@ -6,7 +6,7 @@ export interface ApiClientOptions extends RequestInit {
   skipAuth?: boolean
 }
 
-export type AuthRequiredHandler = (error: ApiError) => void
+export type AuthRequiredHandler = (error: ApiError, rejectedToken?: string) => void
 
 let authRequiredHandler: AuthRequiredHandler | null = null
 
@@ -47,7 +47,7 @@ export function resolveApiUrl(path: string): URL {
  * - Attaches Bearer token from the active Supabase session when available.
  * - Strictly enforces origin boundaries against canonical VITE_API_BASE_URL.
  * - Parses and normalizes V3 ApiError.
- * - Handles 401 responses with a controlled re-auth callback (without infinite retries).
+ * - Handles 401 responses with a controlled re-auth callback (correlated to sent token).
  */
 export async function apiFetch<T = unknown>(
   path: string,
@@ -62,15 +62,17 @@ export async function apiFetch<T = unknown>(
     headers.set('Content-Type', 'application/json')
   }
 
+  let sentToken: string | undefined
+
   // Attach token if not explicitly skipped
   if (!options.skipAuth) {
     try {
       const supabase = getSupabaseClient()
       const { data } = await supabase.auth.getSession()
-      const accessToken = data.session?.access_token
+      sentToken = data.session?.access_token
 
-      if (accessToken) {
-        headers.set('Authorization', `Bearer ${accessToken}`)
+      if (sentToken) {
+        headers.set('Authorization', `Bearer ${sentToken}`)
       }
     } catch {
       // If fetching session fails (e.g. offline/storage error), proceed without token
@@ -101,10 +103,10 @@ export async function apiFetch<T = unknown>(
 
     const apiError = parseApiError(response.status, responseBody, requestIdHeader)
 
-    // Controlled 401 handler
+    // Controlled 401 handler correlated with the rejected token
     if (response.status === 401 && authRequiredHandler) {
       try {
-        authRequiredHandler(apiError)
+        authRequiredHandler(apiError, sentToken)
       } catch {
         // Prevent listener crashes from masking the API error
       }

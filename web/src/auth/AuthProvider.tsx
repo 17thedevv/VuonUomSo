@@ -68,11 +68,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
       }
     })
 
-    // 3. Register controlled 401 re-auth handler
-    setAuthRequiredHandler(() => {
+    // 3. Register controlled 401 re-auth handler correlated with sent token
+    setAuthRequiredHandler(async (_error, rejectedToken) => {
+      const activeToken = currentSessionRef.current?.access_token
+
+      // Stale 401 check: if request was sent with a token but the active session
+      // has already switched to a different token, ignore to avoid logging out a newer session
+      if (rejectedToken && activeToken && rejectedToken !== activeToken) {
+        return
+      }
+
+      // If request had no token but active session exists, do not kill valid session
+      if (!rejectedToken && activeToken) {
+        return
+      }
+
+      // Verify against Supabase client in case of concurrent token refresh
+      const { data: latest } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }))
+      const latestToken = latest.session?.access_token
+      if (rejectedToken && latestToken && rejectedToken !== latestToken) {
+        return
+      }
+
       // End current session locally and clean local session persistence
       void supabase.auth.signOut({ scope: 'local' }).catch(() => {})
 
+      currentSessionRef.current = null
       if (!isMounted) return
       setSession(null)
       setUser(null)

@@ -404,4 +404,95 @@ describe('AuthProvider & Auth Lifecycle', () => {
     expect(screen.getByTestId('status').textContent).toBe('authenticated')
     expect(screen.getByTestId('is-recovery').textContent).toBe('yes')
   })
+
+  it('ignores delayed 401 from an earlier token when session has already switched to a newer token', async () => {
+    let authCallback: ((event: string, session: any) => void) | null = null
+    mockOnAuthStateChange.mockImplementation((cb) => {
+      authCallback = cb
+      return { data: { subscription: { unsubscribe: mockUnsubscribe } } }
+    })
+
+    // Initial session is Token A
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'token-A',
+          user: { id: 'user-A', email: 'userA@vuonuom.local' }
+        }
+      },
+      error: null
+    })
+
+    const originalFetch = globalThis.fetch
+    let resolveRequestA!: (res: Response) => void
+    const pendingRequestPromise = new Promise<Response>((resolve) => {
+      resolveRequestA = resolve
+    })
+
+    const mockFetch = vi.fn().mockImplementation(() => pendingRequestPromise)
+    globalThis.fetch = mockFetch as any
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('authenticated')
+      expect(screen.getByTestId('user-email').textContent).toBe('userA@vuonuom.local')
+    })
+
+    // Start request A with token A (in flight)
+    const requestAFuture = apiFetch('/v3/me')
+
+    // While Request A is still pending, session switches to Session B (token B)
+    act(() => {
+      authCallback?.('SIGNED_IN', {
+        access_token: 'token-B',
+        user: { id: 'user-B', email: 'userB@vuonuom.local' }
+      })
+    })
+
+    // Update getSession mock to return Session B as latest
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: 'token-B',
+          user: { id: 'user-B', email: 'userB@vuonuom.local' }
+        }
+      },
+      error: null
+    })
+
+    // Current session is now confirmed as Session B
+    expect(screen.getByTestId('user-email').textContent).toBe('userB@vuonuom.local')
+
+    // Request A finally returns 401 AUTHENTICATION_REQUIRED for token A
+    resolveRequestA(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Token A has expired.'
+          }
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    )
+
+    await act(async () => {
+      await expect(requestAFuture).rejects.toThrow(ApiError)
+    })
+
+    // Assert signOut was NOT called because token A 401 is stale
+    expect(mockSignOut).not.toHaveBeenCalled()
+
+    // Assert session B is preserved and remains authenticated
+    expect(screen.getByTestId('status').textContent).toBe('authenticated')
+    expect(screen.getByTestId('user-email').textContent).toBe('userB@vuonuom.local')
+    expect(screen.getByTestId('has-session').textContent).toBe('yes')
+
+    globalThis.fetch = originalFetch
+  })
 })

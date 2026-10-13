@@ -139,9 +139,10 @@ describe('apiFetch client wrapper', () => {
     await expect(apiFetch('/v3/me')).rejects.toThrow(ApiError)
 
     expect(reAuthSpy).toHaveBeenCalledTimes(1)
-    const passedError = reAuthSpy.mock.calls[0][0] as ApiError
+    const [passedError, rejectedToken] = reAuthSpy.mock.calls[0]
     expect(passedError.status).toBe(401)
     expect(passedError.code).toBe('AUTHENTICATION_REQUIRED')
+    expect(rejectedToken).toBe('expired-token')
   })
 
   it('does NOT trigger 401 re-auth handler for 403 PERMISSION_DENIED responses', async () => {
