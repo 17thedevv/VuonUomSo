@@ -19,11 +19,12 @@ export function setAuthRequiredHandler(handler: AuthRequiredHandler | null): voi
 
 /**
  * Resolves a full request URL against the configured API base origin.
- * Guarantees that requests target the expected host and prefix.
+ * Guarantees that requests target only the trusted configured host and prefix.
+ * Caller cannot override the trusted origin.
  */
-export function resolveApiUrl(path: string, customBaseUrl?: string): URL {
+export function resolveApiUrl(path: string): URL {
   const env = getWebEnv()
-  const base = customBaseUrl || env.apiBaseUrl
+  const base = env.apiBaseUrl
 
   // If path is already an absolute URL, check that its origin matches the API base origin
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -44,16 +45,16 @@ export function resolveApiUrl(path: string, customBaseUrl?: string): URL {
 /**
  * Canonical V3 API fetch wrapper.
  * - Attaches Bearer token from the active Supabase session when available.
- * - Enforces origin boundaries.
+ * - Strictly enforces origin boundaries against canonical VITE_API_BASE_URL.
  * - Parses and normalizes V3 ApiError.
  * - Handles 401 responses with a controlled re-auth callback (without infinite retries).
  */
 export async function apiFetch<T = unknown>(
   path: string,
-  options: ApiClientOptions = {},
-  customBaseUrl?: string
+  options: ApiClientOptions = {}
 ): Promise<T> {
-  const targetUrl = resolveApiUrl(path, customBaseUrl)
+  // Reject foreign origins BEFORE touching tokens or network
+  const targetUrl = resolveApiUrl(path)
   const headers = new Headers(options.headers || {})
 
   headers.set('Accept', 'application/json')
