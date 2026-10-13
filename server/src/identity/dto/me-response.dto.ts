@@ -4,10 +4,14 @@ export class OrganizationMembership {
   @ApiProperty({ description: "Organization UUID", format: "uuid", type: String })
   organizationId!: string;
 
-  @ApiProperty({ description: "Membership role in organization", example: "MEMBER", type: String })
-  role!: string;
+  @ApiProperty({
+    description: "Membership role in organization",
+    enum: ["OWNER", "ADMIN", "MEMBER"],
+    example: "MEMBER",
+  })
+  role!: "OWNER" | "ADMIN" | "MEMBER";
 
-  @ApiProperty({ description: "Membership record version", minimum: 1, type: Number })
+  @ApiProperty({ description: "Membership record version", type: "integer", minimum: 1 })
   version!: number;
 }
 
@@ -18,10 +22,14 @@ export class GardenMembershipSummary {
   @ApiProperty({ description: "Garden UUID", format: "uuid", type: String })
   gardenId!: string;
 
-  @ApiProperty({ description: "Membership role in garden", example: "WORKER", type: String })
-  role!: string;
+  @ApiProperty({
+    description: "Membership role in garden",
+    enum: ["OWNER", "MANAGER", "WORKER", "VIEWER"],
+    example: "WORKER",
+  })
+  role!: "OWNER" | "MANAGER" | "WORKER" | "VIEWER";
 
-  @ApiProperty({ description: "Membership record version", minimum: 1, type: Number })
+  @ApiProperty({ description: "Membership record version", type: "integer", minimum: 1 })
   version!: number;
 }
 
@@ -52,7 +60,7 @@ export class MeResponse {
   })
   gardens!: GardenMembershipSummary[];
 
-  @ApiProperty({ description: "Optimistic concurrency version (integer >= 1)", minimum: 1, type: Number })
+  @ApiProperty({ description: "Optimistic concurrency version (integer >= 1)", type: "integer", minimum: 1 })
   version!: number;
 }
 

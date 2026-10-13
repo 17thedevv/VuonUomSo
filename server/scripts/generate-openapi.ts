@@ -29,7 +29,7 @@ interface OpenApiSchemaDocument {
 
 export async function generateOpenApiDocument(): Promise<OpenApiSchemaDocument> {
   process.env.NODE_ENV = "test";
-  const app = await NestFactory.create(AppModule, { logger: false });
+  const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
   app.setGlobalPrefix("v3");
 
   const config = new DocumentBuilder()
@@ -52,13 +52,63 @@ export async function generateOpenApiDocument(): Promise<OpenApiSchemaDocument> 
     canonical.paths[routePath] = pathItem;
   }
 
-  // Synchronize schemas defined in DTOs
+  // Synchronize runtime schemas defined in DTOs
   if (generated.components?.schemas) {
     canonical.components = canonical.components || { schemas: {} };
     canonical.components.schemas = canonical.components.schemas || {};
-    for (const [schemaName, schemaObj] of Object.entries(generated.components.schemas)) {
-      canonical.components.schemas[schemaName] = schemaObj;
+
+    // Synchronize HealthResponse if generated
+    if (generated.components.schemas["HealthResponse"]) {
+      canonical.components.schemas["HealthResponse"] = generated.components.schemas["HealthResponse"];
     }
+
+    // Synchronize DTO schemas while preserving canonical Version reference & role enums
+    for (const schemaName of [
+      "OrganizationMembership",
+      "GardenMembershipSummary",
+      "UserProfile",
+      "MeResponse",
+    ]) {
+      const generatedSchema = generated.components.schemas[schemaName] as any;
+      if (generatedSchema) {
+        canonical.components.schemas[schemaName] = generatedSchema;
+
+        // Restore canonical $ref to Version for version property
+        if (generatedSchema.properties?.version) {
+          generatedSchema.properties.version = {
+            $ref: "#/components/schemas/Version",
+          };
+        }
+      }
+    }
+
+    // Ensure ErrorDetail is not leaked as separate schema; canonical ErrorEnvelope is preserved
+    delete canonical.components.schemas["ErrorDetail"];
+    canonical.components.schemas["ErrorEnvelope"] = {
+      type: "object",
+      required: ["error"],
+      properties: {
+        error: {
+          type: "object",
+          required: ["code", "message", "requestId"],
+          properties: {
+            code: {
+              type: "string",
+            },
+            message: {
+              type: "string",
+            },
+            requestId: {
+              type: "string",
+            },
+            details: {
+              type: "object",
+              additionalProperties: true,
+            },
+          },
+        },
+      },
+    };
   }
 
   return canonical;
@@ -70,10 +120,9 @@ async function main(): Promise<void> {
   console.log("Successfully generated and updated", openApiPath);
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()
-) {
+const isDirectRun = process.argv.some((arg) => arg.includes("generate-openapi"));
+
+if (isDirectRun) {
   main().catch((err: unknown) => {
     console.error("OpenAPI generation failed:", err);
     process.exit(1);

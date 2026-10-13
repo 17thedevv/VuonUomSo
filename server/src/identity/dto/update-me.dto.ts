@@ -28,7 +28,7 @@ export class UpdateMeRequest {
     description: "Expected AppUser version for optimistic concurrency control (integer >= 1)",
     minimum: 1,
     example: 1,
-    type: Number,
+    type: "integer",
   })
   @IsInt({ message: "Phiên bản kỳ vọng phải là số nguyên." })
   @Min(1, { message: "Phiên bản kỳ vọng phải lớn hơn hoặc bằng 1." })

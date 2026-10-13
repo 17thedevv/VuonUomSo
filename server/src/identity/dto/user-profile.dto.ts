@@ -15,7 +15,7 @@ export class UserProfile {
   })
   displayName!: string | null;
 
-  @ApiProperty({ description: "Optimistic concurrency version (integer >= 1)", minimum: 1, type: Number })
+  @ApiProperty({ description: "Optimistic concurrency version (integer >= 1)", type: "integer", minimum: 1 })
   version!: number;
 }
 
