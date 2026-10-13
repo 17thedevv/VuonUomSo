@@ -33,6 +33,13 @@ export class InMemoryPrismaService {
     },
 
     create: async ({ data }: { data: any }) => {
+      for (const u of this.users.values()) {
+        if (u.authSubject === data.authSubject) {
+          const err = new Error("Unique constraint failed on the fields: (`authSubject`)");
+          (err as any).code = "P2002";
+          throw err;
+        }
+      }
       const id = randomUUID();
       const user = {
         id,
@@ -47,6 +54,29 @@ export class InMemoryPrismaService {
       };
       this.users.set(id, user);
       return { ...user };
+    },
+
+    updateMany: async ({ where, data }: { where: any; data: any }) => {
+      let count = 0;
+      for (const [id, user] of this.users.entries()) {
+        let match = true;
+        if (where.id && user.id !== where.id) match = false;
+        if (where.authSubject && user.authSubject !== where.authSubject) match = false;
+        if (where.version !== undefined && user.version !== where.version) match = false;
+        if (where.email?.not !== undefined && user.email === where.email.not) match = false;
+
+        if (match) {
+          const updated = {
+            ...user,
+            ...data,
+            version: data.version?.increment ? user.version + 1 : data.version ?? user.version,
+            updatedAt: new Date(),
+          };
+          this.users.set(id, updated);
+          count++;
+        }
+      }
+      return { count };
     },
 
     update: async ({ where, data }: { where: { id: string }; data: any }) => {

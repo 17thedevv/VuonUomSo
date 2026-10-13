@@ -85,6 +85,65 @@ describe("V3-1A: Identity Foundation (me endpoints)", () => {
       expect(res.body.email).toBe("new.email@example.com");
       expect(res.body.version).toBe(2);
     });
+
+    it("create race: 2 concurrent bootstrap requests for same sub result in single AppUser with version 1", async () => {
+      const token = await context.jwtContext.signToken({
+        sub: "concurrent-create-sub",
+        email: "concurrent@example.com",
+      });
+
+      const [resA, resB] = await Promise.all([
+        request(context.app.getHttpServer())
+          .post("/v3/me/bootstrap")
+          .set("Authorization", `Bearer ${token}`),
+        request(context.app.getHttpServer())
+          .post("/v3/me/bootstrap")
+          .set("Authorization", `Bearer ${token}`),
+      ]);
+
+      expect(resA.status).toBe(200);
+      expect(resB.status).toBe(200);
+      expect(resA.body.id).toBe(resB.body.id);
+      expect(resA.body.version).toBe(1);
+      expect(resB.body.version).toBe(1);
+    });
+
+    it("email refresh race: 2 concurrent bootstrap requests updating to new email increment version exactly once", async () => {
+      const oldToken = await context.jwtContext.signToken({
+        sub: "email-race-sub",
+        email: "old@example.com",
+      });
+
+      // Create user with old@example.com (version 1)
+      const initRes = await request(context.app.getHttpServer())
+        .post("/v3/me/bootstrap")
+        .set("Authorization", `Bearer ${oldToken}`);
+      expect(initRes.status).toBe(200);
+      expect(initRes.body.version).toBe(1);
+
+      // Two concurrent bootstraps with new@example.com
+      const newToken = await context.jwtContext.signToken({
+        sub: "email-race-sub",
+        email: "new@example.com",
+      });
+
+      const [resA, resB] = await Promise.all([
+        request(context.app.getHttpServer())
+          .post("/v3/me/bootstrap")
+          .set("Authorization", `Bearer ${newToken}`),
+        request(context.app.getHttpServer())
+          .post("/v3/me/bootstrap")
+          .set("Authorization", `Bearer ${newToken}`),
+      ]);
+
+      expect(resA.status).toBe(200);
+      expect(resB.status).toBe(200);
+      expect(resA.body.email).toBe("new@example.com");
+      expect(resB.body.email).toBe("new@example.com");
+      // Must increment exactly once to version 2
+      expect(resA.body.version).toBe(2);
+      expect(resB.body.version).toBe(2);
+    });
   });
 
   describe("GET /v3/me", () => {
@@ -225,6 +284,54 @@ describe("V3-1A: Identity Foundation (me endpoints)", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe("INVALID_REQUEST");
+    });
+
+    it("atomic OCC: concurrent writes with same expectedVersion result in exactly one 200 and one 409 VERSION_CONFLICT", async () => {
+      const token = await context.jwtContext.signToken({
+        sub: "occ-race-sub",
+        email: "occ.race@example.com",
+      });
+
+      // Bootstrap (initial version = 1)
+      const bootRes = await request(context.app.getHttpServer())
+        .post("/v3/me/bootstrap")
+        .set("Authorization", `Bearer ${token}`);
+      expect(bootRes.status).toBe(200);
+      expect(bootRes.body.version).toBe(1);
+
+      // Request A and Request B concurrently send expectedVersion: 1
+      const [resA, resB] = await Promise.all([
+        request(context.app.getHttpServer())
+          .patch("/v3/me")
+          .set("Authorization", `Bearer ${token}`)
+          .send({
+            displayName: "Winner A",
+            expectedVersion: 1,
+          }),
+        request(context.app.getHttpServer())
+          .patch("/v3/me")
+          .set("Authorization", `Bearer ${token}`)
+          .send({
+            displayName: "Winner B",
+            expectedVersion: 1,
+          }),
+      ]);
+
+      const statuses = [resA.status, resB.status].sort();
+      expect(statuses).toEqual([200, 409]);
+
+      const successRes = resA.status === 200 ? resA : resB;
+      const conflictRes = resA.status === 409 ? resA : resB;
+
+      expect(successRes.body.version).toBe(2);
+      expect(conflictRes.body.error.code).toBe("VERSION_CONFLICT");
+
+      // Verify final canonical state in DB has version 2
+      const finalRes = await request(context.app.getHttpServer())
+        .get("/v3/me")
+        .set("Authorization", `Bearer ${token}`);
+      expect(finalRes.status).toBe(200);
+      expect(finalRes.body.version).toBe(2);
     });
   });
 });

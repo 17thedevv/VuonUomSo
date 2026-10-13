@@ -18,51 +18,66 @@ export class IdentityService {
   async bootstrap(principal: AuthPrincipal): Promise<UserProfileDto> {
     const normalizedEmail = principal.email.trim().toLowerCase();
 
-    const existingUser = await this.prisma.appUser.findUnique({
+    // 1. Ensure user exists: find or create with concurrent race safety
+    let user = await this.prisma.appUser.findUnique({
       where: { authSubject: principal.sub },
     });
 
-    if (!existingUser) {
-      const newUser = await this.prisma.appUser.create({
-        data: {
-          authSubject: principal.sub,
-          email: normalizedEmail,
-          displayName: null,
-          version: 1,
-        },
-      });
+    if (!user) {
+      try {
+        user = await this.prisma.appUser.create({
+          data: {
+            authSubject: principal.sub,
+            email: normalizedEmail,
+            displayName: null,
+            version: 1,
+          },
+        });
+      } catch {
+        // If a concurrent request created the record first, fetch the canonical user
+        user = await this.prisma.appUser.findUnique({
+          where: { authSubject: principal.sub },
+        });
+        if (!user) {
+          throw new ConflictException({
+            code: ErrorCodes.BUSINESS_CONFLICT,
+            message: "Không thể khởi tạo tài khoản do xung đột đồng thời. Vui lòng thử lại.",
+          });
+        }
+      }
+    }
 
+    // 2. Email unchanged: return canonical user with same version
+    if (user.email === normalizedEmail) {
       return {
-        id: newUser.id,
-        email: newUser.email,
-        displayName: newUser.displayName,
-        version: newUser.version,
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        version: user.version,
       };
     }
 
-    if (existingUser.email === normalizedEmail) {
-      return {
-        id: existingUser.id,
-        email: existingUser.email,
-        displayName: existingUser.displayName,
-        version: existingUser.version,
-      };
-    }
-
-    // Email changed in token -> sync canonical email & increment version
-    const updatedUser = await this.prisma.appUser.update({
-      where: { id: existingUser.id },
+    // 3. Email changed: atomic conditional update guarantees version increment exactly once
+    await this.prisma.appUser.updateMany({
+      where: {
+        authSubject: principal.sub,
+        email: { not: normalizedEmail },
+      },
       data: {
         email: normalizedEmail,
         version: { increment: 1 },
       },
     });
 
+    const canonicalUser = await this.prisma.appUser.findUnique({
+      where: { authSubject: principal.sub },
+    });
+
     return {
-      id: updatedUser.id,
-      email: updatedUser.email,
-      displayName: updatedUser.displayName,
-      version: updatedUser.version,
+      id: canonicalUser!.id,
+      email: canonicalUser!.email,
+      displayName: canonicalUser!.displayName,
+      version: canonicalUser!.version,
     };
   }
 
@@ -106,41 +121,50 @@ export class IdentityService {
   }
 
   async updateMe(principal: AuthPrincipal, dto: UpdateMeDto): Promise<UserProfileDto> {
-    const user = await this.prisma.appUser.findUnique({
-      where: { authSubject: principal.sub },
-    });
-
-    if (!user) {
-      throw new NotFoundException({
-        code: ErrorCodes.RESOURCE_NOT_FOUND,
-        message: "Không tìm thấy hồ sơ người dùng.",
-      });
-    }
-
-    if (user.version !== dto.expectedVersion) {
-      throw new ConflictException({
-        code: ErrorCodes.VERSION_CONFLICT,
-        message: "Phiên bản dữ liệu không khớp. Vui lòng tải lại và thử lại.",
-        details: {
-          currentVersion: user.version,
-          expectedVersion: dto.expectedVersion,
-        },
-      });
-    }
-
-    const updated = await this.prisma.appUser.update({
-      where: { id: user.id },
+    // Database-authoritative conditional atomic write (OCC)
+    const updateResult = await this.prisma.appUser.updateMany({
+      where: {
+        authSubject: principal.sub,
+        version: dto.expectedVersion,
+      },
       data: {
         displayName: dto.displayName,
         version: { increment: 1 },
       },
     });
 
+    if (updateResult.count === 0) {
+      // Check if user exists to distinguish 404 from 409
+      const existingUser = await this.prisma.appUser.findUnique({
+        where: { authSubject: principal.sub },
+      });
+
+      if (!existingUser) {
+        throw new NotFoundException({
+          code: ErrorCodes.RESOURCE_NOT_FOUND,
+          message: "Không tìm thấy hồ sơ người dùng.",
+        });
+      }
+
+      throw new ConflictException({
+        code: ErrorCodes.VERSION_CONFLICT,
+        message: "Phiên bản dữ liệu không khớp. Vui lòng tải lại và thử lại.",
+        details: {
+          currentVersion: existingUser.version,
+          expectedVersion: dto.expectedVersion,
+        },
+      });
+    }
+
+    const updated = await this.prisma.appUser.findUnique({
+      where: { authSubject: principal.sub },
+    });
+
     return {
-      id: updated.id,
-      email: updated.email,
-      displayName: updated.displayName,
-      version: updated.version,
+      id: updated!.id,
+      email: updated!.email,
+      displayName: updated!.displayName,
+      version: updated!.version,
     };
   }
 }
