@@ -58,8 +58,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
 
     // 3. Register controlled 401 re-auth handler
     setAuthRequiredHandler(() => {
+      // Clear rejected session from local browser storage without remote signout call
+      void supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+
       if (!isMounted) return
-      // Server rejected credentials - clear invalid session and set unauthenticated
       setSession(null)
       setUser(null)
       setStatus('unauthenticated')
@@ -156,6 +158,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
     [supabase]
   )
 
+  const updatePassword = useCallback(
+    async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) {
+        throw error
+      }
+    },
+    [supabase]
+  )
+
   const contextValue: AuthContextValue = useMemo(
     () => ({
       status,
@@ -164,9 +176,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, onAuthRequ
       signIn,
       signUp,
       signOut,
-      requestPasswordReset
+      requestPasswordReset,
+      updatePassword
     }),
-    [status, user, session, signIn, signUp, signOut, requestPasswordReset]
+    [status, user, session, signIn, signUp, signOut, requestPasswordReset, updatePassword]
   )
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
