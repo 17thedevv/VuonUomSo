@@ -1,0 +1,3116 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vườn Ươm V3 API",
+    "version": "3.0.0-design-freeze",
+    "description": "Design-frozen V3 REST/OpenAPI contract. Runtime implementation remains phase-gated by .agent/PROJECT_STATE.md."
+  },
+  "servers": [
+    {
+      "url": "{apiBase}",
+      "variables": {
+        "apiBase": {
+          "default": "http://localhost:3000"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Identity"
+    },
+    {
+      "name": "Organizations"
+    },
+    {
+      "name": "Gardens"
+    },
+    {
+      "name": "Membership"
+    },
+    {
+      "name": "Contacts"
+    },
+    {
+      "name": "Batches"
+    },
+    {
+      "name": "Orders"
+    },
+    {
+      "name": "Reservations"
+    },
+    {
+      "name": "Shipments"
+    },
+    {
+      "name": "Dossiers"
+    },
+    {
+      "name": "Commands"
+    },
+    {
+      "name": "Sync"
+    },
+    {
+      "name": "Imports"
+    }
+  ],
+  "paths": {
+    "/v3/me": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Current authenticated profile and memberships",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "updateMe",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated self profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/devices/register": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "registerDevice",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDeviceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotently registered device",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Device"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/devices/{deviceId}": {
+      "delete": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "unregisterDevice",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DeviceId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Device unregistered"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/organizations": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "operationId": "listOrganizations",
+        "responses": {
+          "200": {
+            "description": "Caller-visible organizations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "operationId": "createOrganization",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organization created; caller becomes OWNER",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}": {
+      "get": {
+        "tags": [
+          "Organizations"
+        ],
+        "operationId": "getOrganization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Organizations"
+        ],
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationSummary"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/gardens": {
+      "get": {
+        "tags": [
+          "Gardens"
+        ],
+        "operationId": "listGardens",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible/admin garden metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GardenSummary"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Gardens"
+        ],
+        "operationId": "createGarden",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGardenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Garden created with frozen owner/creator governance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GardenDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}": {
+      "get": {
+        "tags": [
+          "Gardens"
+        ],
+        "operationId": "getGarden",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garden detail and effective permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GardenDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/members": {
+      "get": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "listGardenMembers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garden members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GardenMember"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "updateGardenMemberRole",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/UserId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGardenMemberRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GardenMember"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "revokeGardenMember",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/UserId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Membership revoked or self-left"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/members/{userId}": {
+      "patch": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "updateOrganizationMemberRole",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "$ref": "#/components/parameters/UserId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationMemberRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated organization membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMembership"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/invitations": {
+      "post": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "createGardenInvitation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvitationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created/replaced; raw share token returned once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateInvitationResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "listGardenInvitations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Currently PENDING, non-expired invitation metadata only; no raw token/share URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/invitations/{invitationId}": {
+      "delete": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "revokeGardenInvitation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/InvitationId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Pending invitation revoked"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/invitations/preview": {
+      "post": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "previewInvitation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Safe invitation preview for matching authenticated email under Confirm Email policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/v3/invitations/accept": {
+      "post": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "acceptInvitation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation accepted atomically",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GardenMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/contacts": {
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "operationId": "listContacts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization contacts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/contacts/{contactId}": {
+      "get": {
+        "tags": [
+          "Contacts"
+        ],
+        "operationId": "getContact",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "$ref": "#/components/parameters/ContactId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/contacts/snapshot": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "operationId": "getContactDirectorySnapshot",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version-bound organization contact snapshot page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactSnapshotPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/batches": {
+      "get": {
+        "tags": [
+          "Batches"
+        ],
+        "operationId": "listBatches",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garden batches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/batches/{batchId}": {
+      "get": {
+        "tags": [
+          "Batches"
+        ],
+        "operationId": "getBatch",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/BatchId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Batch"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/orders": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/orders/{orderId}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "getOrder",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/OrderId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/orders/{orderId}/reservations": {
+      "get": {
+        "tags": [
+          "Reservations"
+        ],
+        "operationId": "listOrderReservations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/OrderId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order reservation sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Reservation"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/shipments": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "listShipments",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShipmentPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/shipments/{shipmentId}": {
+      "get": {
+        "tags": [
+          "Shipments"
+        ],
+        "operationId": "getShipment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/ShipmentId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Shipment detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Shipment"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/batches/{batchId}/dossier": {
+      "get": {
+        "tags": [
+          "Dossiers"
+        ],
+        "operationId": "getBatchDossier",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/BatchId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch dossier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dossier"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/commands": {
+      "post": {
+        "tags": [
+          "Commands"
+        ],
+        "operationId": "submitCommand",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandEnvelope"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied or idempotently replayed command",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandApplied"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/changes": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "operationId": "getGardenChanges",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete-revision change page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePage"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/snapshot": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "operationId": "getGardenSnapshot",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consistent garden snapshot + signed cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GardenSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/imports": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "operationId": "stageImport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentMediaType": "application/json"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Staged import preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "413": {
+            "description": "File exceeds 10 MiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationRejected"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/imports/{importId}": {
+      "get": {
+        "tags": [
+          "Imports"
+        ],
+        "operationId": "getImportStatus",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/ImportId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Import preview/status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/v3/gardens/{gardenId}/imports/{importId}/commit": {
+      "post": {
+        "tags": [
+          "Imports"
+        ],
+        "operationId": "commitImport",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/GardenId"
+          },
+          {
+            "$ref": "#/components/parameters/ImportId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed/idempotently replayed import",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/v3/me/bootstrap": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "bootstrapMe",
+        "responses": {
+          "200": {
+            "description": "Idempotently provisioned current AppUser",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthRequired"
+          }
+        }
+      }
+    },
+    "/v3/organizations/{organizationId}/members": {
+      "get": {
+        "tags": [
+          "Membership"
+        ],
+        "operationId": "listOrganizationMembers",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationMemberDetail"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/PermissionDenied"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "OrganizationId": {
+        "name": "organizationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "GardenId": {
+        "name": "gardenId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "UserId": {
+        "name": "userId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "DeviceId": {
+        "name": "deviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "InvitationId": {
+        "name": "invitationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ContactId": {
+        "name": "contactId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "BatchId": {
+        "name": "batchId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "OrderId": {
+        "name": "orderId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ShipmentId": {
+        "name": "shipmentId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "ImportId": {
+        "name": "importId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "InvalidRequest": {
+        "description": "Invalid request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "AuthRequired": {
+        "description": "Authentication required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "PermissionDenied": {
+        "description": "Permission denied",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not found or outside visible tenant scope",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Version/idempotency/business conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "ValidationRejected": {
+        "description": "Domain/input validation rejected",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      },
+      "Gone": {
+        "description": "Expired invitation/import/sync cursor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "QuantityString": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$",
+        "examples": [
+          "25000"
+        ]
+      },
+      "MoneyString": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^(0|[1-9][0-9]*)$"
+      },
+      "Version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "Timestamp": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "OrganizationMembership": {
+        "type": "object",
+        "required": [
+          "organizationId",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "MEMBER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "GardenMembershipSummary": {
+        "type": "object",
+        "required": [
+          "organizationId",
+          "gardenId",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "MeResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "organizations",
+          "gardens",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationMembership"
+            }
+          },
+          "gardens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GardenMembershipSummary"
+            }
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "Device": {
+        "type": "object",
+        "required": [
+          "id",
+          "clientInstallationId",
+          "createdAt",
+          "lastSeenAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientInstallationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "platform": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "lastSeenAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "RegisterDeviceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "clientInstallationId"
+        ],
+        "properties": {
+          "clientInstallationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "platform": {
+            "type": "string",
+            "maxLength": 40
+          }
+        }
+      },
+      "OrganizationSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "MEMBER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "CreateOrganizationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "GardenSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "organizationId",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OWNER",
+              "MANAGER",
+              "WORKER",
+              "VIEWER",
+              null
+            ]
+          }
+        }
+      },
+      "GardenDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GardenSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "permissions",
+              "version"
+            ],
+            "properties": {
+              "permissions": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "version": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          }
+        ]
+      },
+      "CreateGardenRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "GardenMember": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "UpdateGardenMemberRoleRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "expectedVersion"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "UpdateOrganizationMemberRoleRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "expectedVersion"
+        ],
+        "properties": {
+          "role": {
+            "enum": [
+              "ADMIN",
+              "MEMBER"
+            ]
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "CreateInvitationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "role"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "role": {
+            "enum": [
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          }
+        }
+      },
+      "Invitation": {
+        "type": "object",
+        "required": [
+          "id",
+          "gardenId",
+          "email",
+          "role",
+          "status",
+          "expiresAt",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "enum": [
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "REVOKED",
+              "EXPIRED"
+            ]
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "CreateInvitationResponse": {
+        "type": "object",
+        "required": [
+          "invitation",
+          "shareUrl"
+        ],
+        "properties": {
+          "invitation": {
+            "$ref": "#/components/schemas/Invitation"
+          },
+          "shareUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "InvitationTokenRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 1024
+          }
+        }
+      },
+      "InvitationPreview": {
+        "type": "object",
+        "required": [
+          "organizationName",
+          "gardenName",
+          "role",
+          "expiresAt"
+        ],
+        "properties": {
+          "organizationName": {
+            "type": "string"
+          },
+          "gardenName": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "MANAGER",
+              "WORKER",
+              "VIEWER"
+            ]
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "Contact": {
+        "type": "object",
+        "required": [
+          "id",
+          "organizationId",
+          "name",
+          "roles",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phoneRaw": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "customer",
+                "supplier"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ContactPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Contact"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ContactSnapshotPage": {
+        "type": "object",
+        "required": [
+          "directoryVersion",
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "directoryVersion": {
+            "$ref": "#/components/schemas/BigIntString"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Contact"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Batch": {
+        "type": "object",
+        "required": [
+          "id",
+          "gardenId",
+          "code",
+          "variety",
+          "initialQuantity",
+          "currentQuantity",
+          "readyQuantity",
+          "ownOutstandingQuantity",
+          "availableQuantity",
+          "status",
+          "version",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "variety": {
+            "type": "string"
+          },
+          "initialQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "currentQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "readyQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "ownOutstandingQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "availableQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "BatchPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Batch"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "gardenId",
+          "customerId",
+          "variety",
+          "requestedQuantity",
+          "coverageQuantity",
+          "shortageQuantity",
+          "shippedQuantity",
+          "status",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "customerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variety": {
+            "type": "string"
+          },
+          "requestedQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "coverageQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "shortageQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "shippedQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "requestedDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "unitPrice": {
+            "$ref": "#/components/schemas/MoneyString"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "OrderPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Reservation": {
+        "type": "object",
+        "required": [
+          "id",
+          "orderId",
+          "sourceType",
+          "quantity",
+          "fulfilledQuantity",
+          "outstandingQuantity",
+          "coverageQuantity",
+          "status",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceType": {
+            "enum": [
+              "own_batch",
+              "external_supplier"
+            ]
+          },
+          "batchId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "quantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "fulfilledQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "outstandingQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "coverageQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "fulfilled",
+              "released"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "ShipmentLine": {
+        "type": "object",
+        "required": [
+          "reservationId",
+          "quantity",
+          "sourceType"
+        ],
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "sourceType": {
+            "enum": [
+              "own_batch",
+              "external_supplier"
+            ]
+          }
+        }
+      },
+      "Shipment": {
+        "type": "object",
+        "required": [
+          "id",
+          "gardenId",
+          "orderId",
+          "plannedQuantity",
+          "shippedQuantity",
+          "status",
+          "version",
+          "lines"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "plannedQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "shippedQuantity": {
+            "$ref": "#/components/schemas/QuantityString"
+          },
+          "plannedDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "shippedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "completed",
+              "cancelled"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShipmentLine"
+            }
+          }
+        }
+      },
+      "ShipmentPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Shipment"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Dossier": {
+        "type": "object",
+        "required": [
+          "id",
+          "batchId",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "materialType": {
+            "type": "string"
+          },
+          "sourceName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceLocation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sourceLotCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "supplierContactId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "CommandEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "protocolVersion",
+          "mutationId",
+          "idempotencyKey",
+          "deviceId",
+          "gardenId",
+          "action",
+          "expectedVersions",
+          "payload",
+          "clientCreatedAt"
+        ],
+        "properties": {
+          "protocolVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "mutationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "enum": [
+              "batch.create",
+              "batch.set_current_quantity",
+              "batch.set_ready_quantity",
+              "contact.create",
+              "contact.update",
+              "order.create",
+              "order.update",
+              "order.cancel",
+              "reservation.reserve_own_batch",
+              "reservation.reserve_external_supplier",
+              "reservation.release",
+              "reservation.reconcile_order_reduction",
+              "reservation.reconcile_batch_shortage",
+              "shipment.plan",
+              "shipment.confirm",
+              "shipment.cancel",
+              "dossier.upsert",
+              "mutation.compensate"
+            ]
+          },
+          "expectedVersions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "clientCreatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "CompensationOffer": {
+        "type": "object",
+        "required": [
+          "supported",
+          "targetMutationId"
+        ],
+        "properties": {
+          "supported": {
+            "const": true
+          },
+          "targetMutationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommandApplied": {
+        "type": "object",
+        "required": [
+          "status",
+          "mutationId",
+          "receiptId",
+          "serverCursor",
+          "result"
+        ],
+        "properties": {
+          "status": {
+            "const": "APPLIED"
+          },
+          "mutationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "serverCursor": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object",
+            "required": [
+              "entityType",
+              "entityId",
+              "version"
+            ],
+            "properties": {
+              "entityType": {
+                "type": "string"
+              },
+              "entityId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "version": {
+                "$ref": "#/components/schemas/Version"
+              }
+            }
+          },
+          "compensation": {
+            "$ref": "#/components/schemas/CompensationOffer"
+          }
+        }
+      },
+      "Change": {
+        "type": "object",
+        "required": [
+          "revision",
+          "ordinal",
+          "entityType",
+          "entityId",
+          "entityVersion",
+          "action",
+          "payload",
+          "createdAt"
+        ],
+        "properties": {
+          "revision": {
+            "$ref": "#/components/schemas/BigIntString"
+          },
+          "ordinal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entityVersion": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "action": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ChangePage": {
+        "type": "object",
+        "required": [
+          "changes",
+          "nextCursor",
+          "hasMore",
+          "organizationContactDirectoryVersion"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "organizationContactDirectoryVersion": {
+            "$ref": "#/components/schemas/BigIntString"
+          }
+        }
+      },
+      "GardenSnapshot": {
+        "type": "object",
+        "required": [
+          "gardenId",
+          "cursor",
+          "generatedAt",
+          "data",
+          "organizationContactDirectoryVersion"
+        ],
+        "properties": {
+          "gardenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "garden",
+              "batches",
+              "orders",
+              "reservations",
+              "shipments",
+              "dossiers"
+            ],
+            "properties": {
+              "garden": {
+                "$ref": "#/components/schemas/GardenDetail"
+              },
+              "batches": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Batch"
+                }
+              },
+              "orders": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              },
+              "reservations": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Reservation"
+                }
+              },
+              "shipments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Shipment"
+                }
+              },
+              "dossiers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Dossier"
+                }
+              }
+            }
+          },
+          "organizationContactDirectoryVersion": {
+            "$ref": "#/components/schemas/BigIntString"
+          }
+        }
+      },
+      "ImportStatus": {
+        "type": "object",
+        "required": [
+          "importId",
+          "status",
+          "contentHash",
+          "expiresAt",
+          "previewCounts",
+          "warnings"
+        ],
+        "properties": {
+          "importId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "STAGED",
+              "VERIFIED",
+              "COMMITTED",
+              "REJECTED",
+              "EXPIRED"
+            ]
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "previewCounts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CommitImportRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contentHash",
+          "confirmTargetGardenId"
+        ],
+        "properties": {
+          "contentHash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "confirmTargetGardenId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "UpdateMeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "expectedVersion"
+        ],
+        "properties": {
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "BigIntString": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)$",
+        "examples": [
+          "42"
+        ]
+      },
+      "UpdateOrganizationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "expectedVersion"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "expectedVersion": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      },
+      "OrganizationMemberDetail": {
+        "type": "object",
+        "required": [
+          "userId",
+          "email",
+          "displayName",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "displayName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120
+          },
+          "role": {
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "MEMBER"
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/Version"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,8 +1,8 @@
 ---
 name: github-workflow
 description: >-
-  Git/GitHub workflow for Vườn Ươm: branch ownership, atomic commits,
-  contract-first two-person collaboration, CI and merge safety.
+  Git/GitHub workflow for Vườn Ươm: task branches, atomic commits,
+  contract-first sequencing, CI and merge safety for solo development.
 ---
 
 # Git & GitHub Workflow for Vườn Ươm
@@ -16,7 +16,7 @@ main
 → atomic commits
 → sync latest base
 → exact-head full gate
-→ PR review
+→ review/audit
 → merge
 ```
 
@@ -30,43 +30,45 @@ main
 - `test/*`
 - `chore/*`
 
-Branch nên theo **task/slice**, không theo tên người kiểu `17thedev-v3` hoặc `athu-v3`.
+Branch theo **task/slice**, không theo tên người.
 
 Ví dụ:
 
-- `feat/v3-1-jwt-verification`
-- `feat/v3-1-login-ui`
+- `feat/v3-1-server-foundation`
+- `feat/v3-1-auth-client`
 - `docs/v3-api-contract`
 
-## 3. Two-person coordination
+## 3. Solo sequencing
 
-Nhóm hiện có hai thành viên: 17thedev và Tráng A Thư.
+Project hiện do **17thedev phát triển một mình**.
 
-Ownership mặc định:
+Không cần ownership matrix giữa người với người. Thay vào đó, mỗi slice phải có:
 
-- server/Prisma/domain runtime: 17thedev primary;
-- frontend/auth client/offline UX: Tráng A Thư primary;
-- API contract/shared types/env/root config: **shared coordination zone**.
+1. contract/dependency đã chốt;
+2. branch riêng;
+3. phạm vi file rõ;
+4. acceptance/test rõ;
+5. merge xong mới mở slice phụ thuộc tiếp theo.
 
-Shared coordination zone không được hai người tự sửa theo giả định khác nhau.
+Ưu tiên sequence:
 
-Trước khi code song song:
+```text
+contract
+→ server/client foundation theo dependency
+→ integration
+→ next slice
+```
 
-1. chốt endpoint/action;
-2. chốt request/response DTO;
-3. chốt error codes;
-4. chốt auth/tenant context;
-5. chốt version/idempotency semantics;
-6. sau đó mới tách branch frontend/backend.
+Không giữ nhiều branch dài cùng sửa API contract, Prisma schema, root config hoặc env contract.
 
 ## 4. Conflict prevention
 
 - Branch sống ngắn.
-- Pull/rebase/merge latest base trước PR/handoff theo workflow team.
+- Sync latest base trước PR/handoff.
 - Không giải conflict bằng `ours/theirs` mù quáng.
-- Lockfile/root config/Prisma schema/API contract là file rủi ro conflict cao.
-- Nếu một PR đổi shared contract, PR phụ thuộc phải sync contract trước khi merge.
-- Không merge hai PR cùng thay một contract theo hai hướng khác nhau.
+- Lockfile/root config/Prisma schema/API contract là file rủi ro self-conflict cao.
+- Nếu task B phụ thuộc contract của task A, merge A trước rồi mới bắt đầu/rebase B.
+- Không duy trì hai implementation khác nhau của cùng một contract.
 
 ## 5. Atomic commits
 
@@ -103,10 +105,12 @@ Docs-only có thể dựa exact-head CI nếu báo cáo rõ local verification c
 Không merge nếu:
 
 - exact head CI đỏ/chưa chạy;
-- unresolved review blocker/high;
+- unresolved BLOCKER/HIGH từ review/audit;
 - contract mismatch frontend/backend;
 - scope vượt PROJECT_STATE;
 - migration/auth/security gate chưa đạt.
+
+Solo project vẫn phải giữ self-review/agent audit và CI; không dùng việc “chỉ có một người” để bỏ gate.
 
 ## 8. Agent permission boundary
 
@@ -122,9 +126,9 @@ Agent không tự:
 ## 9. PR checklist
 
 - [ ] Task/branch đúng scope?
-- [ ] Shared API contract đã chốt nếu frontend/backend cùng phụ thuộc?
+- [ ] API/shared contract đã chốt trước implementation phụ thuộc?
 - [ ] Không secret/artifact?
 - [ ] Sync base đủ mới?
 - [ ] Exact-head verification xanh?
-- [ ] Reviewer hiểu contract/invariant bị thay đổi?
+- [ ] Review/audit contract và invariant đã hoàn tất?
 - [ ] Không claim phase DONE chỉ vì PR CI xanh?

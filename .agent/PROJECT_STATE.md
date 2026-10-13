@@ -5,26 +5,29 @@
 
 ---
 
-## V3-0 authorization addendum — 2026-10-12 (DESIGN ONLY)
+## V3-0 authorization addendum — 2026-10-12 (DESIGN COMPLETE / RUNTIME STILL CLOSED)
 
 **Owner-approved direction:** Vườn Ươm moves toward a cloud-backed PWA using NestJS (Express), PostgreSQL, Prisma, Supabase Auth and tenant-scoped Dexie offline cache/outbox. One person may join many organizations/gardens with independently scoped permissions. Render is for optional test staging, not an architecture constraint. **This is a product roadmap decision, independent of the Cloud Computing mini-project; coursework may present a stable product snapshot but must not drive product requirements, architecture, provider choice, or implementation deadlines.**
 
-**Actual authorization:** start and review **V3-0 architecture documents only**, not executable backend, service provisioning, live migrations, deployment, account creation or collection of real tenant data. The earlier "Production Architecture / Cloud Backend: NOT AUTHORIZED" below continues to mean **implementation is NOT AUTHORIZED**. This addendum does not bypass any pre-existing feature or pilot gate.
+**Actual authorization:** V3-0 architecture/API/auth/sync/migration/toolchain design is now complete enough for implementation handoff. This still does **not** authorize executable backend, service provisioning, live migrations, deployment, real account collection or real tenant data. V3-1 runtime implementation must be explicitly opened after this docs/design PR passes exact-head CI, independent review and merge.
 
-- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). **Main push CI #38232017795 completed SUCCESS, attempt 1.**
+- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). Main push CI #38232017795 SUCCESS.
+- Initial V3-0 foundation PR [#60](https://github.com/17thedevv/VuonUomSo/pull/60) merged on 12/10/2026 at head `13762520f1e0ea98d7c560cd4e7473f0929ae2ee`, merge commit `dc246716a94dfe06482db85fce10e1d27fea8755`.
+- Remaining V3-0 design freeze is isolated in Draft PR [#62](https://github.com/17thedevv/VuonUomSo/pull/62) from branch `docs/v3-0-design-freeze`; no V3-1 runtime begins until #62 review/CI/merge plus explicit phase authorization.
 - REM-05 PR [#58](https://github.com/17thedevv/VuonUomSo/pull/58) remains DRAFT / UNMERGED; do not conflate local mobile impressions or staging deploy with signed R04/R05 acceptance.
 - **REAL PILOT remains NO-GO / NOT APPROVED / NOT STARTED**. R01–R08 historical records are preserved, re-audit remains pending; V2-C/D/E and MCP AI Control are not silently adopted.
-- Proposed design docs (on docs/v3-0-architecture-foundations, not authoritative until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [API contract](../docs/architecture/V3-API-CONTRACT.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
-- Stop at a docs-only Draft PR and independent review; no automatic implementation or merge.
+- Frozen design set on `docs/v3-0-design-freeze` / PR #62 (not authoritative on main until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma 7 draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [API contract](../docs/architecture/V3-API-CONTRACT.md), [machine-readable OpenAPI](../docs/api/v3.openapi.json), [Authorization contract](../docs/architecture/V3-AUTHORIZATION-CONTRACT.md), [Implementation foundation](../docs/architecture/V3-IMPLEMENTATION-FOUNDATION.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3-1 solo implementation plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
+- Stop at this docs/agent design Draft PR until exact-head CI + independent review pass. After merge, V3-1 is **code-ready but still requires explicit implementation authorization**. No automatic implementation or merge.
 
 ## 1. Project Identity
 
 - **Tên chính thức**: `Vườn Ươm`
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
-- **Giai đoạn dự án**: `V3-0 — Architecture & Product Foundation` (docs/design only)
-- **Production Architecture direction**: `APPROVED FOR V3 DESIGN`
-- **Cloud Backend implementation / live migration / real tenant data**: `NOT YET AUTHORIZED`
+- **Giai đoạn dự án**: `V3-0 — Architecture & Product Foundation` (**DESIGN COMPLETE / REVIEW+MERGE PENDING**)
+- **Production Architecture direction**: `DESIGN FROZEN / IMPLEMENTATION-READY`
+- **V3-1 implementation**: `CODE-READY / NOT YET AUTHORIZED / NOT STARTED`
+- **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
 
 ---
 
@@ -36,14 +39,14 @@
 
 | V3 phase | Trạng thái | Gate / scope |
 |---|---|---|
-| V3-0 | **NOW / DOCS-DESIGN ONLY** | ADR, tenancy/roles, schema draft, REST/OpenAPI contract, sync, migration, V3-aware agent skills, roadmap, product/course boundary; no live services/data |
-| V3-1 | **PENDING AUTHORIZATION** | Identity, auth, org/garden onboarding, membership/invite/revoke |
+| V3-0 | **NOW / DESIGN COMPLETE — REVIEW+MERGE PENDING** | ADR, frozen authorization matrix, Prisma 7 schema draft, machine-readable REST/OpenAPI, device/sync/cursor, migration staging, pinned toolchain, agent skills, solo implementation plan; no live services/data |
+| V3-1 | **CODE-READY / NOT AUTHORIZED / NOT STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; exact solo implementation sequence is frozen in the V3-1 plan |
 | V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
 | V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
 | V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |
 | V3-5 | **PENDING DISCOVERY/AUTHORIZATION** | Reports, notifications, photos, workload and scoped operational expansion |
 
-See [V3 Roadmap](../docs/product/V3-ROADMAP.md), [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md) and [V3 API Contract](../docs/architecture/V3-API-CONTRACT.md). Agent task routing is defined in [.agent/router.md](./router.md).
+See [V3 Roadmap](../docs/product/V3-ROADMAP.md), [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [V3 API Contract](../docs/architecture/V3-API-CONTRACT.md), [V3 Authorization Contract](../docs/architecture/V3-AUTHORIZATION-CONTRACT.md), [V3 Implementation Foundation](../docs/architecture/V3-IMPLEMENTATION-FOUNDATION.md) and [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md). Agent task routing is defined in [.agent/router.md](./router.md).
 
 ### Historical roadmap — V2 reset (09/10/2026)
 

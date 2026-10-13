@@ -1,47 +1,106 @@
-// V3-0 DESIGN DRAFT ONLY. NOT INSTALLED, EXECUTABLE MIGRATION, OR DATABASE AUTHORIZATION.
-// Review exact Prisma version/config compatibility, constraints, tenancy FKs, migrations,
-// transactions and test performance before moving this to an application package.
-// Quantities use BIGINT on server; serialize to API as decimal strings, assert JS safe integer.
-// AppUser is profile/membership data; Supabase Auth owns passwords and auth identities.
+// V3-0 DESIGN-FROZEN DRAFT. NOT AN EXECUTABLE MIGRATION OR DEPLOYMENT AUTHORIZATION.
+// Target baseline: Prisma 7.10.0. DATABASE_URL belongs in server/prisma.config.ts.
+// Raw SQL migration review is still required for CHECK/partial-index constraints Prisma cannot express.
+// Business quantities use PostgreSQL BIGINT and API decimal strings.
 
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma" // relative to future server/prisma/schema.prisma
+  moduleFormat = "esm"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum GardenRole {
+  OWNER
+  MANAGER
+  WORKER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum MigrationImportStatus {
+  STAGED
+  VERIFIED
+  COMMITTED
+  REJECTED
+  EXPIRED
 }
 
 model AppUser {
-  id                 String              @id @default(uuid())
-  authSubject        String              @unique
-  displayName        String?
-  createdAt          DateTime            @default(now())
-  organizationRoles  OrganizationMember[]
-  gardenRoles        GardenMember[]
-  imports            MigrationImport[]
-  actedEvents        DomainEvent[]       @relation("EventActor")
-  tutorialProgress   TutorialProgress[]
+  id                   String               @id @default(uuid())
+  authSubject          String               @unique
+  email                String
+  displayName          String?
+  version              Int                  @default(1)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  organizationRoles    OrganizationMember[]
+  gardenRoles          GardenMember[]
+  devices              DeviceInstallation[]
+  imports              MigrationImport[]
+  actedEvents          DomainEvent[]        @relation("EventActor")
+  appliedMutations     AppliedMutation[]    @relation("MutationActor")
+  invitationsCreated   GardenInvitation[]   @relation("InvitationCreator")
+  invitationsAccepted  GardenInvitation[]   @relation("InvitationAcceptor")
+  tutorialProgress     TutorialProgress[]
+
+  @@index([email])
 }
 
 model Organization {
-  id          String               @id @default(uuid())
-  name        String
-  createdAt   DateTime             @default(now())
-  gardens     Garden[]
-  memberships OrganizationMember[]
-  contacts    Contact[]
-  imports     MigrationImport[]
+  id                       String               @id @default(uuid())
+  name                     String
+  version                  Int                  @default(1)
+  contactDirectoryVersion  BigInt               @default(0)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  gardens                  Garden[]
+  memberships              OrganizationMember[]
+  contacts                 Contact[]
+  imports                  MigrationImport[]
+}
+
+model OrganizationMember {
+  organizationId String
+  userId         String
+  role           OrganizationRole
+  version        Int              @default(1)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user          AppUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
 }
 
 model Garden {
   id               String            @id @default(uuid())
   organizationId   String
   name             String
+  version          Int               @default(1)
+  syncRevision     BigInt            @default(0)
   createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   memberships      GardenMember[]
+  invitations      GardenInvitation[]
   settings         GardenSetting[]
   batches          Batch[]
   orders           Order[]
@@ -57,29 +116,61 @@ model Garden {
   @@index([organizationId, name])
 }
 
-model OrganizationMember {
-  organizationId String
-  userId         String
-  role           String // OWNER | ADMIN | MEMBER, policy matrix pending
-  createdAt      DateTime @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           AppUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([organizationId, userId])
-  @@index([userId])
-}
-
 model GardenMember {
   organizationId String
   gardenId       String
   userId         String
-  role           String // OWNER | MANAGER | WORKER | VIEWER, not yet frozen
-  createdAt      DateTime @default(now())
-  garden         Garden   @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Cascade)
-  user           AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           GardenRole
+  version        Int        @default(1)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  garden         Garden     @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Cascade)
+  user           AppUser    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([gardenId, userId])
   @@index([userId, organizationId])
+  @@index([gardenId, role])
+}
+
+model GardenInvitation {
+  id                     String           @id @default(uuid())
+  organizationId         String
+  gardenId               String
+  inviteeEmailNormalized String
+  role                   GardenRole
+  tokenHash              String           @unique
+  status                 InvitationStatus @default(PENDING)
+  version                Int              @default(1)
+  createdById            String
+  acceptedById           String?
+  expiresAt              DateTime
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  acceptedAt             DateTime?
+  revokedAt              DateTime?
+  garden                 Garden           @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Cascade)
+  createdBy              AppUser          @relation("InvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  acceptedBy             AppUser?         @relation("InvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([gardenId, inviteeEmailNormalized, status])
+  @@index([expiresAt, status])
+}
+
+model DeviceInstallation {
+  id                   String            @id @default(uuid())
+  userId               String
+  clientInstallationId String
+  label                String?
+  platform             String?
+  createdAt            DateTime          @default(now())
+  lastSeenAt           DateTime          @default(now())
+  unregisteredAt       DateTime?
+  user                 AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mutations            AppliedMutation[]
+  events               DomainEvent[]
+
+  @@unique([userId, clientInstallationId])
+  @@index([userId, unregisteredAt])
 }
 
 model GardenSetting {
@@ -88,52 +179,58 @@ model GardenSetting {
   gardenId       String
   key            String
   value          String
+  version        Int    @default(1)
   garden         Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Cascade)
 
   @@unique([gardenId, key])
 }
 
 model Contact {
-  id                   String    @id @default(uuid())
-  organizationId       String
-  name                 String
-  phoneRaw             String? // never silently rewrite existing display
-  phoneNormalized      String? // NOT unique; explicit duplicates are supported
-  roles                String[] // customer, supplier
-  version              Int       @default(1)
-  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  customerOrders       Order[]        @relation("CustomerOrders")
-  supplierReservations Reservation[]  @relation("SupplierContact")
+  id              String       @id @default(uuid())
+  organizationId  String
+  name            String
+  phoneRaw        String?
+  phoneNormalized String?
+  roles           String[]
+  version         Int          @default(1)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customerOrders  Order[]      @relation("CustomerOrders")
+  supplierReservations Reservation[] @relation("SupplierContact")
   supplierDossiers     BatchDossier[] @relation("DossierSupplier")
 
   @@unique([organizationId, id])
   @@index([organizationId, phoneNormalized])
+  @@index([organizationId, updatedAt, id])
 }
 
 model Batch {
-  id                 String   @id @default(uuid())
-  organizationId     String
-  gardenId           String
-  code               String
-  variety            String
-  initialQuantity    BigInt
-  currentQuantity    BigInt
-  readyQuantity      BigInt
-  status             String
-  createdAt          DateTime
+  id                  String        @id @default(uuid())
+  organizationId      String
+  gardenId            String
+  code                String
+  variety             String
+  initialQuantity     BigInt
+  currentQuantity     BigInt
+  readyQuantity       BigInt
+  status              String
   preferredSellBefore DateTime?
-  sourceNote         String?
-  version            Int @default(1)
-  garden             Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  reservations       Reservation[] @relation("OwnBatchReservations")
-  dossier            BatchDossier?
+  sourceNote          String?
+  version             Int           @default(1)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  garden              Garden        @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  reservations        Reservation[] @relation("OwnBatchReservations")
+  dossier             BatchDossier?
 
   @@unique([organizationId, gardenId, id])
   @@index([gardenId, code])
+  @@index([gardenId, createdAt, id])
 }
 
 model Order {
-  id                String   @id @default(uuid())
+  id                String        @id @default(uuid())
   organizationId    String
   gardenId          String
   customerId        String
@@ -143,43 +240,47 @@ model Order {
   unitPrice         BigInt?
   note              String?
   status            String
-  version           Int @default(1)
-  garden            Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  customer          Contact @relation("CustomerOrders", fields: [organizationId, customerId], references: [organizationId, id], onDelete: Restrict)
+  version           Int           @default(1)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  garden            Garden        @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  customer          Contact       @relation("CustomerOrders", fields: [organizationId, customerId], references: [organizationId, id], onDelete: Restrict)
   reservations      Reservation[]
   shipments         Shipment[]
 
   @@unique([organizationId, gardenId, id])
-  @@index([gardenId, status])
+  @@index([gardenId, status, createdAt, id])
   @@index([organizationId, customerId])
 }
 
 model Reservation {
-  id                String   @id @default(uuid())
+  id                String         @id @default(uuid())
   organizationId    String
   gardenId          String
   orderId           String
-  sourceType        String // own_batch | external_supplier
+  sourceType        String
   batchId           String?
   supplierId        String?
   quantity          BigInt
-  fulfilledQuantity BigInt   @default(0)
-  status            String // active | fulfilled | released
-  createdAt         DateTime
-  version           Int @default(1)
-  garden            Garden   @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  order             Order    @relation(fields: [organizationId, gardenId, orderId], references: [organizationId, gardenId, id], onDelete: Restrict)
-  batch             Batch?   @relation("OwnBatchReservations", fields: [organizationId, gardenId, batchId], references: [organizationId, gardenId, id], onDelete: Restrict)
-  supplier          Contact? @relation("SupplierContact", fields: [organizationId, supplierId], references: [organizationId, id], onDelete: Restrict)
+  fulfilledQuantity BigInt         @default(0)
+  status            String
+  version           Int            @default(1)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  garden            Garden         @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  order             Order          @relation(fields: [organizationId, gardenId, orderId], references: [organizationId, gardenId, id], onDelete: Restrict)
+  batch             Batch?         @relation("OwnBatchReservations", fields: [organizationId, gardenId, batchId], references: [organizationId, gardenId, id], onDelete: Restrict)
+  supplier          Contact?       @relation("SupplierContact", fields: [organizationId, supplierId], references: [organizationId, id], onDelete: Restrict)
   shipmentLines     ShipmentLine[]
 
   @@unique([organizationId, gardenId, id])
   @@index([gardenId, orderId, status])
   @@index([gardenId, batchId, status])
+  @@index([gardenId, createdAt, id])
 }
 
 model Shipment {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   organizationId  String
   gardenId        String
   orderId         String
@@ -187,22 +288,24 @@ model Shipment {
   shippedQuantity BigInt
   plannedDate     DateTime?
   shippedAt       DateTime?
-  status          String // planned | completed | cancelled
+  status          String
   note            String?
-  createdAt       DateTime
-  version         Int @default(1)
-  garden          Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  order           Order  @relation(fields: [organizationId, gardenId, orderId], references: [organizationId, gardenId, id], onDelete: Restrict)
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  garden          Garden         @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  order           Order          @relation(fields: [organizationId, gardenId, orderId], references: [organizationId, gardenId, id], onDelete: Restrict)
   lines           ShipmentLine[]
 
   @@unique([organizationId, gardenId, id])
   @@index([gardenId, orderId, status])
-  // Requires reviewed partial UNIQUE SQL index on (garden_id, order_id)
-  // WHERE status = 'planned'; Prisma @@unique alone cannot express the predicate.
+  @@index([gardenId, createdAt, id])
+  // Reviewed SQL migration MUST add partial UNIQUE index for one planned shipment:
+  // UNIQUE (garden_id, order_id) WHERE status = 'planned'
 }
 
 model ShipmentLine {
-  id             String @id @default(uuid())
+  id             String      @id @default(uuid())
   organizationId String
   gardenId       String
   shipmentId     String
@@ -215,10 +318,11 @@ model ShipmentLine {
   reservation    Reservation @relation(fields: [organizationId, gardenId, reservationId], references: [organizationId, gardenId, id], onDelete: Restrict)
 
   @@index([gardenId, shipmentId])
+  @@index([gardenId, reservationId])
 }
 
 model BatchDossier {
-  id                String @id @default(uuid())
+  id                String    @id @default(uuid())
   organizationId    String
   gardenId          String
   batchId           String
@@ -229,94 +333,146 @@ model BatchDossier {
   supplierContactId String?
   receivedAt        DateTime?
   propagatedAt      DateTime?
-  documents         Json @default("[]")
+  documents         Json      @default("[]")
   note              String?
-  createdAt         DateTime
-  updatedAt         DateTime
-  version           Int @default(1)
-  garden            Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  batch             Batch @relation(fields: [organizationId, gardenId, batchId], references: [organizationId, gardenId, id], onDelete: Restrict)
-  supplier          Contact? @relation("DossierSupplier", fields: [organizationId, supplierContactId], references: [organizationId, id], onDelete: Restrict)
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  garden            Garden    @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  batch             Batch     @relation(fields: [organizationId, gardenId, batchId], references: [organizationId, gardenId, id], onDelete: Restrict)
+  supplier          Contact?  @relation("DossierSupplier", fields: [organizationId, supplierContactId], references: [organizationId, id], onDelete: Restrict)
 
   @@unique([organizationId, gardenId, id])
   @@unique([gardenId, batchId])
 }
 
 model DomainEvent {
-  id             String @id @default(uuid())
+  id             String              @id @default(uuid())
   organizationId String
   gardenId       String
-  actorUserId    String? // old local events may have unknown actor
+  actorUserId    String?
+  deviceId       String?
   mutationId     String?
   type           String
   entityType     String
   entityId       String
   payload        Json
-  createdAt      DateTime
-  garden         Garden  @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  actor          AppUser? @relation("EventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  createdAt      DateTime            @default(now())
+  garden         Garden              @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  actor          AppUser?            @relation("EventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  device         DeviceInstallation?  @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([gardenId, createdAt])
   @@index([gardenId, entityType, entityId])
+  @@index([gardenId, mutationId])
 }
 
 model AppliedMutation {
-  id             String @id @default(uuid())
+  id             String             @id @default(uuid())
   organizationId String
   gardenId       String
   actorUserId    String
+  deviceId       String
   mutationId     String
   idempotencyKey String
   requestHash    String
   response       Json
-  committedAt    DateTime @default(now())
-  garden         Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  revision       BigInt
+  committedAt    DateTime           @default(now())
+  garden         Garden             @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  actor          AppUser            @relation("MutationActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  device         DeviceInstallation @relation(fields: [deviceId], references: [id], onDelete: Restrict)
 
   @@unique([gardenId, idempotencyKey])
   @@unique([gardenId, mutationId])
+  @@index([gardenId, revision])
+  @@index([actorUserId, committedAt])
 }
 
 model ChangeLog {
-  sequence       BigInt @id @default(autoincrement())
   organizationId String
   gardenId       String
+  revision       BigInt
+  ordinal        Int
   entityType     String
   entityId       String
   entityVersion  Int
   action         String
   payload        Json
   createdAt      DateTime @default(now())
-  garden         Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  garden         Garden   @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
 
-  @@index([gardenId, sequence])
+  @@id([gardenId, revision, ordinal])
+  @@index([gardenId, revision])
+  @@index([gardenId, entityType, entityId])
+  @@index([createdAt])
 }
 
 model MigrationImport {
-  id             String @id @default(uuid())
-  organizationId String
-  gardenId       String
-  initiatedById  String
-  contentHash    String
-  sourceFormat   String
-  status         String // staged | verified | committed | rejected
-  previewCounts  Json
-  error          Json?
-  createdAt      DateTime @default(now())
-  committedAt    DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  garden         Garden @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
-  initiatedBy    AppUser @relation(fields: [initiatedById], references: [id], onDelete: Restrict)
+  id               String                @id @default(uuid())
+  organizationId   String
+  gardenId         String
+  initiatedById    String
+  contentHash      String
+  sourceFormat     String
+  status           MigrationImportStatus @default(STAGED)
+  previewCounts    Json
+  warnings         Json                  @default("[]")
+  stagedPayload    Json?
+  stagedByteLength Int?
+  error            Json?
+  createdAt        DateTime              @default(now())
+  expiresAt        DateTime
+  verifiedAt       DateTime?
+  committedAt      DateTime?
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  garden           Garden                @relation(fields: [organizationId, gardenId], references: [organizationId, id], onDelete: Restrict)
+  initiatedBy      AppUser               @relation(fields: [initiatedById], references: [id], onDelete: Restrict)
 
   @@unique([gardenId, contentHash])
+  @@index([gardenId, status, expiresAt])
 }
 
 model TutorialProgress {
-  id          String @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
   guideKey    String
-  currentStep Int @default(0)
+  currentStep Int      @default(0)
   completedAt DateTime?
-  user        AppUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        AppUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, guideKey])
 }
+
+// Required reviewed SQL constraints/indexes in the first migration:
+//
+// 1) quantities: initial/current/ready/fulfilled/planned/shipped/line quantities nonnegative;
+//    initial/reservation/positive command quantities > 0 where domain requires;
+//    readyQuantity <= currentQuantity <= initialQuantity;
+//    fulfilledQuantity <= quantity.
+//
+// 2) reservation source:
+//    own_batch          => batchId IS NOT NULL AND supplierId IS NULL
+//    external_supplier  => supplierId IS NOT NULL AND batchId IS NULL
+//
+// 3) shipment source lines must match referenced Reservation source semantics.
+//
+// 4) partial UNIQUE index:
+//    UNIQUE (gardenId, orderId) WHERE status = 'planned'
+//
+// 5) GardenInvitation.role <> OWNER.
+//    Accepted/revoked timestamps/status combinations consistent.
+//    At most one PENDING invitation per garden + normalized email.
+//
+// 6) initial V3 governance:
+//    exactly one OrganizationMember OWNER enforced by transaction/service + reviewed DB support;
+//    Organization OWNER must have GardenMember OWNER in each garden;
+//    GardenRole OWNER cannot be assigned through invitation/normal role update.
+//
+// 7) ChangeLog.ordinal >= 0; all rows for one revision belong to one committed mutation.
+//    Garden.syncRevision increments once in the same transaction before ChangeLog/AppliedMutation commit.
+//
+// 8) MigrationImport staged payload <= 10 MiB at HTTP/service boundary, 24h expiry;
+//    stagedPayload purged after commit/reject/expiry.
+//
+// 9) additional tenant-aware foreign keys and delete restrictions reviewed in generated SQL.

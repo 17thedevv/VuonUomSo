@@ -1,40 +1,375 @@
-# V3-0 — PostgreSQL / Prisma schema design review notes
+# V3-0 — PostgreSQL / Prisma Design Notes
 
-**Status: DRAFT ONLY.** Accompanying file: docs/architecture/drafts/v3-schema.prisma. It is an *illustrative model sketch*: not a checked-in backend package, generated migration or deployable service. Prisma version/config syntax must be selected and validated with prisma validate in a future authorized implementation slice.
+**Status: DESIGN FROZEN FOR IMPLEMENTATION HANDOFF.** The accompanying `docs/architecture/drafts/v3-schema.prisma` is still not an executable migration, but its model/boundary decisions are now frozen for the first V3 implementation slices.
 
-## Relationships and scope
+Target baseline: Prisma **7.10.0**.
 
-- AppUser is mapped to externally verified Supabase subject; never import password hashes or use an AppUser row as authentication proof.
-- One Organization has many Gardens; OrganizationMember gives organization-level role, GardenMember gives different per-garden role to the same user. A user may participate in any number of organizations/gardens. An invitation/member-in-organization prerequisite is a reviewed authorization constraint, not automatically guaranteed by two separate membership tables.
-- Organization-scoped Contact may have both customer/supplier roles. Raw display phone is preserved; phoneNormalized is an indexed search key but **not unique** because explicit duplicate contacts remain supported.
-- Garden-scoped Batch, Order, Reservation, Shipment, ShipmentLine, BatchDossier, DomainEvent, AppliedMutation and ChangeLog use tenant-bound foreign keys. GardenSetting replaces only reviewed local setting keys; current generic local settings must be mapped individually.
-- Reservation sourceType own_batch requires batchId and excludes supplierId; external_supplier requires supplierId and excludes batchId. Conditional CHECK constraints plus service/domain tests are required in eventual migrations. No aggregate warehouse/garden cross-inference.
-- Shipment lines must reference a reservation in the same garden. Domain event is append-only; audit event retention/version policy is separate from replication ChangeLog and idempotency AppliedMutation.
-- MigrationImport records staged import ownership and digest; actual historical-to-cloud ID map and private staged blob storage will need a separate design/implementation. Do not put business backup payloads into public buckets.
-- TutorialProgress is per authenticated user/guide key; optional garden-scoped progression and tutorial publication management are future UX decisions.
+Prisma 7 implementation note:
 
-## Postgres correctness constraints NOT fully expressed by the illustrative Prisma models
+- generator: `prisma-client` with explicit output;
+- datasource URL lives in `server/prisma.config.ts`;
+- datasource block in schema contains provider only;
+- first implementation PR must run `prisma format` + `prisma validate` and review generated migration SQL.
 
-1. Use CHECK constraints: positive original/reservation/planned quantities, nonnegative current/ready/fulfilled, ready<=current, fulfilled<=quantity, valid enum/source combinations, unitPrice new-command cap, version>=1. Some legacy import exceptions may require a quarantined read-only migration route.
-2. Use a **partial unique index** for one shipment with status planned per (gardenId, orderId). Review its relation to historic completed shipments.
-3. Consider tenant-aware composite FKs, prevent cross-garden links, prevent a GardenMember belonging to a different organization by a server/DB invariant, and reject hard deletes of referenced audit entities.
-4. Use PostgreSQL transactions with appropriate row-level locking or SERIALIZABLE retry to ensure reservations never oversell. Check version as part of the write predicate; insert DomainEvent/AppliedMutation/ChangeLog atomically.
-5. Keep canonical monotonic sequence in ChangeLog; safe cursor protocol must handle commit ordering, gaps, retention and pagination. Do not treat incrementing sequence allocation as proof of commit ordering without transaction design.
-6. For JS clients, serialize BIGINT quantities to decimal strings with canonical checked integer parsing. Never silently coerce through floating point. Test MAX_SAFE_INTEGER and aggregates.
-7. Define explicit data retention, access logs, export/erasure behavior, backups and point-in-time recovery before hosting real tenant data.
+## 1. Identity and tenancy
 
-## Schema review checklist
+### AppUser
 
-- Tenant isolation: User A owner Garden 1, worker Garden 2, outsider Garden 3; all GET/list/mutate/import/sync commands are correctly scoped, including count/search/export.
-- Identity: revoked account, expired JWT, wrong audience, wrong issuer, manipulated gardenId, switched account/device, shared cached storage.
-- Concurrent operations: 2 devices reserve last available trees; stale version conflicts without orphan events. Offline client remains pending, not falsely confirmed.
-- Migration: same legacy id across tenants, own/external reservation source mismatch, retained historical shortages, old phone data, dossier refs, partially shipped orders and event links.
-- Data preservation: 9 business stores exactly, 2 telemetry stores excluded; never delete original IndexedDB on a cloud import.
+- Maps only to verified Supabase subject.
+- Stores normalized lowercase `email` copied from the verified JWT for membership/admin display; Supabase remains authority for email ownership/change.
+- `POST /v3/me/bootstrap` idempotently creates the AppUser or refreshes its normalized email if the authenticated Supabase email changed.
+- `version` protects mutable profile facts such as displayName/email synchronization against stale updates; read-only `GET /v3/me` does not create records.
+- Never stores password hashes.
+- Supabase owns credential/session lifecycle.
 
-## Decision blockers to resolve at independent review
+### Organization
 
-- Prisma major version pin, exact compatible generator/database connection configuration, extensions and migration toolchain.
-- Final OrganizationMember and GardenMember rights, invitation policy, privacy/retention and tenancy defense-in-depth.
-- Whether contacts are shared within one Organization (current proposal) and what happens when a user moves a contact to another garden.
-- Read-only historical record import exceptions, schema evolution and migration provenance.
-- Database revision/changefeed ordering strategy and authorized device sync cadence.
+- One initial immutable OWNER in V3-1.
+- `contactDirectoryVersion BIGINT` increments on every organization Contact create/update.
+- One organization owns many gardens.
+
+### OrganizationMember
+
+Frozen roles:
+
+```text
+OWNER
+ADMIN
+MEMBER
+```
+
+Membership has optimistic `version`.
+
+### Garden
+
+- Exactly one Organization.
+- Organization OWNER must also be Garden OWNER for every garden.
+- `syncRevision BIGINT` is the per-garden commit-ordered replication revision.
+
+### GardenMember
+
+Frozen roles:
+
+```text
+OWNER
+MANAGER
+WORKER
+VIEWER
+```
+
+Garden role can differ per user/garden except Organization OWNER governance rule.
+
+Membership has optimistic `version`.
+
+Authorization matrix is canonical in [V3-AUTHORIZATION-CONTRACT.md](./V3-AUTHORIZATION-CONTRACT.md).
+
+---
+
+## 2. Invitation model
+
+GardenInvitation is bound to:
+
+- organization;
+- garden;
+- normalized verified email;
+- target role MANAGER/WORKER/VIEWER;
+- token hash;
+- creator;
+- optional acceptor;
+- expiry/status/version.
+
+Store only SHA-256 invite token hash.
+
+Never store raw share token.
+
+Required SQL/service rules:
+
+- invitation role cannot be OWNER;
+- at most one PENDING invite per garden + normalized email;
+- replacement invite revokes old pending invite;
+- ACCEPTED requires acceptedBy/acceptedAt;
+- REVOKED requires revokedAt;
+- 7-day expiry.
+
+---
+
+## 3. Device installation model
+
+DeviceInstallation is a low-data audit/sync identity, not hardware fingerprinting.
+
+Fields:
+
+- canonical device ID;
+- user ID;
+- clientInstallationId UUID generated by browser/PWA;
+- optional user-visible label/platform;
+- created/lastSeen/unregistered timestamps.
+
+Unique:
+
+```text
+(userId, clientInstallationId)
+```
+
+Command deviceId must belong to authenticated actor and must not be unregistered.
+
+Do not collect IMEI, advertising ID, contacts or hardware fingerprint.
+
+---
+
+## 4. Organization-scoped contacts
+
+Contacts remain shared within one organization.
+
+- raw phone preserved;
+- normalized phone is searchable, not unique;
+- explicit duplicate contacts remain allowed;
+- `version`, `createdAt`, `updatedAt` are canonical;
+- contact mutation increments Organization.contactDirectoryVersion atomically.
+
+Contacts are **not duplicated into every Garden ChangeLog**.
+
+V3-3 client refresh uses a version-bound organization contact snapshot. A directory mutation during pagination makes the snapshot stale and client restarts before swapping cache.
+
+---
+
+## 5. Garden-scoped business data
+
+Garden-scoped:
+
+- Batch
+- Order
+- Reservation
+- Shipment
+- ShipmentLine
+- BatchDossier
+- DomainEvent
+- AppliedMutation
+- ChangeLog
+- MigrationImport
+
+All references must preserve organizationId + gardenId scope where applicable.
+
+No automatic cross-garden fulfillment.
+
+---
+
+## 6. Domain quantity semantics
+
+Server/PostgreSQL quantity type:
+
+```text
+BIGINT
+```
+
+API representation:
+
+```text
+base-10 decimal string
+```
+
+Canonical reservation semantics:
+
+- Q = reservation quantity;
+- F = fulfilled quantity;
+- active outstanding O = Q − F;
+- released/fulfilled outstanding = 0;
+- coverage: active/fulfilled = Q, released = F.
+
+Own-batch availability:
+
+```text
+max(readyQuantity - own active outstanding, 0)
+```
+
+External supplier commitment never becomes own stock.
+
+Historical legitimate commitment shortage remains visible.
+
+---
+
+## 7. Sync ordering model
+
+Do not use a global auto-increment sequence as proof of commit order.
+
+Frozen design:
+
+1. every garden business mutation acquires/updates the garden sync revision row/state inside its DB transaction;
+2. increment `Garden.syncRevision` exactly once;
+3. every ChangeLog row for that mutation receives the same `revision`;
+4. `ordinal = 0..N-1`;
+5. business writes + DomainEvent + AppliedMutation + ChangeLog commit atomically.
+
+ChangeLog primary identity:
+
+```text
+(gardenId, revision, ordinal)
+```
+
+This serializes revision assignment per garden and creates a safe complete-revision cursor boundary.
+
+---
+
+## 8. Idempotency receipt
+
+AppliedMutation stores:
+
+- garden/organization;
+- actor;
+- registered device;
+- mutationId;
+- idempotencyKey;
+- canonical request hash;
+- durable response;
+- resulting garden revision;
+- committedAt.
+
+Unique:
+
+```text
+(gardenId, idempotencyKey)
+(gardenId, mutationId)
+```
+
+Same key + same canonical request returns original durable receipt.
+
+Same key + different request rejects with zero new business write.
+
+---
+
+## 9. DomainEvent vs ChangeLog
+
+They remain separate:
+
+### DomainEvent
+
+- immutable business/audit history;
+- long-lived;
+- actor/mutation lineage;
+- not used to reconstruct canonical state.
+
+### ChangeLog
+
+- replication material;
+- finite retention;
+- ordered by garden revision;
+- can be compacted/expired after minimum retention while DomainEvent remains.
+
+Do not convert Vườn Ươm into event sourcing.
+
+---
+
+## 10. MigrationImport staging
+
+Initial import contract:
+
+- JSON Backup V1 upload;
+- maximum 10 MiB;
+- SHA-256 content hash;
+- normalized staged payload private to backend;
+- 24-hour stage expiry;
+- preview before canonical writes;
+- OWNER-only commit;
+- purge staged payload after commit/reject/expiry.
+
+MigrationImport retains metadata/hash/counts/receipt as required for audit while raw/normalized staged business payload is purged.
+
+No public storage bucket is required for bootstrap.
+
+---
+
+## 11. Required database constraints outside Prisma model
+
+The initial reviewed SQL migration must add/verify:
+
+1. quantity positivity/non-negativity;
+2. `ready <= current <= initial`;
+3. `fulfilled <= quantity`;
+4. exclusive own/external reservation source;
+5. shipment-line/source coherence;
+6. partial unique index for one planned shipment per garden/order;
+7. tenant-aware composite FKs;
+8. invitation target role not OWNER;
+9. pending invitation uniqueness;
+10. invitation status/timestamp consistency;
+11. sync revision/ordinal constraints;
+12. role/governance invariants that can be enforced safely at DB layer;
+13. delete restrictions for referenced audit/business entities.
+
+Prisma service checks do not replace DB constraints for critical integrity.
+
+---
+
+## 12. Concurrency
+
+### Reservation / stock
+
+Transaction must:
+
+- authenticate/authorize;
+- read current rows;
+- check expected versions;
+- serialize conflicting stock writers with reviewed row lock or SERIALIZABLE strategy;
+- validate commit-time available;
+- write business result;
+- increment garden sync revision;
+- append audit/change/idempotency receipt;
+- commit atomically.
+
+Two devices competing for final available quantity must yield one accepted outcome and one conflict/rejection, never oversell.
+
+### Contact directory
+
+Contact mutation and Organization.contactDirectoryVersion increment are one transaction.
+
+### Membership/invitation
+
+Accept invitation atomically:
+
+- validate token/email/expiry;
+- create OrganizationMember MEMBER if missing;
+- create GardenMember;
+- mark invitation ACCEPTED;
+- append audit evidence.
+
+---
+
+## 13. Snapshot consistency
+
+Garden snapshot uses one consistent DB snapshot:
+
+- read `Garden.syncRevision`;
+- read canonical garden-scoped business state;
+- return cursor for exactly that revision.
+
+Organization contact snapshot is separate and version-bound.
+
+---
+
+## 14. Data retention
+
+Before real tenant production launch:
+
+- backup/PITR policy must be operationally verified;
+- DomainEvent retention must be defined as long-lived business audit;
+- ChangeLog retains at least 90 days;
+- staged import payload retains at most 24 hours;
+- tokens/secrets never enter logs;
+- personal contact data export/erasure policy must be documented.
+
+These are production launch gates, not blockers for V3-1 sandbox bootstrap.
+
+---
+
+## 15. Remaining implementation verification
+
+Architecture decisions above are frozen. Implementation PR still must verify:
+
+- Prisma 7 syntax with `prisma validate`;
+- actual generated SQL constraints/index names;
+- transaction/lock behavior under real PostgreSQL;
+- query/index performance with representative synthetic data;
+- Supabase JWT claims against actual sandbox project;
+- exact environment/provider limits.
+
+If implementation evidence shows a frozen contract is invalid, change the design in a separate reviewed contract PR instead of silently diverging in code.

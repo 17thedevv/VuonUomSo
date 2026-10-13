@@ -6,15 +6,19 @@ Trạng thái phase hiện tại luôn lấy từ [`.agent/PROJECT_STATE.md`](..
 
 ## Current V3 design set
 
-V3 hiện ở **V3-0 — docs/design only**.
+V3 hiện ở **V3-0 — design complete, pending exact-head CI/independent review/merge**. Runtime vẫn chưa được mở.
 
 - [V3 Roadmap](product/V3-ROADMAP.md)
 - [ADR-003 — Cloud-backed Architecture](architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md)
 - [V3 API Contract](architecture/V3-API-CONTRACT.md)
+- [Machine-readable OpenAPI](api/v3.openapi.json)
+- [V3 Authorization Contract](architecture/V3-AUTHORIZATION-CONTRACT.md)
+- [V3 Implementation Foundation](architecture/V3-IMPLEMENTATION-FOUNDATION.md)
 - [V3 Data Model Notes](architecture/V3-DATA-MODEL-NOTES.md)
 - [V3 Prisma Draft](architecture/drafts/v3-schema.prisma)
 - [V3 Sync Protocol](architecture/V3-SYNC-PROTOCOL.md)
 - [V3 Local-to-Cloud Migration](architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md)
+- [V3-1 Solo Implementation Plan](development/V3-1-SOLO-IMPLEMENTATION-PLAN.md)
 - [Cloud Computing Project Boundary](academic/cloud-computing-2026/PROJECT-BOUNDARY.md)
 
 Target design:

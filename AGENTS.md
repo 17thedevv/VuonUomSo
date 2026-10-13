@@ -28,7 +28,7 @@ Cấu trúc hiện tại:
 - `api-contract`: REST/OpenAPI contract, auth context, DTO/error/version/idempotency rules.
 - `implementation`: coding workflow và slice discipline.
 - `testing`: risk-based verification, domain/server/client/integration tests.
-- `github-workflow`: branches, atomic commits, CI, merge safety, two-person coordination.
+- `github-workflow`: branches, atomic commits, CI và merge safety cho solo development.
 - `validation`: field evidence/pilot gates; không dùng pilot evidence để tự mở phase kỹ thuật.
 - `review-audit`: correctness, tenancy/security, architecture, UX, tests, scope.
 
@@ -69,9 +69,18 @@ V3-1+ chỉ bắt đầu khi có authorization riêng trong `.agent/PROJECT_STAT
 
 1. **Domain correctness**: không oversell; reservation không làm giảm physical stock; shipment mới làm giảm physical stock theo contract.
 2. **Tenant isolation**: mọi server read/write phải scope và authorize organization/garden; deny by default.
-3. **Contract-first collaboration**: frontend và backend không tự đoán request/response của nhau. Shared API contract được chốt trước khi hai người code song song.
+3. **Contract-first implementation**: frontend và backend không được tự suy diễn hai contract khác nhau. Canonical API/OpenAPI contract phải được cập nhật trước hoặc cùng atomic change khi behavior đổi.
 
-## 6. Product/course boundary
+## 6. Solo development rule
+
+Project hiện do **17thedev phát triển một mình**.
+
+- Chia việc theo **slice nhỏ**, không theo ownership giữa nhiều thành viên.
+- Backend và frontend có thể nằm ở các branch/task khác nhau nhưng không triển khai song song theo contract chưa merge.
+- Shared contract, Prisma schema, env contract và CI phải được thay đổi tuần tự để giảm self-conflict.
+- Agent có thể audit/review độc lập, nhưng không được giả định tồn tại teammate/reviewer khác.
+
+## 7. Product/course boundary
 
 Coursework chỉ trình bày một stable snapshot của sản phẩm thật. Không được:
 

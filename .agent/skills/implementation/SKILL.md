@@ -2,7 +2,7 @@
 name: implementation
 description: >-
   V3 implementation workflow: phase check, contract/invariants, thin slices,
-  two-person integration, risk-based verification and truthful handoff.
+  sequential solo integration, risk-based verification and truthful handoff.
 ---
 
 # Feature Implementation Workflow
@@ -12,7 +12,7 @@ description: >-
 1. Đọc `.agent/PROJECT_STATE.md`.
 2. Đọc router + skills liên quan.
 3. Nếu có frontend ↔ backend boundary, đọc `api-contract` và canonical API doc.
-4. Xác định owner/reviewer và shared files.
+4. Xác định dependency, phạm vi file và contract ảnh hưởng.
 5. Không code executable phase chưa được authorize.
 
 ## 2. Contract-first rule
@@ -21,21 +21,16 @@ Với API/server/client task:
 
 ```text
 contract
-→ review
-→ backend/client implementation song song
+→ review/audit
+→ implementation slice
 → integration tests
+→ merge
+→ dependent slice
 ```
 
-Không làm:
+Không implement frontend và backend theo hai DTO tự suy diễn khác nhau.
 
-```text
-backend tự nghĩ DTO
-+
-frontend tự đoán DTO
-→ cuối phase mới ghép
-```
-
-Contract change trong lúc code phải cập nhật canonical doc trước hoặc cùng atomic PR, và báo cho branch phụ thuộc.
+Contract change trong lúc code phải cập nhật canonical doc trước hoặc cùng atomic PR. Task phụ thuộc chỉ bắt đầu/sync sau khi contract change đã ổn định.
 
 ## 3. Risk levels
 
@@ -62,7 +57,7 @@ Tùy task, ưu tiên:
 6. UI;
 7. tests/evidence.
 
-Không tạo hạ tầng cho feature chưa được scope.
+Solo development không phải lý do gom cả phase vào một PR. Giữ mỗi slice nhỏ và merge tuần tự.
 
 ## 5. V3 server rules
 
