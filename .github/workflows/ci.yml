@@ -39,6 +39,9 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Verify generated API types drift
+        run: npm run api:check
+
       - name: Run test suite
         run: npm test
 

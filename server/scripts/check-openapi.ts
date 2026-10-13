@@ -8,7 +8,9 @@ async function checkOpenApi(): Promise<void> {
 
   const expectedStr = JSON.stringify(generated, null, 2) + "\n";
 
-  if (existingRaw.trim() !== expectedStr.trim()) {
+  const normalize = (s: string) => s.replace(/\r\n/g, "\n").trim();
+
+  if (normalize(existingRaw) !== normalize(expectedStr)) {
     console.error(
       "ERROR: OpenAPI document drift detected between server runtime controllers/DTOs and docs/api/v3.openapi.json!",
     );
