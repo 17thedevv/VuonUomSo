@@ -5,42 +5,57 @@
 
 ---
 
-## V3-0 authorization addendum — 2026-10-12 (DESIGN COMPLETE / RUNTIME STILL CLOSED)
+## V3-1 authorization addendum — 2026-10-13 (V3-0 CLOSED / V3-1 AUTHORIZED FOR IMPLEMENTATION)
 
-**Owner-approved direction:** Vườn Ươm moves toward a cloud-backed PWA using NestJS (Express), PostgreSQL, Prisma, Supabase Auth and tenant-scoped Dexie offline cache/outbox. One person may join many organizations/gardens with independently scoped permissions. Render is for optional test staging, not an architecture constraint. **This is a product roadmap decision, independent of the Cloud Computing mini-project; coursework may present a stable product snapshot but must not drive product requirements, architecture, provider choice, or implementation deadlines.**
+**Developer allocation:** `17thedev (sole developer)`. Không chia team, không có Tráng A Thư, không có two-person handoff. Mọi slice implementation thực hiện tuần tự theo [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md).
 
-**Actual authorization:** V3-0 architecture/API/auth/sync/migration/toolchain design is now complete enough for implementation handoff. This still does **not** authorize executable backend, service provisioning, live migrations, deployment, real account collection or real tenant data. V3-1 runtime implementation must be explicitly opened after this docs/design PR passes exact-head CI, independent review and merge.
+**V3-0 design closure:**
+- PR [#62](https://github.com/17thedevv/VuonUomSo/pull/62) (`docs(v3-0): freeze solo implementation contracts and V3-1 plan`) đã được kiểm toán độc lập (0 Blocker, 0 High, 0 Medium, 0 Low), bỏ trạng thái Draft và merge vào `main` tại merge commit `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`.
+- Exact PR head SHA: `bca527edb9ecfdfb39d44a13824716a3efeed62f` (CI run [#38262872601](https://github.com/17thedevv/VuonUomSo/actions/runs/38262872601) SUCCESS).
+- Main push CI run [#38340235275](https://github.com/17thedevv/VuonUomSo/actions/runs/38340235275) trên merge commit `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90` đạt **SUCCESS** (Attempt 1: 1.259/1.259 tests / 73 files, typecheck, lint, production build PASS).
+- V3-0 design gate chính thức **DONE / CLOSED (#62)**. Toàn bộ tài liệu kiến trúc, API contract canonical, machine-readable OpenAPI (`docs/api/v3.openapi.json`), Prisma schema draft (`docs/architecture/drafts/v3-schema.prisma`) và solo plan đã có hiệu lực trên `main`.
 
-- QA-01 PR [#59](https://github.com/17thedevv/VuonUomSo/pull/59) reviewed and merged to main at `09c98f70f8358c3c78baa039c10edd67403de532`; exact PR head CI #38230990539 SUCCESS (1259/1259 tests / 73 files). Main push CI #38232017795 SUCCESS.
-- Initial V3-0 foundation PR [#60](https://github.com/17thedevv/VuonUomSo/pull/60) merged on 12/10/2026 at head `13762520f1e0ea98d7c560cd4e7473f0929ae2ee`, merge commit `dc246716a94dfe06482db85fce10e1d27fea8755`.
-- Remaining V3-0 design freeze is isolated in Draft PR [#62](https://github.com/17thedevv/VuonUomSo/pull/62) from branch `docs/v3-0-design-freeze`; no V3-1 runtime begins until #62 review/CI/merge plus explicit phase authorization.
-- REM-05 PR [#58](https://github.com/17thedevv/VuonUomSo/pull/58) remains DRAFT / UNMERGED; do not conflate local mobile impressions or staging deploy with signed R04/R05 acceptance.
-- **REAL PILOT remains NO-GO / NOT APPROVED / NOT STARTED**. R01–R08 historical records are preserved, re-audit remains pending; V2-C/D/E and MCP AI Control are not silently adopted.
-- Frozen design set on `docs/v3-0-design-freeze` / PR #62 (not authoritative on main until reviewed merge): [ADR-003](../docs/architecture/ADR-003-CLOUD-BACKED-ARCHITECTURE.md), [Prisma 7 draft](../docs/architecture/drafts/v3-schema.prisma), [Data model notes](../docs/architecture/V3-DATA-MODEL-NOTES.md), [API contract](../docs/architecture/V3-API-CONTRACT.md), [machine-readable OpenAPI](../docs/api/v3.openapi.json), [Authorization contract](../docs/architecture/V3-AUTHORIZATION-CONTRACT.md), [Implementation foundation](../docs/architecture/V3-IMPLEMENTATION-FOUNDATION.md), [Sync protocol](../docs/architecture/V3-SYNC-PROTOCOL.md), [Migration](../docs/architecture/V3-LOCAL-TO-CLOUD-MIGRATION.md), [V3-1 solo implementation plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md), [V3 roadmap](../docs/product/V3-ROADMAP.md), [Cloud-course presentation boundary](../docs/academic/cloud-computing-2026/PROJECT-BOUNDARY.md). High-level product planning is mirrored in Notion: [V3 Product & Delivery Plan](https://app.notion.com/p/3f7368d81eff81e4861afe3ae14692d1).
-- Stop at this docs/agent design Draft PR until exact-head CI + independent review pass. After merge, V3-1 is **code-ready but still requires explicit implementation authorization**. No automatic implementation or merge.
+**V3-1 implementation authorization:**
+- V3-1 (`Identity, Auth & Tenancy Foundation`) chính thức **AUTHORIZED / STARTED**.
+- Slice triển khai kế tiếp ngay lập tức: **`V3-1A — Server Foundation` (NEXT)**.
+- Trình tự thực thi V3-1 tuân thủ nghiêm ngặt 4 slice tuần tự trong [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md):
+  1. `V3-1A — Server Foundation` (NestJS modular monolith bootstrap, Fastify/Express HTTP, Pino logging, Prisma client setup, health check, baseline test harness).
+  2. `V3-1B — Auth & Identity Integration` (Supabase JWT/JWKS verification, user identity, dev auth fallback, auth guards).
+  3. `V3-1C — Org & Garden Tenancy` (Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor).
+  4. `V3-1D — Device Registration & Client Integration` (Device session tokens, client bootstrap, end-to-end integration verification).
+- **Ranh giới an toàn giữ nguyên không đổi:**
+  - V3-2+ (`Server Domain & Migration Cutover`, `Offline Sync`, v.v.) tiếp tục ở trạng thái **PENDING AUTHORIZATION / NOT AUTHORIZED**.
+  - Cloud database production provisioning, live data migration thật và thu thập real tenant data tiếp tục **NOT AUTHORIZED**.
+  - **REAL PILOT tiếp tục NO-GO / NOT APPROVED / NOT STARTED**. Hồ sơ audit lịch sử R01–R08 được lưu giữ; REM-05 physical device testing tiếp tục chờ nghiệm thu.
+  - **Giới hạn môn Cloud:** Coursework chỉ là presentation snapshot của sản phẩm thật; không lái product requirements, kiến trúc, provider hay deadline.
+  - Task đóng/mở gate này tuyệt đối **không viết runtime code** (`server/`, dependency backend, v.v.).
 
 ## 1. Project Identity
 
 - **Tên chính thức**: `Vườn Ươm`
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
-- **Giai đoạn dự án**: `V3-0 — Architecture & Product Foundation` (**DESIGN COMPLETE / REVIEW+MERGE PENDING**)
-- **Production Architecture direction**: `DESIGN FROZEN / IMPLEMENTATION-READY`
-- **V3-1 implementation**: `CODE-READY / NOT YET AUTHORIZED / NOT STARTED`
+- **Developer**: `17thedev (sole developer)`
+- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1A**)
+- **V3-0 Design Gate**: `DONE / CLOSED (#62)` (merge `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, CI #38340235275 SUCCESS)
+- **Production Architecture direction**: `CANONICAL / FROZEN ON MAIN`
+- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1A — Server Foundation` là **NEXT**)
+- **V3-2+ implementation**: `NOT AUTHORIZED`
 - **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
+- **Real pilot**: `NO-GO / NOT APPROVED`
 
 ---
 
 ## 2. Roadmap Matrix & Current Phase
 
-### Roadmap hiện hành — V3 transition (12/10/2026)
+### Roadmap hiện hành — V3 transition (13/10/2026)
 
-**V3 là roadmap sản phẩm hiện hành ở cấp direction/design.** V3-0 chỉ cho phép kiến trúc/tài liệu và independent review; implementation của V3-1+ cần authorization riêng theo phase. Mini-project môn Cloud là presentation layer và không tạo product requirements.
+**V3 là roadmap sản phẩm hiện hành.** V3-0 design gate đã hoàn tất và đóng qua PR #62. V3-1 đã được phê duyệt triển khai theo kế hoạch solo sequential slices (bắt đầu từ V3-1A). Các phase từ V3-2 trở đi vẫn cần authorization riêng. Mini-project môn Cloud là presentation layer và không tạo product requirements.
 
 | V3 phase | Trạng thái | Gate / scope |
 |---|---|---|
-| V3-0 | **NOW / DESIGN COMPLETE — REVIEW+MERGE PENDING** | ADR, frozen authorization matrix, Prisma 7 schema draft, machine-readable REST/OpenAPI, device/sync/cursor, migration staging, pinned toolchain, agent skills, solo implementation plan; no live services/data |
-| V3-1 | **CODE-READY / NOT AUTHORIZED / NOT STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; exact solo implementation sequence is frozen in the V3-1 plan |
+| V3-0 | **DONE / CLOSED (#62)** | ADR, frozen authorization matrix, Prisma 7 schema draft, machine-readable REST/OpenAPI, device/sync/cursor, migration staging, pinned toolchain, agent skills, solo implementation plan; merged to main at `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, main CI #38340235275 SUCCESS |
+| V3-1 | **NOW / AUTHORIZED / STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; exact solo implementation sequence in [V3-1 Solo Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md); immediate slice: **V3-1A Server Foundation (NEXT)** |
 | V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
 | V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
 | V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |
@@ -234,8 +249,9 @@ FC5-0 đã merge; các yêu cầu implementation bên dưới là contract tham 
 
 Các cấm đoán prototype V2 về auth/cloud **không còn là product-level prohibition**, nhưng chỉ được mở theo phase V3 đã được duyệt:
 
-- **V3-0 hiện tại:** không viết backend executable, không provisioning auth/database, không migration thật, không deploy cloud production, không thu thập real tenant data.
-- **V3-1+ chỉ được làm khi có authorization riêng:** authentication, organization/garden membership và cloud persistence không được tự động suy ra từ việc V3 direction đã được chốt.
+- **V3-0:** đã hoàn thành và đóng qua PR #62 (`e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`).
+- **V3-1 hiện tại:** đã được authorize implementation theo các slice solo tuần tự (bắt đầu bằng `V3-1A Server Foundation`). Vẫn **chưa** provisioning cloud database production, chưa live migration dữ liệu thật, chưa thu thập real tenant data.
+- **V3-2+ chỉ được làm khi có authorization riêng:** server domain, audit, migration cutover và multi-device sync không được tự động suy ra trước khi V3-1 hoàn thành.
 - **Academic boundary:** yêu cầu mini-project môn Cloud không được mở phase, thêm feature, chọn provider hoặc ép deadline implementation. Demo dùng stable snapshot của sản phẩm.
 
 Vẫn deferred/out-of-scope nếu chưa có product decision riêng:
