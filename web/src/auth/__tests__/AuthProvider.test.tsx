@@ -4,6 +4,8 @@ import React, { StrictMode } from 'react'
 import { AuthProvider } from '../AuthProvider'
 import { useAuth } from '../useAuth'
 import * as supabaseModule from '../../lib/supabase/client'
+import { apiFetch } from '../../api/client'
+import { ApiError } from '../../api/errors'
 
 const TestConsumer: React.FC = () => {
   const { status, user, session, signIn, signUp, signOut, requestPasswordReset } = useAuth()
@@ -28,6 +30,7 @@ describe('AuthProvider & Auth Lifecycle', () => {
   let mockSignUp: ReturnType<typeof vi.fn>
   let mockSignOut: ReturnType<typeof vi.fn>
   let mockResetPasswordForEmail: ReturnType<typeof vi.fn>
+  let mockUpdateUser: ReturnType<typeof vi.fn>
   let mockUnsubscribe: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -40,6 +43,7 @@ describe('AuthProvider & Auth Lifecycle', () => {
     mockSignUp = vi.fn()
     mockSignOut = vi.fn().mockResolvedValue({ error: null })
     mockResetPasswordForEmail = vi.fn().mockResolvedValue({ error: null })
+    mockUpdateUser = vi.fn().mockResolvedValue({ data: { user: {} }, error: null })
 
     vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
       auth: {
@@ -48,7 +52,8 @@ describe('AuthProvider & Auth Lifecycle', () => {
         signInWithPassword: mockSignInWithPassword,
         signUp: mockSignUp,
         signOut: mockSignOut,
-        resetPasswordForEmail: mockResetPasswordForEmail
+        resetPasswordForEmail: mockResetPasswordForEmail,
+        updateUser: mockUpdateUser
       }
     } as any)
   })
@@ -228,5 +233,135 @@ describe('AuthProvider & Auth Lifecycle', () => {
       session: null,
       requiresEmailConfirmation: true
     })
+  })
+
+  it('purges persisted session via local signOut and resets status upon 401 re-auth event', async () => {
+    mockGetSession.mockResolvedValueOnce({
+      data: {
+        session: {
+          access_token: 'stale-token',
+          user: { id: 'u-1', email: 'owner@vuonuom.local' }
+        }
+      },
+      error: null
+    })
+
+    const originalFetch = globalThis.fetch
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'AUTHENTICATION_REQUIRED',
+            message: 'Mã xác thực không hợp lệ.'
+          }
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    )
+    globalThis.fetch = mockFetch as any
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('authenticated')
+    })
+
+    // Dispatch an authenticated API request that returns 401
+    await act(async () => {
+      await expect(apiFetch('/v3/me')).rejects.toThrow(ApiError)
+    })
+
+    // Verify local signOut was invoked to purge localStorage persistence
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' })
+
+    // Verify state transitioned to unauthenticated
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('unauthenticated')
+      expect(screen.getByTestId('user-email').textContent).toBe('no-user')
+      expect(screen.getByTestId('has-session').textContent).toBe('no')
+    })
+
+    globalThis.fetch = originalFetch
+  })
+
+  it('does NOT call signOut when receiving 403 PERMISSION_DENIED', async () => {
+    mockGetSession.mockResolvedValueOnce({
+      data: {
+        session: {
+          access_token: 'valid-token',
+          user: { id: 'u-1', email: 'owner@vuonuom.local' }
+        }
+      },
+      error: null
+    })
+
+    const originalFetch = globalThis.fetch
+    const mockFetch = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'Không đủ quyền thực hiện.'
+          }
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      )
+    )
+    globalThis.fetch = mockFetch as any
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('status').textContent).toBe('authenticated')
+    })
+
+    await expect(apiFetch('/v3/garden/restricted')).rejects.toThrow(ApiError)
+
+    expect(mockSignOut).not.toHaveBeenCalled()
+    expect(screen.getByTestId('status').textContent).toBe('authenticated')
+
+    globalThis.fetch = originalFetch
+  })
+
+  it('calls supabase.auth.updateUser with new password on updatePassword', async () => {
+    let capturedError: any = null
+    const PasswordTest: React.FC = () => {
+      const { updatePassword } = useAuth()
+      return (
+        <button
+          onClick={async () => {
+            try {
+              await updatePassword('NewSecurePassword123')
+            } catch (err) {
+              capturedError = err
+            }
+          }}
+        >
+          Đổi mật khẩu
+        </button>
+      )
+    }
+
+    render(
+      <AuthProvider>
+        <PasswordTest />
+      </AuthProvider>
+    )
+
+    const btn = screen.getByText('Đổi mật khẩu')
+    await act(async () => {
+      btn.click()
+    })
+
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewSecurePassword123' })
+    expect(capturedError).toBeNull()
   })
 })

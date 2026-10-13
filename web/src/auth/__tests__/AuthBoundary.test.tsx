@@ -13,6 +13,7 @@ const createMockAuthContext = (overrides?: Partial<AuthContextValue>): AuthConte
   signUp: vi.fn(),
   signOut: vi.fn(),
   requestPasswordReset: vi.fn(),
+  updatePassword: vi.fn(),
   ...overrides
 })
 

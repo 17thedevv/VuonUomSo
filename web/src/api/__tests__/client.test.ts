@@ -18,18 +18,41 @@ describe('apiFetch client wrapper', () => {
     vi.restoreAllMocks()
   })
 
+  it('enforces immutable API origin signature contract', () => {
+    expect(resolveApiUrl.length).toBe(1)
+    expect(apiFetch.length).toBeLessThanOrEqual(2)
+  })
+
   it('resolves API URLs correctly and blocks foreign origins', () => {
-    const validUrl = resolveApiUrl('/v3/me', 'http://localhost:3000')
+    const validUrl = resolveApiUrl('/v3/me')
     expect(validUrl.toString()).toBe('http://localhost:3000/v3/me')
 
     // Matching full URL passes
-    const fullMatching = resolveApiUrl('http://localhost:3000/v3/me', 'http://localhost:3000')
+    const fullMatching = resolveApiUrl('http://localhost:3000/v3/me')
     expect(fullMatching.toString()).toBe('http://localhost:3000/v3/me')
 
     // Foreign origin throws boundary error
     expect(() => {
-      resolveApiUrl('https://malicious-site.com/v3/me', 'http://localhost:3000')
+      resolveApiUrl('https://malicious-site.com/v3/me')
     }).toThrow(/Security boundary violation/)
+  })
+
+  it('rejects foreign origin requests BEFORE reading session or firing network request', async () => {
+    const getSessionSpy = vi.fn()
+    vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
+      auth: {
+        getSession: getSessionSpy
+      }
+    } as any)
+
+    await expect(apiFetch('https://evil.example/collect')).rejects.toThrow(
+      /Security boundary violation/
+    )
+
+    // Token must not be leaked / read
+    expect(getSessionSpy).not.toHaveBeenCalled()
+    // Network request must not be dispatched
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('attaches Bearer access token when session is present', async () => {
@@ -50,7 +73,7 @@ describe('apiFetch client wrapper', () => {
       })
     )
 
-    const result = await apiFetch<{ data: string }>('/v3/me', {}, 'http://localhost:3000')
+    const result = await apiFetch<{ data: string }>('/v3/me')
 
     expect(result).toEqual({ data: 'success' })
     expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -59,6 +82,30 @@ describe('apiFetch client wrapper', () => {
     const headers = options.headers as Headers
     expect(headers.get('Authorization')).toBe('Bearer test-supabase-jwt-token')
     expect(headers.get('Accept')).toBe('application/json')
+  })
+
+  it('does not attach Bearer token when skipAuth is true', async () => {
+    const getSessionSpy = vi.fn()
+    vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
+      auth: {
+        getSession: getSessionSpy
+      }
+    } as any)
+
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: 'public' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    const result = await apiFetch<{ data: string }>('/v3/public', { skipAuth: true })
+
+    expect(result).toEqual({ data: 'public' })
+    expect(getSessionSpy).not.toHaveBeenCalled()
+    const [, options] = mockFetch.mock.calls[0]
+    const headers = options.headers as Headers
+    expect(headers.get('Authorization')).toBeNull()
   })
 
   it('triggers 401 re-auth handler exactly once when server rejects credentials', async () => {
@@ -89,7 +136,7 @@ describe('apiFetch client wrapper', () => {
     const reAuthSpy = vi.fn()
     setAuthRequiredHandler(reAuthSpy)
 
-    await expect(apiFetch('/v3/me', {}, 'http://localhost:3000')).rejects.toThrow(ApiError)
+    await expect(apiFetch('/v3/me')).rejects.toThrow(ApiError)
 
     expect(reAuthSpy).toHaveBeenCalledTimes(1)
     const passedError = reAuthSpy.mock.calls[0][0] as ApiError
@@ -124,7 +171,7 @@ describe('apiFetch client wrapper', () => {
     const reAuthSpy = vi.fn()
     setAuthRequiredHandler(reAuthSpy)
 
-    await expect(apiFetch('/v3/garden/protected', {}, 'http://localhost:3000')).rejects.toThrow(ApiError)
+    await expect(apiFetch('/v3/garden/protected')).rejects.toThrow(ApiError)
 
     expect(reAuthSpy).not.toHaveBeenCalled()
   })
@@ -142,7 +189,7 @@ describe('apiFetch client wrapper', () => {
       })
     )
 
-    const res = await apiFetch('/v3/action', {}, 'http://localhost:3000')
+    const res = await apiFetch('/v3/action')
     expect(res).toBeUndefined()
   })
 
@@ -156,7 +203,7 @@ describe('apiFetch client wrapper', () => {
     mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
     try {
-      await apiFetch('/v3/test', {}, 'http://localhost:3000')
+      await apiFetch('/v3/test')
       expect.unreachable('Should have thrown')
     } catch (err) {
       expect(err).toBeInstanceOf(ApiError)

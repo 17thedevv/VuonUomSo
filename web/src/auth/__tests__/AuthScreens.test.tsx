@@ -17,6 +17,7 @@ const createMockAuthContext = (overrides?: Partial<AuthContextValue>): AuthConte
   signUp: vi.fn(),
   signOut: vi.fn(),
   requestPasswordReset: vi.fn(),
+  updatePassword: vi.fn(),
   ...overrides
 })
 
@@ -218,6 +219,55 @@ describe('Auth Screens UX & Flow', () => {
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: 'Không thể xác nhận' })).toBeInTheDocument()
         expect(screen.getByRole('link', { name: /Quay về trang Đăng nhập/i })).toBeInTheDocument()
+      })
+    })
+
+    it('sanitizes raw provider error strings and never renders technical details in UI', async () => {
+      const rawTechnicalError = 'AuthApiError: invalid_grant 400 Flow code PKCE token mismatch'
+      vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
+        auth: {
+          getSession: vi.fn().mockResolvedValue({
+            data: { session: null },
+            error: new Error(rawTechnicalError)
+          })
+        }
+      } as any)
+
+      render(
+        <MemoryRouter>
+          <AuthCallbackScreen />
+        </MemoryRouter>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Không thể xác nhận' })).toBeInTheDocument()
+        expect(screen.getByText('Liên kết không hợp lệ hoặc đã hết hạn.')).toBeInTheDocument()
+      })
+
+      // Ensure raw technical error is never rendered to user
+      expect(screen.queryByText(new RegExp(rawTechnicalError, 'i'))).not.toBeInTheDocument()
+    })
+
+    it('sanitizes recovery error with actionable Vietnamese recovery guidance', async () => {
+      vi.spyOn(supabaseModule, 'getSupabaseClient').mockReturnValue({
+        auth: {
+          getSession: vi.fn().mockResolvedValue({
+            data: { session: null },
+            error: new Error('Recovery link has expired')
+          })
+        }
+      } as any)
+
+      window.history.replaceState({}, '', '/auth/callback?type=recovery')
+
+      render(
+        <MemoryRouter>
+          <AuthCallbackScreen />
+        </MemoryRouter>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Không thể khôi phục mật khẩu. Hãy yêu cầu liên kết mới.')).toBeInTheDocument()
       })
     })
   })
