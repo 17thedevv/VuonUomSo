@@ -32,6 +32,7 @@ import { CustomerDetailScreen } from '../features/customers/CustomerDetailScreen
 import { LoginScreen } from '../features/auth/LoginScreen'
 import { SignupScreen } from '../features/auth/SignupScreen'
 import { ForgotPasswordScreen } from '../features/auth/ForgotPasswordScreen'
+import { ResetPasswordScreen } from '../features/auth/ResetPasswordScreen'
 import { AuthCallbackScreen } from '../features/auth/AuthCallbackScreen'
 import { AuthBoundary } from '../auth/AuthBoundary'
 
@@ -137,6 +138,10 @@ const router = createBrowserRouter([
       {
         path: '/forgot-password',
         element: <ForgotPasswordScreen />
+      },
+      {
+        path: '/reset-password',
+        element: <ResetPasswordScreen />
       },
       {
         path: '/auth/callback',
