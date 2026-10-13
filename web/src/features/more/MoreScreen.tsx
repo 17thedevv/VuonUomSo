@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   Truck,
   AlertTriangle,
-  BarChart3
+  BarChart3,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react'
 import { resetDemoData, clearAllData } from '../../data/seed'
 import {
@@ -23,6 +25,7 @@ import {
 } from '../../data/backup'
 import { settingsRepository, organizationRepository } from '../../data/repositories'
 import { PageHeader } from '../../shared/components/PageHeader'
+import { useAuth } from '../../auth/useAuth'
 import { PrimaryButton } from '../../shared/components/PrimaryButton'
 import { validationTracker } from '../../validation/validationTracker'
 import { SecondaryButton } from '../../shared/components/SecondaryButton'
@@ -55,6 +58,22 @@ export const MoreScreen: React.FC = () => {
   const [previewData, setPreviewData] = useState<BackupPreviewData | null>(null)
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
+  const { user, signOut } = useAuth()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const handleSignOut = async () => {
+    if (loggingOut) return
+    if (!window.confirm('Bạn có chắc chắn muốn đăng xuất tài khoản?')) {
+      return
+    }
+    setLoggingOut(true)
+    try {
+      await signOut()
+      navigate('/login', { replace: true })
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   const loadInfo = async () => {
     const currentMode = await settingsRepository.get('app_mode')
@@ -230,6 +249,30 @@ export const MoreScreen: React.FC = () => {
         <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0 items-start">
           {/* Column 1: Workspace info, Shipments, Backup & Restore */}
           <div className="space-y-4">
+            {/* Account Info & Logout */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500 flex items-center gap-1.5">
+                  <UserIcon className="w-4 h-4 text-slate-400" />
+                  Tài khoản:
+                </span>
+                <span className="font-semibold text-slate-800 text-xs sm:text-sm truncate max-w-[200px]">
+                  {user?.email || 'Chưa đăng nhập'}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={loggingOut}
+                  className="w-full min-h-[44px] px-3 py-2 rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 font-medium text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>{loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất tài khoản'}</span>
+                </button>
+              </div>
+            </div>
+
             {/* Current State Info */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 space-y-2">
           <div className="flex items-center justify-between text-sm">
