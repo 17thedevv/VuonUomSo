@@ -5,6 +5,19 @@
 
 ---
 
+## V3-1B closure addendum — 2026-10-14 (V3-1B CLOSED / V3-1C NEXT)
+
+**Developer allocation:** `17thedev (sole developer)`. Không chia team, không có Tráng A Thư, không có two-person handoff. Mọi slice implementation thực hiện tuần tự theo [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md).
+
+**V3-1B Auth Client Foundation closure:**
+- PR [#65](https://github.com/17thedevv/VuonUomSo/pull/65) (`feat(v3-1b): add auth client foundation`) đã hoàn tất independent review & re-audit (PASS FOR READY/MERGE GATE, 0 Blocker, 0 High, 0 Medium, 2 LOW non-gating đã được cleanup triệt để tại commit `b59064923c3eda70a29ca29ae8d67a82ab88f25f`).
+- 2 LOW cleanup: dọn sạch fallback URL `type=recovery` để phụ thuộc hoàn toàn vào canonical `PASSWORD_RECOVERY` event; bắt buộc cờ `isPasswordRecovery` trong `ResetPasswordScreen` để chặn người dùng đã đăng nhập bình thường truy cập trực tiếp recovery UI.
+- PR bỏ trạng thái Draft và merge vào `main` tại merge commit `0bfdfc56334f4007483d5d43ee815eb9d4137915`.
+- Exact PR head SHA: `b59064923c3eda70a29ca29ae8d67a82ab88f25f` (CI run [#38536614480](https://github.com/17thedevv/VuonUomSo/actions/runs/38536614480) SUCCESS: 35/35 server tests, 84 test suites / 1.334 web tests).
+- Main push CI run [#38537626629](https://github.com/17thedevv/VuonUomSo/actions/runs/38537626629) trên merge commit `0bfdfc56334f4007483d5d43ee815eb9d4137915` đạt **SUCCESS** (Attempt 1: cả Server Quality Gates và Web Quality Gates PASS).
+- V3-1B hoàn tất: Supabase Auth client bootstrap với canonical origin guard tuyệt đối, session provider & auth lifecycle hook, login/signup/logout, password recovery UX với canonical `PASSWORD_RECOVERY` event, token-correlated 401 re-auth chống stale race condition, client API wrapper đính kèm Bearer token và parse lỗi chuẩn, client installation ID ổn định, UI mobile-first responsive (360–430px).
+- Slice kế tiếp ngay lập tức: **`V3-1C — Tenancy and Device Server` (NEXT)**.
+
 ## V3-1A closure addendum — 2026-10-13 (V3-1A CLOSED / V3-1B NEXT)
 
 **Developer allocation:** `17thedev (sole developer)`. Không chia team, không có Tráng A Thư, không có two-person handoff. Mọi slice implementation thực hiện tuần tự theo [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md).
@@ -26,11 +39,12 @@
 **V3-1 implementation authorization:**
 - V3-1 (`Identity, Auth & Tenancy Foundation`) chính thức **AUTHORIZED / STARTED**.
 - V3-1A: **DONE / CLOSED (#64)** (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS).
-- Slice triển khai kế tiếp: **`V3-1B — Auth Client Foundation` (NEXT / IN PROGRESS)**.
+- V3-1B: **DONE / CLOSED (#65)** (merge `0bfdfc56334f4007483d5d43ee815eb9d4137915`, CI #38537626629 SUCCESS).
+- Slice triển khai kế tiếp: **`V3-1C — Tenancy and Device Server` (NEXT / READY TO START)**.
 - Trình tự thực thi V3-1 tuân thủ nghiêm ngặt các slice tuần tự trong [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md):
   1. `V3-1A — Server Foundation` (DONE / CLOSED #64).
-  2. `V3-1B — Auth Client Foundation` (NEXT / IN PROGRESS: Supabase client bootstrap, session provider/hook, login/signup/logout, token attachment, API error handling, mobile UX).
-  3. `V3-1C — Org & Garden Tenancy Server` (Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor).
+  2. `V3-1B — Auth Client Foundation` (DONE / CLOSED #65).
+  3. `V3-1C — Tenancy and Device Server` (NEXT: Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor, device registration).
   4. `V3-1D — Tenant Onboarding Client` (Garden setup, org onboarding UX).
   5. `V3-1E — Membership / Invitation Server & Client`.
 - **Ranh giới an toàn giữ nguyên không đổi:**
@@ -45,11 +59,12 @@
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
 - **Developer**: `17thedev (sole developer)`
-- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1B IN PROGRESS**)
+- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1C READY TO START**)
 - **V3-0 Design Gate**: `DONE / CLOSED (#62)` (merge `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, CI #38340235275 SUCCESS)
 - **V3-1A Server Foundation**: `DONE / CLOSED (#64)` (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS)
+- **V3-1B Auth Client Foundation**: `DONE / CLOSED (#65)` (merge `0bfdfc56334f4007483d5d43ee815eb9d4137915`, CI #38537626629 SUCCESS)
 - **Production Architecture direction**: `CANONICAL / FROZEN ON MAIN`
-- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1B — Auth Client Foundation` là **NEXT / IN PROGRESS**)
+- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1C — Tenancy and Device Server` là **NEXT / READY TO START**)
 - **V3-2+ implementation**: `NOT AUTHORIZED`
 - **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
 - **Real pilot**: `NO-GO / NOT APPROVED`
@@ -58,14 +73,14 @@
 
 ## 2. Roadmap Matrix & Current Phase
 
-### Roadmap hiện hành — V3 transition (13/10/2026)
+### Roadmap hiện hành — V3 transition (14/10/2026)
 
-**V3 là roadmap sản phẩm hiện hành.** V3-0 design gate đã hoàn tất và đóng qua PR #62. V3-1A đã hoàn tất và đóng qua PR #64. V3-1B là slice kế tiếp. Các phase từ V3-2 trở đi vẫn cần authorization riêng. Mini-project môn Cloud là presentation layer và không tạo product requirements.
+**V3 là roadmap sản phẩm hiện hành.** V3-0 design gate đã hoàn tất và đóng qua PR #62. V3-1A đã hoàn tất và đóng qua PR #64. V3-1B đã hoàn tất và đóng qua PR #65. V3-1C là slice kế tiếp. Các phase từ V3-2 trở đi vẫn cần authorization riêng. Mini-project môn Cloud là presentation layer và không tạo product requirements.
 
 | V3 phase | Trạng thái | Gate / scope |
 |---|---|---|
 | V3-0 | **DONE / CLOSED (#62)** | ADR, frozen authorization matrix, Prisma 7 schema draft, machine-readable REST/OpenAPI, device/sync/cursor, migration staging, pinned toolchain, agent skills, solo implementation plan; merged to main at `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, main CI #38340235275 SUCCESS |
-| V3-1 | **NOW / AUTHORIZED / STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; V3-1A Server Foundation DONE / CLOSED (#64); immediate slice: **V3-1B Auth Client Foundation (NEXT)** |
+| V3-1 | **NOW / AUTHORIZED / STARTED** | Identity/auth/device registration/org-garden onboarding/membership/invite/revoke; V3-1A Server Foundation DONE / CLOSED (#64); V3-1B Auth Client Foundation DONE / CLOSED (#65); immediate slice: **V3-1C Tenancy and Device Server (NEXT)** |
 | V3-2 | **PENDING AUTHORIZATION** | Server domain, audit, staged import and explicit cutover |
 | V3-3 | **PENDING AUTHORIZATION** | Multi-device offline sync, outbox, conflict/idempotency/changefeed |
 | V3-4 | **PENDING AUTHORIZATION** | Tutorial/onboarding/help |

@@ -1,7 +1,7 @@
 # V3-1 — Solo Implementation Plan
 
 **Owner: 17thedev**  
-**Status: CODE-READY / NOT STARTED / requires explicit V3-1 authorization in PROJECT_STATE.**
+**Status: AUTHORIZED / IN PROGRESS (V3-1A, V3-1B DONE; NEXT: V3-1C).**
 
 Vườn Ươm V3 is currently developed by **17thedev as the sole developer**.
 
@@ -89,12 +89,12 @@ Acceptance:
 
 ## 4. V3-1B — Auth client foundation
 
-**Status: NEXT / IN PROGRESS (Draft PR)**
+**Status: DONE / CLOSED (#65)** (merged at `0bfdfc56334f4007483d5d43ee815eb9d4137915`, main CI [#38537626629](https://github.com/17thedevv/VuonUomSo/actions/runs/38537626629) SUCCESS)
 
-Suggested branch:
+Branch:
 
 ```text
-feat/v3-1-auth-client-foundation
+feat/v3-1-auth-client-foundation (merged via PR #65)
 ```
 
 Starts after V3-1A merge.
@@ -120,11 +120,13 @@ Acceptance:
 - token attachment tests;
 - account/session switch tests;
 - no server-only secret in browser;
-- web typecheck/lint/test/build pass.
+- web typecheck/lint/test/build pass (84 test suites / 1.334 tests).
 
 ---
 
 ## 5. V3-1C — Tenancy and device server
+
+**Status: NEXT / READY TO START**
 
 Suggested branch:
 
