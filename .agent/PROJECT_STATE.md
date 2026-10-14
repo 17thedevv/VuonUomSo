@@ -26,10 +26,10 @@
 **V3-1 implementation authorization:**
 - V3-1 (`Identity, Auth & Tenancy Foundation`) chính thức **AUTHORIZED / STARTED**.
 - V3-1A: **DONE / CLOSED (#64)** (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS).
-- Slice triển khai kế tiếp ngay lập tức: **`V3-1B — Auth Client Foundation` (NEXT)**.
+- Slice triển khai kế tiếp: **`V3-1B — Auth Client Foundation` (NEXT / IN PROGRESS)**.
 - Trình tự thực thi V3-1 tuân thủ nghiêm ngặt các slice tuần tự trong [V3-1 Solo Implementation Plan](../docs/development/V3-1-SOLO-IMPLEMENTATION-PLAN.md):
   1. `V3-1A — Server Foundation` (DONE / CLOSED #64).
-  2. `V3-1B — Auth Client Foundation` (NEXT: Supabase client bootstrap, session provider/hook, login/signup/logout, token attachment, API error handling, mobile UX).
+  2. `V3-1B — Auth Client Foundation` (NEXT / IN PROGRESS: Supabase client bootstrap, session provider/hook, login/signup/logout, token attachment, API error handling, mobile UX).
   3. `V3-1C — Org & Garden Tenancy Server` (Organization, Garden, GardenMember, membership roles, invite/revoke, tenant guard/interceptor).
   4. `V3-1D — Tenant Onboarding Client` (Garden setup, org onboarding UX).
   5. `V3-1E — Membership / Invitation Server & Client`.
@@ -45,11 +45,11 @@
 - **Descriptor phụ**: `Sổ cây giống trên điện thoại`
 - **Tên cũ cấm dùng**: `Sổ Cây Giống` (không dùng làm brand chính)
 - **Developer**: `17thedev (sole developer)`
-- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1B**)
+- **Giai đoạn dự án**: `V3-1 — Identity, Auth & Tenancy Foundation` (**AUTHORIZED / STARTED — NEXT: V3-1B IN PROGRESS**)
 - **V3-0 Design Gate**: `DONE / CLOSED (#62)` (merge `e8b4157b0c9f160c63b8c54eb946ddad1f2a3c90`, CI #38340235275 SUCCESS)
 - **V3-1A Server Foundation**: `DONE / CLOSED (#64)` (merge `836995892a1da2ae91925bd18e7de51451ffe0c4`, CI #38364601217 SUCCESS)
 - **Production Architecture direction**: `CANONICAL / FROZEN ON MAIN`
-- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1B — Auth Client Foundation` là **NEXT**)
+- **V3-1 implementation**: `AUTHORIZED / STARTED` (slice `V3-1B — Auth Client Foundation` là **NEXT / IN PROGRESS**)
 - **V3-2+ implementation**: `NOT AUTHORIZED`
 - **Cloud provisioning / live migration / real tenant data**: `NOT AUTHORIZED`
 - **Real pilot**: `NO-GO / NOT APPROVED`

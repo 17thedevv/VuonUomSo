@@ -89,7 +89,7 @@ Acceptance:
 
 ## 4. V3-1B — Auth client foundation
 
-**Status: NEXT / READY TO START**
+**Status: NEXT / IN PROGRESS (Draft PR)**
 
 Suggested branch:
 

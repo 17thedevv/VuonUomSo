@@ -29,6 +29,13 @@ import { GardenAvailabilityScreen } from '../features/garden/GardenAvailabilityS
 import { AvailabilityShareScreen } from '../features/share/AvailabilityShareScreen'
 import { CustomersScreen } from '../features/customers/CustomersScreen'
 import { CustomerDetailScreen } from '../features/customers/CustomerDetailScreen'
+import { LoginScreen } from '../features/auth/LoginScreen'
+import { SignupScreen } from '../features/auth/SignupScreen'
+import { ForgotPasswordScreen } from '../features/auth/ForgotPasswordScreen'
+import { ResetPasswordScreen } from '../features/auth/ResetPasswordScreen'
+import { AuthCallbackScreen } from '../features/auth/AuthCallbackScreen'
+import { AuthBoundary } from '../auth/AuthBoundary'
+import { useAuth } from '../auth/useAuth'
 
 const RootLayout: React.FC = () => {
   return (
@@ -96,6 +103,7 @@ const AppShellLayout: React.FC = () => {
  * Root index redirector based on onboarding state.
  */
 const RootRedirect: React.FC = () => {
+  const { isPasswordRecovery } = useAuth()
   const [checking, setChecking] = useState(true)
   const [isOnboarded, setIsOnboarded] = useState(false)
 
@@ -105,6 +113,10 @@ const RootRedirect: React.FC = () => {
       setChecking(false)
     })
   }, [])
+
+  if (isPasswordRecovery) {
+    return <Navigate to="/reset-password" replace />
+  }
 
   if (checking) {
     return (
@@ -122,91 +134,116 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       {
-        path: '/',
-        element: <RootRedirect />
+        path: '/login',
+        element: <LoginScreen />
       },
       {
-        path: '/onboarding',
-        element: <OnboardingScreen />
+        path: '/signup',
+        element: <SignupScreen />
       },
       {
-        element: <AppShellLayout />,
+        path: '/forgot-password',
+        element: <ForgotPasswordScreen />
+      },
+      {
+        path: '/reset-password',
+        element: <ResetPasswordScreen />
+      },
+      {
+        path: '/auth/callback',
+        element: <AuthCallbackScreen />
+      },
+      {
+        element: <AuthBoundary />,
         children: [
           {
-            path: '/today',
-            element: <TodayScreen />
+            path: '/',
+            element: <RootRedirect />
           },
           {
-            path: '/garden',
-            element: <GardenAvailabilityScreen />
+            path: '/onboarding',
+            element: <OnboardingScreen />
           },
           {
-            path: '/garden/share',
-            element: <AvailabilityShareScreen />
-          },
-          {
-            path: '/customers',
-            element: <CustomersScreen />
-          },
-          {
-            path: '/customers/:id',
-            element: <CustomerDetailScreen />
-          },
-          {
-            path: '/batches',
-            element: <BatchesScreen />
-          },
-          {
-            path: '/batches/new',
-            element: <BatchNewScreen />
-          },
-          {
-            path: '/batches/:id',
-            element: <BatchDetailScreen />
-          },
-          {
-            path: '/orders',
-            element: <OrdersScreen />
-          },
-          {
-            path: '/orders/new',
-            element: <OrderNewScreen />
-          },
-          {
-            path: '/orders/:id',
-            element: <OrderDetailScreen />
-          },
-          {
-            path: '/orders/:id/reserve',
-            element: <OrderReserveScreen />
-          },
-          {
-            path: '/shipments',
-            element: <ShipmentsScreen />
-          },
-          {
-            path: '/shipments/new',
-            element: <ShipmentNewScreen />
-          },
-          {
-            path: '/shipments/:id',
-            element: <ShipmentDetailScreen />
-          },
-          {
-            path: '/dossiers/:batchId',
-            element: <BatchDossierScreen />
-          },
-          {
-            path: '/more',
-            element: <MoreScreen />
-          },
-          {
-            path: '/validation',
-            element: <ValidationReportScreen />
-          },
-          {
-            path: '/pilot-tools',
-            element: <PilotToolsScreen />
+            element: <AppShellLayout />,
+            children: [
+              {
+                path: '/today',
+                element: <TodayScreen />
+              },
+              {
+                path: '/garden',
+                element: <GardenAvailabilityScreen />
+              },
+              {
+                path: '/garden/share',
+                element: <AvailabilityShareScreen />
+              },
+              {
+                path: '/customers',
+                element: <CustomersScreen />
+              },
+              {
+                path: '/customers/:id',
+                element: <CustomerDetailScreen />
+              },
+              {
+                path: '/batches',
+                element: <BatchesScreen />
+              },
+              {
+                path: '/batches/new',
+                element: <BatchNewScreen />
+              },
+              {
+                path: '/batches/:id',
+                element: <BatchDetailScreen />
+              },
+              {
+                path: '/orders',
+                element: <OrdersScreen />
+              },
+              {
+                path: '/orders/new',
+                element: <OrderNewScreen />
+              },
+              {
+                path: '/orders/:id',
+                element: <OrderDetailScreen />
+              },
+              {
+                path: '/orders/:id/reserve',
+                element: <OrderReserveScreen />
+              },
+              {
+                path: '/shipments',
+                element: <ShipmentsScreen />
+              },
+              {
+                path: '/shipments/new',
+                element: <ShipmentNewScreen />
+              },
+              {
+                path: '/shipments/:id',
+                element: <ShipmentDetailScreen />
+              },
+              {
+                path: '/dossiers/:batchId',
+                element: <BatchDossierScreen />
+              },
+              {
+                path: '/more',
+                element: <MoreScreen />
+              },
+              {
+                path: '/validation',
+                element: <ValidationReportScreen />
+              },
+              {
+                path: '/pilot-tools',
+                element: <PilotToolsScreen />
+              }
+            ]
           }
         ]
       },

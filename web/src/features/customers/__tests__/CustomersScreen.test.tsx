@@ -14,6 +14,7 @@ import * as query from '../../../services/customerQueryService'
 import { createOrder } from '../../../services/orderService'
 import { undoService } from '../../../services/undoService'
 import { businessSnapshot, customerFixture, orderA, orderB } from './customerFixtures'
+import { TestAuthProvider } from '../../../test/authTestHelper'
 
 const deferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -27,7 +28,7 @@ function mount(path = '/customers', state?: unknown) {
     { path: '/more', element: <MoreScreen /> }, { path: '/orders', element: <OrdersScreen /> },
     { path: '/orders/:id', element: <OrderDetailScreen /> }, { path: '/shipments/:id', element: <h1>Chuyến đúng ID</h1> }
   ] }], { initialEntries: [{ pathname: path, state }] })
-  return { router, ...render(<RouterProvider router={router} />) }
+  return { router, ...render(<TestAuthProvider><RouterProvider router={router} /></TestAuthProvider>) }
 }
 beforeEach(async () => {
   await clearAllData(); undoService.clearLastMutation(); await customerFixture()

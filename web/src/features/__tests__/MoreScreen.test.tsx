@@ -6,6 +6,7 @@ import { resetDemoData, clearAllData } from '../../data/seed'
 import * as backupModule from '../../data/backup'
 import * as seedModule from '../../data/seed'
 import { db } from '../../data/db'
+import { TestAuthProvider } from '../../test/authTestHelper'
 
 describe('MoreScreen', () => {
   afterEach(() => { cleanup(); vi.restoreAllMocks() })
@@ -16,11 +17,13 @@ describe('MoreScreen', () => {
 
   it('renders more screen with organization info and backup/restore sections', async () => {
     render(
-      <MemoryRouter initialEntries={['/more']}>
-        <Routes>
-          <Route path="/more" element={<MoreScreen />} />
-        </Routes>
-      </MemoryRouter>
+      <TestAuthProvider>
+        <MemoryRouter initialEntries={['/more']}>
+          <Routes>
+            <Route path="/more" element={<MoreScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </TestAuthProvider>
     )
 
     await waitFor(() => {
@@ -35,11 +38,13 @@ describe('MoreScreen', () => {
     const downloadSpy = vi.spyOn(backupModule, 'downloadBackupFile').mockImplementation(() => {})
 
     render(
-      <MemoryRouter initialEntries={['/more']}>
-        <Routes>
-          <Route path="/more" element={<MoreScreen />} />
-        </Routes>
-      </MemoryRouter>
+      <TestAuthProvider>
+        <MemoryRouter initialEntries={['/more']}>
+          <Routes>
+            <Route path="/more" element={<MoreScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </TestAuthProvider>
     )
 
     await waitFor(() => {
@@ -61,11 +66,13 @@ describe('MoreScreen', () => {
     const { jsonString } = await backupModule.exportWorkspaceBackup()
 
     const { container } = render(
-      <MemoryRouter initialEntries={['/more']}>
-        <Routes>
-          <Route path="/more" element={<MoreScreen />} />
-        </Routes>
-      </MemoryRouter>
+      <TestAuthProvider>
+        <MemoryRouter initialEntries={['/more']}>
+          <Routes>
+            <Route path="/more" element={<MoreScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </TestAuthProvider>
     )
 
     await waitFor(() => {
@@ -98,11 +105,13 @@ describe('MoreScreen', () => {
 
   it('shows error when invalid JSON file is selected', async () => {
     const { container } = render(
-      <MemoryRouter initialEntries={['/more']}>
-        <Routes>
-          <Route path="/more" element={<MoreScreen />} />
-        </Routes>
-      </MemoryRouter>
+      <TestAuthProvider>
+        <MemoryRouter initialEntries={['/more']}>
+          <Routes>
+            <Route path="/more" element={<MoreScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </TestAuthProvider>
     )
 
     await waitFor(() => {
@@ -124,11 +133,13 @@ describe('MoreScreen', () => {
     const { jsonString } = await backupModule.exportWorkspaceBackup()
 
     const { container } = render(
-      <MemoryRouter initialEntries={['/more']}>
-        <Routes>
-          <Route path="/more" element={<MoreScreen />} />
-        </Routes>
-      </MemoryRouter>
+      <TestAuthProvider>
+        <MemoryRouter initialEntries={['/more']}>
+          <Routes>
+            <Route path="/more" element={<MoreScreen />} />
+          </Routes>
+        </MemoryRouter>
+      </TestAuthProvider>
     )
 
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
@@ -149,11 +160,17 @@ describe('MoreScreen', () => {
 
   const snapshot = () => db.transaction('r', db.tables, async () =>
     Object.fromEntries(await Promise.all(db.tables.map(async table => [table.name, await table.toArray()]))))
-  const renderResetScreen = () => render(<MemoryRouter initialEntries={['/more']}><Routes>
-    <Route path="/more" element={<MoreScreen />} />
-    <Route path="/today" element={<div>TODAY TEST</div>} />
-    <Route path="/onboarding" element={<div>ONBOARDING TEST</div>} />
-  </Routes></MemoryRouter>)
+  const renderResetScreen = () => render(
+    <TestAuthProvider>
+      <MemoryRouter initialEntries={['/more']}>
+        <Routes>
+          <Route path="/more" element={<MoreScreen />} />
+          <Route path="/today" element={<div>TODAY TEST</div>} />
+          <Route path="/onboarding" element={<div>ONBOARDING TEST</div>} />
+        </Routes>
+      </MemoryRouter>
+    </TestAuthProvider>
+  )
 
   it('RST-17: cancelling either reset preserves every store and warns of replacement', async () => {
     const before = await snapshot()
