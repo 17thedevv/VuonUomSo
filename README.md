@@ -1,165 +1,222 @@
 # Vườn Ươm — Sổ cây giống trên điện thoại
 
-> **Lưu ý quan trọng**: Đây là **validation prototype** (bản mẫu thử nghiệm hành vi người dùng), **chưa phải production SaaS**.
-> Hệ thống được thiết kế tối ưu cho **learning speed > scalability**, lưu trữ 100% cục bộ trên thiết bị qua IndexedDB (Dexie), không sử dụng backend hay cloud database trong giai đoạn này.
+> **Project status: HIBERNATED / DEVELOPMENT PAUSED — 2026-10-14**
+>
+> Vườn Ươm đã chứng minh được giá trị ở mức **product/internal tool**: mô hình nghiệp vụ lô cây, tồn kho khả dụng, giữ chỗ, đơn hàng, giao hàng, hồ sơ lô, backup và offline-first có thể giải quyết một bài toán vận hành thực tế.
+>
+> Tuy nhiên, **commercial SaaS thesis hiện chưa được validate**. Việc tiếp tục mở rộng thành một SaaS production-grade sẽ kéo theo thêm tenancy, sync, billing, support, security/privacy operations, migration, native distribution và customer acquisition trong khi willingness-to-pay/ROI thương mại chưa có đủ bằng chứng.
+>
+> Vì vậy dự án được **tạm dừng có chủ đích tại một checkpoint sạch**, không phải do lỗi kỹ thuật hay thiếu khả năng hoàn thiện. Phần SaaS chỉ nên được mở lại khi xuất hiện bằng chứng thị trường đủ mạnh hoặc nhu cầu vận hành thực tế mới.
 
 ---
 
-## 1. Cấu trúc tổng thể Repository
+## 1. Checkpoint hiện tại
+
+### Đã hoàn thành
+
+- **V3-1A — Server Foundation**: DONE / CLOSED qua PR #64.
+  - NestJS + Express
+  - Prisma 7 + PostgreSQL foundation
+  - JWT/JWKS authentication
+  - `/v3/me` bootstrap/profile
+  - structured logging, request ID, throttling
+  - OpenAPI generation/check
+- **V3-1B — Auth Client Foundation**: DONE / CLOSED qua PR #65.
+  - Supabase Auth client
+  - login/signup/logout
+  - password recovery
+  - Bearer-token API wrapper
+  - 401 re-auth handling
+  - client installation ID
+  - web/server CI green tại thời điểm closure
+
+### Chưa bắt đầu / không được tiếp tục tự động
+
+- **V3-1C — Tenancy and Device Server**: NOT STARTED.
+- **V3-1D — Tenant Onboarding Client**: NOT STARTED.
+- **V3-1E — Membership / Invitations**: NOT STARTED.
+- **V3-2+ — Server Domain, Migration Cutover, Offline Sync**: NOT AUTHORIZED.
+- Production cloud provisioning, live tenant migration và real tenant data: NOT AUTHORIZED.
+- Real pilot: NOT STARTED.
+
+Không tự động tiếp tục roadmap chỉ vì các phase trước đã hoàn thành.
+
+---
+
+## 2. Vì sao dự án được pause
+
+Bài toán sản phẩm có giá trị, nhưng bài toán kinh doanh chưa được chứng minh.
+
+Một công cụ local/internal có thể tạo ROI ngay nếu nó giảm sai sót và tiết kiệm thời gian. Nhưng khi chuyển thành SaaS, hệ thống phải gánh thêm:
+
+- multi-tenant authorization;
+- cloud sync và conflict handling;
+- billing/subscription;
+- backup/recovery;
+- security và privacy operations;
+- customer onboarding/support;
+- monitoring/incident response;
+- native Android/iOS distribution;
+- customer acquisition và churn management.
+
+Ở checkpoint hiện tại chưa có đủ bằng chứng rằng số lượng khách hàng sẵn sàng trả tiền và ARPU có thể biện minh cho toàn bộ complexity trên.
+
+Quyết định pause vì vậy là một **product/business decision dựa trên thông tin thu được sau quá trình implementation**, không phải đánh giá rằng codebase hay ý tưởng nghiệp vụ không có giá trị.
+
+---
+
+## 3. Điều kiện hợp lý để cân nhắc mở lại
+
+Dự án có thể được xem xét tiếp tục nếu xuất hiện ít nhất một tín hiệu mới đủ mạnh, ví dụ:
+
+- có một nhóm vườn ươm ngoài người phát triển thực sự muốn sử dụng;
+- có khách hàng sẵn sàng trả tiền, không chỉ phản hồi tích cực;
+- nhu cầu multi-device/multi-user/cloud sync xuất hiện rõ trong sử dụng thực tế;
+- có business model tốt hơn subscription SaaS giá thấp;
+- nhu cầu nội bộ phát triển tới mức cloud collaboration thực sự cần thiết.
+
+Khi mở lại, câu hỏi đầu tiên không phải là “tiếp tục V3-1C ở đâu”, mà là:
+
+> **Mức nhỏ nhất của Vườn Ươm mà một người dùng bên ngoài thực sự sẵn sàng trả tiền là gì?**
+
+Architecture tiếp theo phải đi theo câu trả lời đó.
+
+---
+
+## 4. Trạng thái kiến trúc tại checkpoint
+
+Repository hiện chứa hai lớp chính:
 
 ```text
 VuonUomSo/
-├── LICENSE       # GNU Affero General Public License v3.0 (AGPL-3.0-only)
-├── web/          # Sản phẩm ứng dụng Web/PWA chạy được
-├── docs/         # Tài liệu đặc tả, kiến trúc, bối cảnh lâm nghiệp & UX
-├── .agent/       # Hệ điều hành Agent (Skills, Project State, Router)
-├── .github/      # Tự động hóa repository & CI workflow
-├── .gitignore
-├── AGENTS.md     # Chỉ dẫn vận hành cốt lõi cho AI Agents
+├── web/          # React/Vite PWA, business UI, Dexie/local data, Supabase auth client
+├── server/       # NestJS V3 cloud foundation
+├── docs/         # Product, domain, architecture, API, migration & validation docs
+├── .agent/       # Project state, agent rules & implementation guidance
+├── .github/      # CI workflows
+├── AGENTS.md
+├── LICENSE
 └── README.md
 ```
 
-- **`web/`**: Chứa toàn bộ mã nguồn frontend, dependencies, test suite và cấu hình build Vite/PWA.
-- **`docs/`**: Chứa tài liệu thiết kế hệ thống, bối cảnh người làm giống và hướng dẫn phát triển.
-- **`.agent/`**: Chứa kiến thức dự án và các kỹ năng chuẩn hóa của agent (Single Source of Truth).
-- **`.github/`**: Chứa CI workflow kiểm tra tự động (`typecheck -> lint -> test -> build`).
+### Local/business layer
+
+Phần nghiệp vụ ban đầu được xây theo hướng local/offline-first với Dexie/IndexedDB:
+
+- organizations/settings;
+- contacts;
+- batches;
+- orders;
+- reservations;
+- shipments;
+- dossiers;
+- events/audit-compatible history;
+- Backup V1 export.
+
+Cloud migration/cutover cho business data **chưa được hoàn thành**. Không có real tenant business data nào được phép coi là đã migration production.
+
+### V3 cloud foundation
+
+V3 đã có server/auth foundation nhưng chưa có đầy đủ tenancy, membership, domain cloud authority hay production sync.
+
+Nói cách khác:
+
+```text
+Product/domain implementation: substantial
+Cloud foundation: partial
+Production SaaS platform: incomplete by design
+Commercial validation: not proven
+```
 
 ---
 
-## 2. Requirements
+## 5. Requirements
 
-- **Node.js**: >= 18 (khuyến nghị v20+)
-- **NPM**: >= 9
-- **Trình duyệt**: Bất kỳ trình duyệt hiện đại nào trên điện thoại hoặc máy tính hỗ trợ IndexedDB & Service Worker (Chrome, Safari, Edge, Cốc Cốc, Zalo Webview).
+- **Node.js**: >= 22.22.2
+- **npm**: phiên bản tương thích Node 22
+- Trình duyệt hiện đại hỗ trợ IndexedDB và Service Worker cho web/PWA.
 
 ---
 
-## 3. Cài đặt & Khởi động nhanh (Quick Start)
-
-Mọi thao tác phát triển và kiểm thử được thực hiện từ thư mục `web/`:
+## 6. Chạy Web/PWA
 
 ```bash
-# 1. Di chuyển vào thư mục web
 cd web
-
-# 2. Cài đặt dependencies
 npm install
-
-# 3. Khởi động môi trường phát triển
 npm run dev
 ```
 
-Truy cập ứng dụng tại: `http://localhost:5173` (giao diện tối ưu cho kích thước màn hình điện thoại 360px–430px).
+Ứng dụng phát triển mặc định chạy qua Vite.
 
----
-
-## 4. Chạy kiểm thử (Testing)
+Quality gates:
 
 ```bash
-# Đứng tại thư mục web/
 cd web
 
-# Chạy toàn bộ test suites (Vitest)
-npm test
-
-# Chạy test ở chế độ theo dõi thay đổi (watch)
-npm run test:watch
-```
-
-Bộ test bao gồm:
-- **Unit test**: Bộ phân tích số lượng lâm nghiệp (`parseQuantity`: 3 vạn, 3v, 4,52 vạn, 30.000, 30,000...), kiểm tra bất biến tồn kho (`availableQuantity`, `reservedQuantity`, `batchService`, `orderService`, `undoService`).
-- **Repository test**: Kiểm tra tính bền vững dữ liệu IndexedDB (ghi cơ sở -> đọc lại; khôi phục dữ liệu mẫu).
-- **Integration test**: Kiểm tra các luồng màn hình Mở sổ (`/onboarding`), Hôm nay (`/today`), Danh sách lô (`/batches`), Tạo lô mới (`/batches/new`), Đơn hàng (`/orders`), Ghi đơn mới (`/orders/new`).
-
----
-
-## 5. Kiểm tra chất lượng mã nguồn & Build
-
-```bash
-# Đứng tại thư mục web/
-cd web
-
-# Typecheck TypeScript (chế độ strict)
 npm run typecheck
-
-# Linter (oxlint)
 npm run lint
-
-# Production build (kèm sinh PWA service worker và manifest)
+npm test
+npm run api:check
 npm run build
-
-# Preview bản build production
-npm run preview
 ```
 
 ---
 
-## 6. Cấu trúc ứng dụng Web (`web/src/`)
+## 7. Chạy Server V3
 
-```text
-web/
-├── src/
-│   ├── app/
-│   │   ├── App.tsx          # Root application component
-│   │   ├── router.tsx       # Cấu hình React Router & điều hướng bảo vệ
-│   │   └── bootstrap.ts     # Khởi tạo trạng thái ban đầu từ local storage
-│   │
-│   ├── domain/
-│   │   ├── organization.ts  # Kiểu dữ liệu Cơ sở / Vườn ươm & vai trò
-│   │   ├── batch.ts         # Kiểu dữ liệu Lô cây & trạng thái sinh trưởng
-│   │   ├── order.ts         # Kiểu dữ liệu Đơn hàng
-│   │   ├── reservation.ts   # Kiểu dữ liệu Giữ cây cho khách
-│   │   ├── shipment.ts      # Kiểu dữ liệu Chuyến giao
-│   │   ├── contact.ts       # Kiểu dữ liệu Khách hàng / Vườn liên kết
-│   │   └── quantity.ts      # Parser số lượng & Pure functions tính tồn/khả dụng
-│   │
-│   ├── services/
-│   │   ├── batchService.ts  # Tạo lô, kiểm kê số lượng, tự tạo mã lô
-│   │   ├── orderService.ts  # Ghi đơn hàng, kiểm tra khả dụng tồn kho
-│   │   ├── contactService.ts# Tạo khách hàng, kiểm tra trùng số điện thoại
-│   │   └── undoService.ts   # Quản lý hoàn tác cho các thao tác quan trọng
-│   │
-│   ├── data/
-│   │   ├── db.ts            # Dexie schema v1
-│   │   ├── repositories/    # Repository interfaces & Dexie implementations
-│   │   ├── seed.ts          # Dữ liệu mẫu Vườn Hồng Anh (Hữu Lũng) & reset
-│   │   └── backup.ts        # Xuất dữ liệu cục bộ ra JSON
-│   │
-│   ├── features/
-│   │   ├── onboarding/      # Màn hình mở sổ lần đầu (/onboarding)
-│   │   ├── today/           # Màn hình làm việc hôm nay (/today)
-│   │   ├── batches/         # Màn hình quản lý lô cây (/batches, /batches/new, /batches/:id)
-│   │   ├── orders/          # Màn hình đơn hàng (/orders, /orders/new, /orders/:id)
-│   │   ├── shipments/       # Màn hình chuyến giao (/shipments, /shipments/:id)
-│   │   ├── dossiers/        # Màn hình hồ sơ nguồn gốc cây giống (/dossiers/:batchId)
-│   │   └── more/            # Màn hình cài đặt, chế độ & quản lý dữ liệu (/more)
-│   │
-│   └── shared/
-│       ├── components/      # UI components (AppShell, QuantityInput, UndoBanner...)
-│       └── hooks/           # useOnlineStatus...
-│
-├── public/                  # Favicon, icons PWA, manifest
-├── index.html
-├── vite.config.ts
-├── tsconfig.json
-└── package.json
+Server chỉ là **cloud foundation tại checkpoint hiện tại**, không phải production SaaS hoàn chỉnh.
+
+```bash
+cd server
+npm install
+
+npm run typecheck
+npm run lint
+npm test
+npm run prisma:validate
+npm run openapi:check
+npm run build
 ```
 
+Các runtime environment variables và database/auth configuration phải tuân theo tài liệu V3 trong `docs/architecture/`. Không dùng production secrets cho local development/test.
+
 ---
 
-## 7. Khả năng mở rộng kiến trúc trong tương lai
+## 8. Các invariant nghiệp vụ đáng giữ lại
 
-- **Backend production**: Khi bước qua giai đoạn validation thành công, backend có thể được bổ sung tại root:
-  ```text
-  VuonUomSo/
-  ├── web/
-  ├── supabase/          # Migrations, Edge Functions, config
-  └── docs/
-  ```
-- **Mobile native shell**: Capacitor có thể đặt trực tiếp bên trong `web/` (`web/android/`, `web/ios/`, `web/capacitor.config.ts`) vì Android/iOS đóng vai trò native container cho cùng web app, không phải sản phẩm độc lập.
- 
+Dù commercial SaaS direction đang pause, phần domain model vẫn là tài sản quan trọng của project:
+
+- **stock != availability**;
+- availability phải trừ active outstanding reservations;
+- fulfilled quantity và outstanding commitment là hai khái niệm khác nhau;
+- external supply không được tính như own physical stock;
+- tạo order không tự động reserve;
+- planned shipment không đồng nghĩa đã xuất hàng;
+- chỉ confirmed/completed own-source shipment mới làm giảm own stock;
+- undo/audit phải giữ semantics có thể kiểm chứng;
+- local backup và migration phải fail closed, không silent cutover.
+
+Các invariant này nên được giữ nếu codebase được tái sử dụng cho một sản phẩm khác.
+
 ---
 
-## 8. License
+## 9. Nếu chỉ dùng như internal/local tool
 
-Vườn Ươm is licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`). See [LICENSE](file:///d:/Project-17/VuonUom/LICENSE) for details.
+Đây vẫn là một outcome hợp lệ.
+
+Không cần hoàn thiện toàn bộ SaaS roadmap để tiếp tục dùng hoặc phát triển những phần tạo giá trị trực tiếp cho chính người vận hành. Có thể giữ repository như:
+
+- personal/internal nursery operations tool;
+- domain/reference implementation;
+- nền tảng để thử các workflow mới;
+- portfolio/reference cho offline-first, auth, audit và domain modeling.
+
+Không có yêu cầu phải hoàn tất multi-tenant SaaS chỉ để “kết thúc” project.
+
+---
+
+## 10. License
+
+Vườn Ươm được phát hành theo **GNU Affero General Public License v3.0** (`AGPL-3.0-only`).
+
+Xem [LICENSE](./LICENSE).
