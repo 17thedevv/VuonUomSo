@@ -277,7 +277,7 @@ describe('Auth Screens UX & Flow', () => {
 
       window.history.replaceState({}, '', '/auth/callback?type=recovery')
 
-      const mockAuth = createMockAuthContext()
+      const mockAuth = createMockAuthContext({ isPasswordRecovery: true })
 
       render(
         <AuthContext.Provider value={mockAuth}>

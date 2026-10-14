@@ -49,12 +49,9 @@ export const AuthCallbackScreen: React.FC = () => {
     })
 
     const processAuthCallback = async () => {
-      // 2. Immediate check of query/hash parameters before SDK cleans them
+      // 2. Query and hash inspection for error parameters
       const hash = typeof window !== 'undefined' ? window.location.hash : ''
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
-      if (hash.includes('type=recovery') || params.get('type') === 'recovery') {
-        recoveryRef.current = true
-      }
 
       try {
         // Check for error in query params or URL hash

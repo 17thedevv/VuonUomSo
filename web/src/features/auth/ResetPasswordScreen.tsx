@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/useAuth'
 import { formatAuthError } from './authHelpers'
 
 export const ResetPasswordScreen: React.FC = () => {
-  const { updatePassword, session } = useAuth()
+  const { updatePassword, session, isPasswordRecovery } = useAuth()
   const navigate = useNavigate()
 
   const [password, setPassword] = useState('')
@@ -47,7 +47,7 @@ export const ResetPasswordScreen: React.FC = () => {
   }
 
   // If user navigates to reset-password without active recovery session
-  if (!session && !isSuccess) {
+  if ((!session || !isPasswordRecovery) && !isSuccess) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">

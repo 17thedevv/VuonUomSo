@@ -43,6 +43,27 @@ describe('ResetPasswordScreen UX & Validation', () => {
     expect(screen.getByRole('link', { name: /Yêu cầu liên kết mới/i })).toHaveAttribute('href', '/forgot-password')
   })
 
+  it('renders expired/invalid notice when user has active session but isPasswordRecovery is false', () => {
+    const mockAuth = createMockAuthContext({
+      status: 'authenticated',
+      session: { access_token: 'normal-user-token' } as any,
+      user: { id: 'u1', email: 'user@vuonuom.local' } as any,
+      isPasswordRecovery: false
+    })
+
+    render(
+      <AuthContext.Provider value={mockAuth}>
+        <MemoryRouter>
+          <ResetPasswordScreen />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    )
+
+    expect(screen.getByRole('heading', { name: 'Liên kết không hợp lệ hoặc đã hết hạn' })).toBeInTheDocument()
+    expect(screen.getByText(/Phiên khôi phục mật khẩu không còn hiệu lực/i)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Đặt mật khẩu mới/i })).not.toBeInTheDocument()
+  })
+
   it('renders reset password form when active recovery session exists', () => {
     const mockAuth = createMockAuthContext()
 
